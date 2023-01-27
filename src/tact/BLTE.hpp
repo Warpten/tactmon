@@ -1,22 +1,30 @@
 #pragma once
 
+#include <array>
+#include <cstdint>
 #include <optional>
 
-#include <tact/EKey.hpp>
+#include "io/mem/MemoryStream.hpp"
+#include "tact/CKey.hpp"
+#include "tact/EKey.hpp"
 
 namespace io {
-	struct IStream;
+    struct IStream;
+    struct IReadableStream;
 }
 
 namespace tact {
-	struct BLTE final {
-		static std::optional<BLTE> Parse(io::IReadableStream& fstream, tact::EKey const& ekey);
+    struct BLTE final {
+        static std::optional<BLTE> Parse(io::IReadableStream& fstream, tact::EKey const& ekey, tact::CKey const& ckey);
 
-	private:
-		explicit BLTE(io::IReadableStream& fstream);
+    private:
+        explicit BLTE();
+        bool LoadChunk(io::IReadableStream& stream, size_t compressedSize, size_t decompressedSize, std::array<uint8_t, 16> checksum);
+        bool Validate(tact::CKey const& ckey) const;
 
-	public:
+    public:
 
-	private:
-	};
+    private:
+        io::mem::GrowableMemoryStream _dataBuffer{ std::endian::little };
+    };
 }

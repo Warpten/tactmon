@@ -13,6 +13,7 @@ add_executable(wow-build-monitor
 add_dependencies(wow-build-monitor
   boost
   openssl
+  spdlog
 )
 
 target_include_directories(wow-build-monitor
@@ -47,6 +48,7 @@ target_link_libraries(wow-build-monitor
     boost
     openssl
     ${ZLIB_LIBRARIES}
+    spdlog
 )
 
 install(TARGETS wow-build-monitor

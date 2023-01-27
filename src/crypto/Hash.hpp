@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <span>
 #include <type_traits>
+#include <vector>
 
 #include <openssl/evp.h>
 
@@ -30,7 +31,7 @@ namespace crypto {
             return hash.GetDigest();
         }
 
-        explicit Hash() noexcept : _context(HashImpl::MakeContext()) {
+        explicit Hash() noexcept : _context(HashImpl::MakeContext()), _digest{} {
             uint32_t result = EVP_DigestInit_ex(_context, Creator(), nullptr);
         }
 
@@ -70,6 +71,12 @@ namespace crypto {
             else {
                 UpdateData(std::as_bytes(data));
             }
+        }
+
+        template <typename T>
+        requires std::integral<T>
+        void UpdateData(std::vector<T> const& data) {
+            EVP_DigestUpdate(_context, reinterpret_cast<uint8_t*>(data.data()), data.size() * sizeof(T));
         }
 
         void UpdateData(std::string_view data) {

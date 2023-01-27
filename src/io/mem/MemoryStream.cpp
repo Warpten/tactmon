@@ -1,54 +1,63 @@
 #include "io/mem/MemoryStream.hpp"
 
 namespace io::mem {
-	MemoryStream::MemoryStream(std::span<uint8_t> data, std::endian endianness)
-		: IReadableStream(endianness), _data(data)
-	{ }
+    MemoryStream::MemoryStream(std::span<uint8_t> data, std::endian endianness)
+        : IReadableStream(endianness), _data(data)
+    { }
 
-	size_t MemoryStream::SeekRead(size_t offset) {
-		_cursor = std::min(_data.size(), offset);
+    std::span<const uint8_t> MemoryStream::AsSpan() const {
+        return _data;
+    }
 
-		return _cursor;
-	}
+    size_t MemoryStream::SeekRead(size_t offset) {
+        _cursor = std::min(_data.size(), offset);
 
-	size_t MemoryStream::_ReadImpl(std::span<std::byte> bytes) {
-		size_t length = std::min(bytes.size(), _data.size() - _cursor);
+        return _cursor;
+    }
 
-		bytes = std::span { reinterpret_cast<std::byte*>(_data.data()) + _cursor, length };
-		_cursor += length;
-		return length;
-	}
+    size_t MemoryStream::_ReadImpl(std::span<std::byte> bytes) {
+        size_t length = std::min(bytes.size(), _data.size() - _cursor);
 
-	// ^^^ MemoryStream / GrowableMemoryStream vvv
+        bytes = std::span { reinterpret_cast<std::byte*>(_data.data()) + _cursor, length };
+        _cursor += length;
+        return length;
+    }
 
-	GrowableMemoryStream::GrowableMemoryStream(std::span<uint8_t> data, std::endian endianness)
-		: IReadableStream(endianness), IWritableStream(endianness), _data(data.begin(), data.end())
-	{ }
+    // ^^^ MemoryStream / GrowableMemoryStream vvv
 
+    GrowableMemoryStream::GrowableMemoryStream(std::endian endianness) : IReadableStream(endianness), IWritableStream(endianness) { }
 
-	size_t GrowableMemoryStream::SeekRead(size_t offset) {
-		return _readCursor = std::min(offset, _data.size());
-	}
+    GrowableMemoryStream::GrowableMemoryStream(std::span<uint8_t> data, std::endian endianness)
+        : IReadableStream(endianness), IWritableStream(endianness), _data(data.begin(), data.end())
+    { }
 
-	size_t GrowableMemoryStream::SeekWrite(size_t offset) {
-		_writeCursor = offset;
-		_data.resize(offset);
-		return _writeCursor;
-	}
+    std::span<const uint8_t> GrowableMemoryStream::AsSpan() const {
+        return std::span<const uint8_t> { _data.data(), _data.size() };
+    }
 
-	size_t GrowableMemoryStream::_ReadImpl(std::span<std::byte> bytes) {
-		size_t length = std::min(bytes.size(), _data.size() - _readCursor);
+    size_t GrowableMemoryStream::SeekRead(size_t offset) {
+        return _readCursor = std::min(offset, _data.size());
+    }
 
-		bytes = std::span{ reinterpret_cast<std::byte*>(_data.data()) + _readCursor, length };
-		_readCursor += length;
-		return length;
-	}
+    size_t GrowableMemoryStream::SeekWrite(size_t offset) {
+        _writeCursor = offset;
+        _data.resize(offset);
+        return _writeCursor;
+    }
 
-	size_t GrowableMemoryStream::_WriteImpl(std::span<std::byte> bytes) {
-		_data.resize(_writeCursor + bytes.size());
+    size_t GrowableMemoryStream::_ReadImpl(std::span<std::byte> bytes) {
+        size_t length = std::min(bytes.size(), _data.size() - _readCursor);
 
-		std::memcpy(_data.data() + _writeCursor, bytes.data(), bytes.size());
-		_writeCursor += bytes.size();
-		return bytes.size();
-	}
+        bytes = std::span{ reinterpret_cast<std::byte*>(_data.data()) + _readCursor, length };
+        _readCursor += length;
+        return length;
+    }
+
+    size_t GrowableMemoryStream::_WriteImpl(std::span<std::byte> bytes) {
+        _data.resize(_writeCursor + bytes.size());
+
+        std::memcpy(_data.data() + _writeCursor, bytes.data(), bytes.size());
+        _writeCursor += bytes.size();
+        return bytes.size();
+    }
 }

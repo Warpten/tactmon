@@ -23,6 +23,8 @@
 #include <boost/beast/http.hpp>
 #include <boost/tokenizer.hpp>
 
+#include <spdlog/spdlog.h>
+
 #include "ext/ctre.hpp"
 
 namespace net::ribbit {
@@ -68,110 +70,124 @@ namespace net::ribbit {
     };
 
     template <> struct CommandTraits<Command::ProductVersions> {
-		constexpr static const char Format[] = "{}/products/{}/versions";
+        constexpr static const char Format[] = "{}/products/{}/versions";
 
-		using Args = std::tuple<std::string_view>;
-		using ValueType = types::Versions;
+        using Args = std::tuple<std::string_view>;
+        using ValueType = types::Versions;
 
         static std::optional<types::Versions> Parse(std::string_view input);
     };
     
     template <> struct CommandTraits<Command::ProductCDNs> {
-		constexpr static const char Format[] = "{}/products/{}/cdns";
+        constexpr static const char Format[] = "{}/products/{}/cdns";
 
-		using Args = std::tuple<std::string_view>;
-		using ValueType = types::CDNs;
+        using Args = std::tuple<std::string_view>;
+        using ValueType = types::CDNs;
 
         static std::optional<types::CDNs> Parse(std::string_view input);
     };
 
     template <> struct CommandTraits<Command::ProductBGDL> {
-		constexpr static const char Format[] = "{}/products/{}/cdns";
+        constexpr static const char Format[] = "{}/products/{}/cdns";
 
-		using ValueType = types::BGDL;
-		using Args = std::tuple<std::string_view>;
+        using ValueType = types::BGDL;
+        using Args = std::tuple<std::string_view>;
 
         static std::optional<types::BGDL> Parse(std::string_view input);
     };
 
     // template <> struct CommandTraits<Command::Certificate> {
-	// 	constexpr static const std::string_view Format = "{}/certs/{}";
+    // 	constexpr static const std::string_view Format = "{}/certs/{}";
     // 
-	// 	using Args = std::tuple<std::string_view>;
+    // 	using Args = std::tuple<std::string_view>;
     // };
     // template <> struct CommandTraits<Command::OCSP> {
-	// 	constexpr static const std::string_view Format = "{}/ocsp/{}";
+    // 	constexpr static const std::string_view Format = "{}/ocsp/{}";
     // 
-	// 	using Args = std::tuple<std::string_view>;
+    // 	using Args = std::tuple<std::string_view>;
     // };
 
     template <Version> struct VersionTraits;
-	
+    
     template <> struct VersionTraits<Version::V1> {
         constexpr static const std::string_view Value = "v1";
 
-		template <typename C>
-		static auto Parse(std::string_view payload)
+        template <typename C>
+        static auto Parse(std::string_view payload)
             -> std::optional<typename C::ValueType>
         {
-			// We pretend this is an HTTP response by shoving a "HTTP/1.1 200 OK\r\n" at the front of the response
-			std::string httpResponse = "HTTP/1.1 200 OK\r\n";
-			httpResponse += payload;
+            // We pretend this is an HTTP response by shoving a "HTTP/1.1 200 OK\r\n" at the front of the response
+            std::string httpResponse = "HTTP/1.1 200 OK\r\n";
+            httpResponse += payload;
 
-			// And then we just parse it through Boost.Beast
+            // And then we just parse it through Boost.Beast
             boost::beast::http::response_parser<boost::beast::http::string_body> parser;
 
-			boost::beast::error_code ec;
-			parser.put(boost::asio::buffer(httpResponse), ec);
+            boost::beast::error_code ec;
+            parser.put(boost::asio::buffer(httpResponse), ec);
+            if (ec.failed()) {
+                spdlog::error("  An error occured: {}.", ec.message());
 
-			auto mimeBoundary = [&]() -> std::optional<std::string_view> {
-				auto contentType = parser.get()[boost::beast::http::field::content_type];
+                return std::nullopt;
+            }
 
-				auto r1 = ctre::match<R"reg(^multipart/([^;]+);\s*boundary="(?<boundary>[^"]+)"$)reg">(contentType.begin(), contentType.end());
-				auto r2 = ctre::match<R"reg(^multipart/([^;]+);\s*boundary=(?<boundary>[^"]+)$)reg">(contentType.begin(), contentType.end());
+            auto mimeBoundary = [&]() -> std::optional<std::string_view> {
+                auto contentType = parser.get()[boost::beast::http::field::content_type];
 
-				if (r1) return r1.get<"boundary">();
-				if (r2) return r2.get<"boundary">();
-				return std::nullopt;
-			}();
+                auto r1 = ctre::match<R"reg(^multipart/([^;]+);\s*boundary="(?<boundary>[^"]+)"$)reg">(contentType.begin(), contentType.end());
+                auto r2 = ctre::match<R"reg(^multipart/([^;]+);\s*boundary=(?<boundary>[^"]+)$)reg">(contentType.begin(), contentType.end());
 
-			if (mimeBoundary == std::nullopt)
-				return std::nullopt;
+                if (r1) return r1.get<"boundary">();
+                if (r2) return r2.get<"boundary">();
+                return std::nullopt;
+            }();
 
-			// Found a MIME boundary, split the body
-			std::vector<std::string_view> messageParts;
-			boost::split_regex(messageParts, payload, boost::regex{ std::format("--{}\r\n", *mimeBoundary) });
+            if (mimeBoundary == std::nullopt) {
+                spdlog::error("  An error occured: Malformed multipart response; message boundary not found.");
 
-			for (std::string_view elem : messageParts) {
-				auto elemParse = C::Parse(elem);
-				if (elemParse.has_value())
-					return elemParse;
-			}
+                return std::nullopt;
+            }
 
-			return std::nullopt;
-		}
+            // Found a MIME boundary, split the body
+            std::vector<std::string_view> messageParts;
+            boost::split_regex(messageParts, payload, boost::regex{ std::format("--{}\r\n", *mimeBoundary) });
+
+            for (std::string_view elem : messageParts) {
+                auto elemParse = C::Parse(elem);
+                if (elemParse.has_value())
+                    return elemParse;
+            }
+
+            return std::nullopt;
+        }
     };
 
-	template <> struct VersionTraits<Version::V2> {
-		constexpr static const std::string_view Value = "v2";
+    template <> struct VersionTraits<Version::V2> {
+        constexpr static const std::string_view Value = "v2";
 
-		template <typename C>
+        template <typename C>
         static auto Parse(std::string_view payload) 
             -> std::optional<typename C::ValueType>
         {
-			// We pretend this is an HTTP response by shoving a "HTTP/1.1 200 OK\r\n" at the front of the response
-			std::string httpResponse = "HTTP/1.1 200 OK\r\n";
-			httpResponse += payload;
+            // We pretend this is an HTTP response by shoving a "HTTP/1.1 200 OK\r\n" at the front of the response
+            std::string httpResponse = "HTTP/1.1 200 OK\r\n";
+            httpResponse += payload;
 
-			// And then we just parse it through Boost.Beast
-			boost::beast::http::response_parser<boost::beast::http::string_body> parser;
+            // And then we just parse it through Boost.Beast
+            boost::beast::http::response_parser<boost::beast::http::string_body> parser;
 
-			boost::beast::error_code ec;
-			parser.put(httpResponse, ec);
+            boost::beast::error_code ec;
+            parser.put(httpResponse, ec);
+            if (ec.failed())
+            {
+                spdlog::error("  An error occured: {}.", ec.message());
 
-			return C::Parse(parser.get().body());
-		}
-	};
+                return std::nullopt;
+            }
+
+            return C::Parse(parser.get().body());
+        }
+    };
 
     template <Command C, Region R, Version V>
     struct CommandExecutor {
@@ -185,30 +201,41 @@ namespace net::ribbit {
         auto operator() (Args&&... args)
             -> std::optional<typename CommandTraits::ValueType>
         {
-			namespace ip = boost::asio::ip;
-			using tcp = ip::tcp;
+            namespace ip = boost::asio::ip;
+            using tcp = ip::tcp;
 
-			boost::system::error_code ec;
+            boost::system::error_code ec;
+
+            spdlog::info("Loading {}:{}/{}.", RegionTraits::Host, 1119, std::format(CommandTraits::Format, VersionTraits<V>::Value, std::forward<Args>(args)...));
+            spdlog::trace("Connecting to {}:{}/{}.", RegionTraits::Host, 1119, std::format(CommandTraits::Format, VersionTraits<V>::Value, std::forward<Args>(args)...));
 
             tcp::resolver r { _ctx };
             boost::asio::connect(_socket, r.resolve(RegionTraits::Host, "1119"), ec);
 
-            if (ec)
+            if (ec) {
+                spdlog::error("  An error occured: {}.", ec.message());
+
                 return std::nullopt;
+            }
 
             { // Write Ribbit request
                 auto command = std::format(CommandTraits::Format, VersionTraits<V>::Value, std::forward<Args>(args)...) + "\r\n";
+
                 auto buf = boost::asio::buffer(command);
                 boost::asio::write(_socket, buf, ec);
-                if (ec)
+                if (ec) {
+                    spdlog::error("  An error occured: {}.", ec.message());
+
                     return std::nullopt;
+                }
             }
 
             { // Read Ribbit response
                 boost::asio::streambuf buf;
                 size_t bytesTransferred = boost::asio::read(_socket, buf, ec);
                 if (ec && ec != boost::asio::error::eof) {
-                    auto x = ec.to_string();
+                    spdlog::error("  An error occured: {}.", ec.message());
+
                     return std::nullopt;
                 }
 
@@ -224,28 +251,3 @@ namespace net::ribbit {
         boost::asio::ip::tcp::socket _socket;
     };
 }
-
-template <> struct std::formatter<net::ribbit::Region> {
-	template <typename Context>
-	auto format(net::ribbit::Region region, Context& ctx) const {
-		switch (region) {
-		    case net::ribbit::Region::EU:
-                return std::formatter<std::string_view>{}.format("EU", ctx);
-		    case net::ribbit::Region::US:
-                return std::formatter<std::string_view>{}.format("US", ctx);
-		    case net::ribbit::Region::KR:
-                return std::formatter<std::string_view>{}.format("KR", ctx);
-		    case net::ribbit::Region::CN:
-                return std::formatter<std::string_view>{}.format("CN", ctx);
-		    case net::ribbit::Region::TW:
-                return std::formatter<std::string_view>{}.format("TW", ctx);
-		}
-
-		return ctx.end();
-	}
-
-    template <typename Context>
-    auto parse(Context& ctx) -> decltype(ctx.begin()) {
-        return ctx.end();
-    }
-};
