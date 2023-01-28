@@ -20,6 +20,7 @@ namespace io::mem {
         size_t GetReadCursor() const override { return _cursor; }
         size_t SeekRead(size_t offset) override;
         void SkipRead(size_t offset) override { _cursor += offset; }
+        bool CanRead(size_t amount) const override { return _cursor + amount <= _data.size(); }
 
     protected:
         size_t _ReadImpl(std::span<std::byte> writableSpan) override;
@@ -43,6 +44,7 @@ namespace io::mem {
         size_t GetReadCursor() const override { return _readCursor; }
         size_t SeekRead(size_t offset) override;
         void SkipRead(size_t offset) override { _readCursor += offset; }
+        bool CanRead(size_t amount) const override { return _readCursor + amount <= _data.size(); }
 
     public:
         size_t GetWriteCursor() const override { return _writeCursor; }

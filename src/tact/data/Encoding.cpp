@@ -17,17 +17,20 @@ namespace tact::data {
     }
 
     struct Header {
-        uint16_t Signature;
-        uint8_t Version;
+        uint16_t Signature = 0;
+        uint8_t Version = 0;
         struct {
-            uint32_t PageSize;
-            uint32_t PageCount;
-            uint8_t HashSize;
+            uint32_t PageSize = 0;
+            uint32_t PageCount = 0;
+            uint8_t HashSize = 0;
         } CEKey, EKeySpec;
-        uint32_t ESpecBlockSize;
+        uint32_t ESpecBlockSize = 0;
 
         Header(io::IReadableStream& stream) {
-            Signature          = stream.Read<uint16_t>(std::endian::little);
+            if (!stream.CanRead(2 + 1 + 1 + 1 + 2 + 2 + 4 + 4 + 1 + 4))
+                return;
+
+            Signature          = stream.Read<uint16_t>(std::endian::big);
             Version            = stream.Read<uint8_t>(std::endian::little);
             CEKey.HashSize     = stream.Read<uint8_t>(std::endian::little);
             EKeySpec.HashSize  = stream.Read<uint8_t>(std::endian::little);
@@ -48,9 +51,11 @@ namespace tact::data {
 
         _ckey = std::make_unique<uint8_t[]>(_ckeySize);
         stream.Read(std::span { _ckey.get(), _ckeySize }, std::endian::little);
-            
-        _ekeys = std::make_unique<uint8_t[]>(_ekeySize * _keyCount);
-        stream.Read(std::span { _ekeys.get(), _ekeySize * _keyCount }, std::endian::little);
+
+        if (_keyCount * _ekeySize > 0) {
+            _ekeys = std::make_unique<uint8_t[]>(_ekeySize * _keyCount);
+            stream.Read(std::span{ _ekeys.get(), _ekeySize * _keyCount }, std::endian::little);
+        }
     }
 
     Encoding::CEKeyPageTable::CEKeyPageTable(CEKeyPageTable&& other) noexcept 
@@ -115,6 +120,9 @@ namespace tact::data {
     }
 
     Encoding::EKeySpecPageTable::EKeySpecPageTable(io::IReadableStream& stream, Header const& header) {
+        if (!stream.CanRead(header.EKeySpec.HashSize + 4 + 5))
+            return;
+
         _ekey = std::make_unique<uint8_t[]>(header.EKeySpec.HashSize);
         stream.Read(std::span{ _ekey.get(), header.EKeySpec.HashSize }, std::endian::little);
 
@@ -130,6 +138,8 @@ namespace tact::data {
 
     Encoding::Encoding(io::IReadableStream& stream) {
         Header header{ stream };
+        if (header.Signature != 'EN')
+            return;
 
         stream.SkipRead(header.ESpecBlockSize); // Skip ESpec strings
 

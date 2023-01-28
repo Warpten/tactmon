@@ -2,12 +2,14 @@
 
 #include "io/fs/MemoryMappedFileStream.hpp"
 #include "io/net/Download.hpp"
+#include "logging/Sinks.hpp"
 
 #include "net/ribbit/types/CDNs.hpp"
 #include "net/ribbit/types/Versions.hpp"
 
 #include "tact/config/BuildConfig.hpp"
 #include "tact/data/Encoding.hpp"
+#include "tact/data/Install.hpp"
 
 #include <filesystem>
 #include <functional>
@@ -71,14 +73,16 @@ namespace io {
         }
 
     private:
-        boost::asio::io_context& _context;
+		boost::asio::io_context& _context;
+		std::shared_ptr<spdlog::logger> _logger;
 
+    private:
         std::filesystem::path _installRoot;
         net::ribbit::types::CDNs _cdns;
         net::ribbit::types::versions::Record _version;
 
         std::optional<tact::config::BuildConfig> _buildConfig;
-
         std::optional<tact::data::Encoding> _encoding;
+        std::optional<tact::data::Install> _install;
     };
 }

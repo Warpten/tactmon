@@ -1,5 +1,6 @@
 #include "net/ribbit/Commands.hpp"
 #include "io/LocalCache.hpp"
+#include "logging/Sinks.hpp"
 
 #include <boost/program_options.hpp>
 #include <boost/asio/io_context.hpp>
@@ -30,16 +31,8 @@ int main(int argc, char** argv) {
         ;
 
     // Initialize logging
-    auto consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    consoleSink->set_level(spdlog::level::info);
-
-    // File sink, 100MB max, 3 files rotated
-    auto fileSink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>("logs/console.log", 100 * 1024 * 1024, 3);
-    fileSink->set_level(spdlog::level::info);
-
-    std::shared_ptr<spdlog::logger> logger = std::make_shared<spdlog::logger>("main", spdlog::sinks_init_list { consoleSink, fileSink });
+    std::shared_ptr<spdlog::logger> logger = logging::GetLogger("main");
     logger->set_level(spdlog::level::trace);
-    
     spdlog::set_default_logger(logger);
 
     try {

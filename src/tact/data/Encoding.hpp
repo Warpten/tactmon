@@ -31,7 +31,8 @@ namespace tact::data {
 
             while (stream.GetReadCursor() < pageEnd) {
                 T pageEntry{ stream, header };
-                if (!pageEntry)
+                // Stop if the entry read was mostly padding bytes, or if we read past the end of the page in the process (alignment bytes)
+                if (!pageEntry || stream.GetReadCursor() > pageEnd)
                     break;
 
                 _entries.emplace_back(std::move(pageEntry));
@@ -48,6 +49,7 @@ namespace tact::data {
         size_t _hashSize;
         std::vector<T> _entries;
 
+        //! Because I can't be bothered specializing on the boolean.
         std::conditional_t<Indexed,
             std::unique_ptr<uint8_t[]>,
             Empty
@@ -100,9 +102,9 @@ namespace tact::data {
             static size_t HashSize(Header const& header);
 
         private:
-            std::unique_ptr<uint8_t[]> _ekey;
-            uint32_t _especIndex; // Not an offset but an index into the ESpec string block.
-            uint64_t _fileSize;   // Of the encoded version of the file.
+            std::unique_ptr<uint8_t[]> _ekey = nullptr;
+            uint32_t _especIndex = 0; // Not an offset but an index into the ESpec string block.
+            uint64_t _fileSize = 0;   // Of the encoded version of the file.
         };
 
         size_t count() const;

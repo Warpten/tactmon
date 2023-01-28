@@ -118,6 +118,8 @@ namespace io {
          */
         virtual size_t SeekRead(size_t offset) = 0;
 
+        virtual bool CanRead(size_t amount) const = 0;
+
         /**
          * Reads a value from the stream, using the given endianness.
          * 
