@@ -11,6 +11,7 @@
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
+#include <chrono>
 #include <csignal>
 #include <filesystem>
 #include <string_view>
@@ -36,11 +37,7 @@ int main(int argc, char** argv) {
     auto fileSink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>("logs/console.log", 100 * 1024 * 1024, 3);
     fileSink->set_level(spdlog::level::info);
 
-    // Trace log
-    auto traceSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/trace.log", true);
-    traceSink->set_level(spdlog::level::trace);
-
-    std::shared_ptr<spdlog::logger> logger = std::make_shared<spdlog::logger>("logger", spdlog::sinks_init_list { consoleSink, fileSink, traceSink });
+    std::shared_ptr<spdlog::logger> logger = std::make_shared<spdlog::logger>("main", spdlog::sinks_init_list { consoleSink, fileSink });
     logger->set_level(spdlog::level::trace);
     
     spdlog::set_default_logger(logger);
@@ -104,4 +101,6 @@ void Execute(boost::asio::io_context& context) {
         return;
 
     io::LocalCache localCache { fs::current_path(), *cdns, (*versions)[0], context };
+
+    using namespace std::chrono_literals;
 }

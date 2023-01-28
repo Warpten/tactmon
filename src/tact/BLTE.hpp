@@ -8,11 +8,6 @@
 #include "tact/CKey.hpp"
 #include "tact/EKey.hpp"
 
-namespace io {
-    struct IStream;
-    struct IReadableStream;
-}
-
 namespace tact {
     struct BLTE final {
         static std::optional<BLTE> Parse(io::IReadableStream& fstream, tact::EKey const& ekey, tact::CKey const& ckey);
@@ -23,6 +18,7 @@ namespace tact {
         bool Validate(tact::CKey const& ckey) const;
 
     public:
+        io::IReadableStream& GetStream() { return _dataBuffer; }
 
     private:
         io::mem::GrowableMemoryStream _dataBuffer{ std::endian::little };

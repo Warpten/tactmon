@@ -47,8 +47,9 @@ namespace io::mem {
 
     size_t GrowableMemoryStream::_ReadImpl(std::span<std::byte> bytes) {
         size_t length = std::min(bytes.size(), _data.size() - _readCursor);
+        std::span<std::byte> value = std::span{ reinterpret_cast<std::byte*>(_data.data()) + _readCursor, length };
 
-        bytes = std::span{ reinterpret_cast<std::byte*>(_data.data()) + _readCursor, length };
+        std::copy_n(value.begin(), length, bytes.begin());
         _readCursor += length;
         return length;
     }

@@ -13,6 +13,9 @@ namespace io {
     namespace detail {
         template <typename T> struct is_span : std::false_type { };
         template <typename T, size_t N> struct is_span<std::span<T, N>> : std::true_type { };
+
+        template <typename T>
+        constexpr static const bool is_span_v = is_span<T>::value;
     }
 
     struct IStream {
@@ -43,6 +46,8 @@ namespace io {
 
         virtual size_t GetWriteCursor() const = 0;
         virtual size_t SeekWrite(size_t offset) = 0;
+
+        virtual void SkipWrite(size_t offset) = 0;
 
         template <typename T>
         size_t Write(T value, std::endian endianness) {
@@ -98,6 +103,8 @@ namespace io {
         explicit IReadableStream(std::endian endianness = std::endian::native) : IStream(endianness) { }
         virtual ~IReadableStream() = default;
 
+		virtual void SkipRead(size_t offset) = 0;
+
         /**
          * Returns the position of the read cursor.
          */
@@ -118,22 +125,19 @@ namespace io {
          * @param[in] endianness The endianness to use.
          * @eturns The amount of bytes that were effectively read.
          */
-        template <typename T>
+        template <typename T, typename = std::enable_if_t<!detail::is_span_v<T>> >
         size_t Read(T& value, std::endian endianness) {
-            if constexpr (detail::is_span<T>::value) {
-                return _ReadSpan(value, endianness, sizeof(typename T::value_type));
-            } else {
-                return _ReadSpan(std::span<T> { std::addressof(value), 1 }, endianness, sizeof(T));
-            }
+            return _ReadSpan(std::span<T> { std::addressof(value), 1 }, endianness, sizeof(T));
+        }
+
+        template <typename T>
+        size_t Read(std::span<T> span, std::endian endianness) {
+            return _ReadSpan(span, endianness, sizeof(T));
         }
 
         template <typename T>
         size_t Read(std::vector<T>& value, std::endian endianness) {
-            size_t readCount = 0;
-            for (size_t i = 0; i < value.size(); ++i)
-                readCount += Read(value[i], endianness);
-
-            return readCount;
+            return _ReadSpan(std::span<T> {value.data(), value.size()}, endianness, sizeof(T));
         }
 
         template <typename T>
@@ -181,7 +185,7 @@ namespace io {
         template <typename T>
         size_t _ReadSpan(std::span<T> writableSpan, std::endian endianness, size_t elementSize) {
             if constexpr (std::is_same_v<std::byte, T>) {
-                size_t readCount = _ReadImpl(writableSpan);
+                size_t readCount = _ReadImpl(std::forward<std::span<T>>(writableSpan));
 
                 if (endianness != GetEndianness()) {
                     auto begin = std::ranges::begin(writableSpan);
@@ -200,8 +204,7 @@ namespace io {
                 return readCount;
             } else {
                 // Cast to std::span<std::byte> and read again
-                std::span<std::byte> byteSpan = std::as_writable_bytes(writableSpan);
-                return _ReadSpan(byteSpan, endianness, sizeof(T));
+                return _ReadSpan(std::as_writable_bytes(writableSpan), endianness, sizeof(T));
             }
         }
     };

@@ -17,6 +17,7 @@ namespace io {
 	public: // IReadableStream
 		size_t SeekRead(size_t offset) override;
 		size_t GetReadCursor() const override;
+		void SkipRead(size_t offset) override { _cursor += offset; }
 
 	protected: // IReadableStream
 		size_t _ReadImpl(std::span<std::byte> bytes) override;
