@@ -4,6 +4,7 @@
 #include "net/ribbit/types/CDNs.hpp"
 #include "net/ribbit/types/Summary.hpp"
 #include "net/ribbit/types/Versions.hpp"
+#include "logging/Sinks.hpp"
 
 #include <cstdint>
 #include <format>
@@ -113,9 +114,9 @@ namespace net::ribbit {
         constexpr static const std::string_view Value = "v1";
 
         template <typename C>
-        static auto Parse(std::string_view payload)
+        static auto Parse(std::string_view payload, std::shared_ptr<spdlog::logger> logger)
             -> std::optional<typename C::ValueType>
-        {
+		{
             // We pretend this is an HTTP response by shoving a "HTTP/1.1 200 OK\r\n" at the front of the response
             std::string httpResponse = "HTTP/1.1 200 OK\r\n";
             httpResponse += payload;
@@ -126,7 +127,7 @@ namespace net::ribbit {
             boost::beast::error_code ec;
             parser.put(boost::asio::buffer(httpResponse), ec);
             if (ec.failed()) {
-                spdlog::error("  An error occured: {}.", ec.message());
+                logger->error("  An error occured: {}.", ec.message());
 
                 return std::nullopt;
             }
@@ -143,7 +144,7 @@ namespace net::ribbit {
             }();
 
             if (mimeBoundary == std::nullopt) {
-                spdlog::error("  An error occured: Malformed multipart response; message boundary not found.");
+                logger->error("  An error occured: Malformed multipart response; message boundary not found.");
 
                 return std::nullopt;
             }
@@ -166,7 +167,7 @@ namespace net::ribbit {
         constexpr static const std::string_view Value = "v2";
 
         template <typename C>
-        static auto Parse(std::string_view payload) 
+        static auto Parse(std::string_view payload, std::shared_ptr<spdlog::logger> logger)
             -> std::optional<typename C::ValueType>
         {
             // We pretend this is an HTTP response by shoving a "HTTP/1.1 200 OK\r\n" at the front of the response
@@ -206,14 +207,16 @@ namespace net::ribbit {
 
             boost::system::error_code ec;
 
-            spdlog::info("Loading {}:{}/{}.", RegionTraits::Host, 1119, std::format(CommandTraits::Format, VersionTraits<V>::Value, std::forward<Args>(args)...));
-            spdlog::trace("Connecting to {}:{}/{}.", RegionTraits::Host, 1119, std::format(CommandTraits::Format, VersionTraits<V>::Value, std::forward<Args>(args)...));
+            auto logger = logging::GetLogger("ribbit");
+
+            logger->info("Loading {}:{}/{}.", RegionTraits::Host, 1119, std::format(CommandTraits::Format, VersionTraits<V>::Value, std::forward<Args>(args)...));
+            logger->trace("Connecting to {}:{}/{}.", RegionTraits::Host, 1119, std::format(CommandTraits::Format, VersionTraits<V>::Value, std::forward<Args>(args)...));
 
             tcp::resolver r { _ctx };
             boost::asio::connect(_socket, r.resolve(RegionTraits::Host, "1119"), ec);
 
             if (ec) {
-                spdlog::error("  An error occured: {}.", ec.message());
+                logger->error("  An error occured: {}.", ec.message());
 
                 return std::nullopt;
             }
@@ -224,7 +227,7 @@ namespace net::ribbit {
                 auto buf = boost::asio::buffer(command);
                 boost::asio::write(_socket, buf, ec);
                 if (ec) {
-                    spdlog::error("  An error occured: {}.", ec.message());
+                    logger->error("  An error occured: {}.", ec.message());
 
                     return std::nullopt;
                 }
@@ -234,7 +237,7 @@ namespace net::ribbit {
                 boost::asio::streambuf buf;
                 size_t bytesTransferred = boost::asio::read(_socket, buf, ec);
                 if (ec && ec != boost::asio::error::eof) {
-                    spdlog::error("  An error occured: {}.", ec.message());
+                    logger->error("  An error occured: {}.", ec.message());
 
                     return std::nullopt;
                 }
@@ -242,7 +245,7 @@ namespace net::ribbit {
                 auto bufs = buf.data();
                 std::string response { boost::asio::buffers_begin(bufs), boost::asio::buffers_begin(bufs) + buf.size() };
 
-                return VersionTraits<V>::template Parse<CommandTraits>(response);
+                return VersionTraits<V>::template Parse<CommandTraits>(response, logger);
             }
         }
 

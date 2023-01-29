@@ -84,10 +84,16 @@ namespace net::ribbit {
 		for (std::string const& line : tok) {
 			auto value = types::versions::Record::Parse(line);
 			if (value.has_value())
-				versions.push_back(*value);
+				versions.Records.push_back(*value);
+			else if (line.starts_with("## seqn = ")) {
+				auto seqnStr = line.substr(10);
+				auto [ptr, ec] = std::from_chars(seqnStr.data(), seqnStr.data() + seqnStr.size(), versions.SequenceID);
+				if (ec != std::errc{ })
+					versions.SequenceID = 0;
+			}
 		}
 
-		if (versions.empty())
+		if (versions.Records.empty() || versions.SequenceID == 0)
 			return std::nullopt;
 
 		// Do not remove the first row - it gets skipped because we expect a build number in one column and treat it as an integer
