@@ -111,12 +111,15 @@ namespace tact::data {
         private:
             friend struct Encoding;
 
-            size_t _ekeySize;
-            size_t _ckeySize;
+            // TODO: Moving these up in Encoding saves ~30MB of RAM.
+            // The rationale is that all entries share the same ekey/ckey sizes
+            // (and it is already persisted in Encoding::_header).
+            size_t _ekeySize = 0;
+            size_t _ckeySize = 0;
 
             uint64_t _fileSize; // Of the non-encoded version of the file
-            std::unique_ptr<uint8_t[]> _ckey;
-            std::unique_ptr<uint8_t[]> _ekeys;
+            std::unique_ptr<uint8_t[]> _ckey = nullptr;
+            std::unique_ptr<uint8_t[]> _ekeys = nullptr;
             uint8_t _keyCount;
         };
 
@@ -140,6 +143,7 @@ namespace tact::data {
 
         size_t _cekeyPageCount = 0;
         std::unique_ptr<Page<CEKeyPageTable, false>[]> _cekeyPages;
+        size_t _keySpecPageTablesCount = 0;
         std::unique_ptr<Page<EKeySpecPageTable, false>[]> _keySpecPageTables;
     };
 }

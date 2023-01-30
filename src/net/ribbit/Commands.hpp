@@ -127,7 +127,7 @@ namespace net::ribbit {
             boost::beast::error_code ec;
             parser.put(boost::asio::buffer(httpResponse), ec);
             if (ec.failed()) {
-                logger->error("  An error occured: {}.", ec.message());
+                logger->error("An error occured: {}.", ec.message());
 
                 return std::nullopt;
             }
@@ -144,7 +144,7 @@ namespace net::ribbit {
             }();
 
             if (mimeBoundary == std::nullopt) {
-                logger->error("  An error occured: Malformed multipart response; message boundary not found.");
+                logger->error("An error occured: Malformed multipart response; message boundary not found.");
 
                 return std::nullopt;
             }
@@ -181,7 +181,7 @@ namespace net::ribbit {
             parser.put(httpResponse, ec);
             if (ec.failed())
             {
-                spdlog::error("  An error occured: {}.", ec.message());
+                logger->error("An error occured: {}.", ec.message());
 
                 return std::nullopt;
             }
@@ -216,7 +216,7 @@ namespace net::ribbit {
             boost::asio::connect(_socket, r.resolve(RegionTraits::Host, "1119"), ec);
 
             if (ec) {
-                logger->error("  An error occured: {}.", ec.message());
+                logger->error("An error occured: {}.", ec.message());
 
                 return std::nullopt;
             }
@@ -227,7 +227,7 @@ namespace net::ribbit {
                 auto buf = boost::asio::buffer(command);
                 boost::asio::write(_socket, buf, ec);
                 if (ec) {
-                    logger->error("  An error occured: {}.", ec.message());
+                    logger->error("An error occured: {}.", ec.message());
 
                     return std::nullopt;
                 }
@@ -237,7 +237,7 @@ namespace net::ribbit {
                 boost::asio::streambuf buf;
                 size_t bytesTransferred = boost::asio::read(_socket, buf, ec);
                 if (ec && ec != boost::asio::error::eof) {
-                    logger->error("  An error occured: {}.", ec.message());
+                    logger->error("An error occured: {}.", ec.message());
 
                     return std::nullopt;
                 }
