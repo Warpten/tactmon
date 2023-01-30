@@ -116,7 +116,7 @@ namespace net::ribbit {
         template <typename C>
         static auto Parse(std::string_view payload, std::shared_ptr<spdlog::logger> logger)
             -> std::optional<typename C::ValueType>
-		{
+        {
             // We pretend this is an HTTP response by shoving a "HTTP/1.1 200 OK\r\n" at the front of the response
             std::string httpResponse = "HTTP/1.1 200 OK\r\n";
             httpResponse += payload;

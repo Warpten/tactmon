@@ -7,15 +7,15 @@
 #include <vector>
 
 namespace net::ribbit::types {
-	namespace summary {
-		struct Record {
-			std::string Product;
-			uint32_t SequenceID;
-			std::string Flags;
+    namespace summary {
+        struct Record {
+            std::string Product;
+            uint32_t SequenceID;
+            std::string Flags;
 
-			static std::optional<Record> Parse(std::string_view input);
-		};
-	}
+            static std::optional<Record> Parse(std::string_view input);
+        };
+    }
 
-	using Summary = std::vector<summary::Record>;
+    using Summary = std::vector<summary::Record>;
 }

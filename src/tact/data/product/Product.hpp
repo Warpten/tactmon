@@ -8,21 +8,21 @@
 #include <string_view>
 
 namespace tact::data::product {
-	struct Product {
-		explicit Product(std::string_view productName, boost::asio::io_context& context);
+    struct Product {
+        explicit Product(std::string_view productName, boost::asio::io_context& context);
 
-		bool Refresh() noexcept;
+        bool Refresh() noexcept;
 
-		// TODO: API to download files
+        // TODO: API to download files
 
-	protected:
-		virtual bool LoadRoot() = 0;
+    protected:
+        virtual bool LoadRoot() = 0;
 
-	private:
-		boost::asio::io_context& _context;
-		std::string _productName;
+    private:
+        boost::asio::io_context& _context;
+        std::string _productName;
 
-	protected:
-		std::optional<io::LocalCache> _localInstance;
-	};
+    protected:
+        std::optional<io::LocalCache> _localInstance;
+    };
 }

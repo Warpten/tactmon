@@ -12,9 +12,9 @@ namespace io {
         _logger = logging::GetLogger(version.VersionsName);
         _logger->set_level(spdlog::level::info);
 
-		_logger->info("Detected build configuration: {}.", _version.BuildConfig);
-		_logger->info("Detected CDN configuration: {}.", _version.CDNConfig);
-		_logger->info("Detected product configuration: {}.", _version.ProductConfig);
+        _logger->info("Detected build configuration: {}.", _version.BuildConfig);
+        _logger->info("Detected CDN configuration: {}.", _version.CDNConfig);
+        _logger->info("Detected product configuration: {}.", _version.ProductConfig);
 
         _buildConfig = ResolveConfig<tact::config::BuildConfig>(_version.BuildConfig, [](io::IReadableStream& fstream) -> std::optional<tact::config::BuildConfig> {
             return tact::config::BuildConfig { fstream };

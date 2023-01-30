@@ -103,7 +103,7 @@ namespace io {
         explicit IReadableStream(std::endian endianness = std::endian::native) : IStream(endianness) { }
         virtual ~IReadableStream() = default;
 
-		virtual void SkipRead(size_t offset) = 0;
+        virtual void SkipRead(size_t offset) = 0;
 
         /**
          * Returns the position of the read cursor.

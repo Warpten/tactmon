@@ -6,19 +6,19 @@
 #include <vector>
 
 namespace net::ribbit::types {
-	namespace bgdl {
-		struct Record {
-			std::string Region;
-			std::string BuildConfig;
-			std::string CDNConfig;
-			std::string KeyRing;
-			uint32_t BuildID;
-			std::string VersionsName;
-			std::string ProductConfig;
+    namespace bgdl {
+        struct Record {
+            std::string Region;
+            std::string BuildConfig;
+            std::string CDNConfig;
+            std::string KeyRing;
+            uint32_t BuildID;
+            std::string VersionsName;
+            std::string ProductConfig;
 
-			static std::optional<Record> Parse(std::string_view input);
-		};
-	}
-	
-	using BGDL = std::vector<bgdl::Record>;
+            static std::optional<Record> Parse(std::string_view input);
+        };
+    }
+    
+    using BGDL = std::vector<bgdl::Record>;
 }

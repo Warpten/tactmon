@@ -28,12 +28,12 @@ namespace io {
                 std::string remotePath{ std::format("{}/config/{}/{}/{}", cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
                 std::filesystem::path localPath = _installRoot / remotePath;
 
-				if (std::filesystem::is_regular_file(localPath)) {
-					io::MemoryMappedFileStream fileStream{ localPath, std::endian::little };
-					std::optional<T> parsedValue = parser(fileStream);
-					if (parsedValue.has_value())
-						return parsedValue;
-				}
+                if (std::filesystem::is_regular_file(localPath)) {
+                    io::MemoryMappedFileStream fileStream{ localPath, std::endian::little };
+                    std::optional<T> parsedValue = parser(fileStream);
+                    if (parsedValue.has_value())
+                        return parsedValue;
+                }
 
                 for (std::string_view host : cdn.Hosts) {
                     if (!io::Download(_context, host, remotePath, localPath))
@@ -86,8 +86,8 @@ namespace io {
         std::optional<tact::data::FileLocation> FindFile(tact::CKey const& ckey) const;
 
     private:
-		boost::asio::io_context& _context;
-		std::shared_ptr<spdlog::logger> _logger;
+        boost::asio::io_context& _context;
+        std::shared_ptr<spdlog::logger> _logger;
 
     private:
         std::filesystem::path _installRoot;

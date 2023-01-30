@@ -7,15 +7,15 @@
 #include <string_view>
 
 namespace tact {
-	struct CKey {
-		explicit CKey(std::string_view value) noexcept;
-		CKey() = default;
+    struct CKey {
+        explicit CKey(std::string_view value) noexcept;
+        CKey() = default;
 
-		std::span<const uint8_t> Value() const { return std::span{ _value }; }
+        std::span<const uint8_t> Value() const { return std::span{ _value }; }
 
-		std::string ToString() const;
+        std::string ToString() const;
 
-	private:
-		std::array<uint8_t, 16> _value = { };
-	};
+    private:
+        std::array<uint8_t, 16> _value = { };
+    };
 }
