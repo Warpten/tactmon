@@ -1,9 +1,11 @@
 #pragma once
 
 #include "tact/data/product/Product.hpp"
+#include "tact/data/product/wow/Root.hpp"
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 namespace tact::data::product::wow {
@@ -22,10 +24,15 @@ namespace tact::data::product::wow {
             uint64_t _nameHash = 0;
         };
 
+        std::optional<tact::data::FileLocation> FindFile(std::string_view fileName) const override;
+        std::optional<tact::data::FileLocation> FindFile(uint32_t fileDataID) const override;
+
     protected:
         bool LoadRoot() override;
 
     private:
         std::vector<Entry> _entries;
+
+        std::optional<tact::data::product::wow::Root> _root;
     };
 }

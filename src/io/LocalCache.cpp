@@ -28,7 +28,7 @@ namespace io {
         _logger->info("Detected encoding manifest: {}.", _buildConfig->Encoding.Key.EncodingKey.ToString());
         _logger->info("Detected install manifest: {}.", _buildConfig->Install.Key.EncodingKey.ToString());
 
-        _encoding = ResolveData<tact::data::Encoding>(_buildConfig->Encoding.Key.ContentKey, _buildConfig->Encoding.Key.EncodingKey,
+        _encoding = ResolveData<tact::data::Encoding>(_buildConfig->Encoding.Key.EncodingKey.ToString(),
             [&key = _buildConfig->Encoding.Key](io::IReadableStream& fstream) -> std::optional<tact::data::Encoding>
             {
                 if (!fstream)
@@ -49,7 +49,7 @@ namespace io {
 
         _logger->info("Found {} entries in encoding manifest.", _encoding->count());
 
-        _install = ResolveData<tact::data::Install>(_buildConfig->Install.Key.ContentKey, _buildConfig->Install.Key.EncodingKey,
+        _install = ResolveData<tact::data::Install>(_buildConfig->Install.Key.EncodingKey.ToString(),
             [&key = _buildConfig->Install.Key](io::IReadableStream& fstream) -> std::optional<tact::data::Install>
             {
                 if (!fstream)
@@ -73,5 +73,9 @@ namespace io {
 
     std::optional<tact::data::FileLocation> LocalCache::FindFile(tact::CKey const& ckey) const {
         return _encoding->FindFile(ckey);
+    }
+
+    size_t LocalCache::GetContentKeySize() const {
+        return _encoding->GetContentKeySize();
     }
 }

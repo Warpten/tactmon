@@ -2,20 +2,46 @@
 
 #include <array>
 #include <cstdint>
-#include <optional>
+#include <memory>
 #include <span>
+#include <string>
 #include <string_view>
 
 namespace tact {
-    struct CKey {
-        explicit CKey(std::string_view value) noexcept;
-        CKey() = default;
+    /**
+     * Represents a content key.
+     */
+    struct CKey final {
+        CKey();
 
-        std::span<const uint8_t> Value() const { return std::span{ _value }; }
+        CKey(CKey const& other);
+
+        CKey& operator = (CKey const& other);
+
+        explicit CKey(std::string_view value);
+
+        CKey(std::span<uint8_t> data);
+        CKey(std::span<uint8_t const> data);
+
+        template <size_t N>
+        explicit CKey(std::array<uint8_t, N> data) : _data(data), _size(N) { }
+
+        CKey(uint8_t* data, size_t length);
 
         std::string ToString() const;
 
+        friend bool operator == (CKey const& left, CKey const& right) noexcept;
+
+        template <typename T>
+        requires requires (T instance) {
+            { std::begin(instance) }
+            { std::end(instance) }
+        }
+        friend bool operator == (CKey const& left, T right) noexcept {
+            return std::equal(left._data.get(), left._data.get() + left._size, std::begin(right), std::end(right));
+        }
     private:
-        std::array<uint8_t, 16> _value = { };
+        std::unique_ptr<uint8_t[]> _data;
+        size_t _size = 0;
     };
 }

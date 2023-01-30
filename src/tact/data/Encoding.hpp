@@ -2,6 +2,7 @@
 
 #include "io/IStream.hpp"
 #include "tact/CKey.hpp"
+#include "tact/EKey.hpp"
 #include "tact/data/FileLocation.hpp"
 
 #include <cstdint>
@@ -11,53 +12,7 @@
 #include <vector>
 
 namespace tact::data {
-    struct Header;
-
     struct Empty { };
-
-    template <typename T, bool Indexed = false>
-    struct Page {
-        Page() = default;
-
-        Page(io::IReadableStream& stream, Header const& header, size_t pageOffset, size_t pageEnd) {
-            _hashSize = T::HashSize(header);
-
-            if constexpr (!Indexed) {
-                stream.SkipRead(_hashSize + 0x10);
-            } else {
-                _index = std::make_unique<uint8_t[]>(_hashSize + 0x10);
-                stream.Read(std::span { _index.get(), _hashSize + 0x10 }, std::endian::little);
-            }
-
-            size_t position = stream.GetReadCursor();
-            stream.SeekRead(pageOffset);
-
-            while (stream.GetReadCursor() < pageEnd) {
-                T pageEntry{ stream, header };
-                // Stop if the entry read was mostly padding bytes, or if we read past the end of the page in the process (alignment bytes)
-                if (!pageEntry || stream.GetReadCursor() > pageEnd)
-                    break;
-
-                _entries.emplace_back(std::move(pageEntry));
-            }
-            
-            _entries.shrink_to_fit();
-            stream.SeekRead(position);
-        }
-
-        T const& operator [] (size_t index) const { return _entries.at(index); }
-        size_t size() const { return _entries.size(); }
-
-    private:
-        size_t _hashSize;
-        std::vector<T> _entries;
-
-        //! Because I can't be bothered specializing on the boolean.
-        std::conditional_t<Indexed,
-            std::unique_ptr<uint8_t[]>,
-            Empty
-        > _index;
-    };
 
     struct Encoding final {
         explicit Encoding(io::IReadableStream& stream);
@@ -66,6 +21,75 @@ namespace tact::data {
         ~Encoding();
 
         Encoding& operator = (Encoding&& other) noexcept;
+
+    public:
+        size_t GetContentKeySize() const;
+
+        size_t count() const;
+        size_t specCount() const;
+
+        std::optional<tact::data::FileLocation> FindFile(tact::CKey const& ckey) const;
+
+    private:
+        struct Header {
+            uint16_t Signature = 0;
+            uint8_t Version = 0;
+            struct {
+                uint32_t PageSize = 0;
+                uint32_t PageCount = 0;
+                uint8_t HashSize = 0;
+            } CEKey, EKeySpec;
+            uint32_t ESpecBlockSize = 0;
+
+            Header(io::IReadableStream& stream);
+        };
+
+
+        template <typename T, bool Indexed = false>
+        struct Page {
+            Page() = default;
+
+            Page(io::IReadableStream& stream, Header const& header, size_t pageOffset, size_t pageEnd) {
+                _hashSize = T::HashSize(header);
+
+                if constexpr (!Indexed) {
+                    stream.SkipRead(_hashSize + 0x10);
+                }
+                else {
+                    _index = std::make_unique<uint8_t[]>(_hashSize + 0x10);
+                    stream.Read(std::span{ _index.get(), _hashSize + 0x10 }, std::endian::little);
+                }
+
+                size_t position = stream.GetReadCursor();
+                stream.SeekRead(pageOffset);
+
+                while (stream.GetReadCursor() < pageEnd) {
+                    T pageEntry{ stream, header };
+                    // Stop if the entry read was mostly padding bytes, or if we read past the end of the page in the process (alignment bytes)
+                    if (!pageEntry || stream.GetReadCursor() > pageEnd)
+                        break;
+
+                    _entries.emplace_back(std::move(pageEntry));
+                }
+
+                _entries.shrink_to_fit();
+                stream.SeekRead(position);
+            }
+
+            T const& operator [] (size_t index) const { return _entries.at(index); }
+            size_t size() const { return _entries.size(); }
+
+        private:
+            size_t _hashSize;
+            std::vector<T> _entries;
+
+            //! Because I can't be bothered specializing on the boolean.
+            std::conditional_t<Indexed,
+                std::unique_ptr<uint8_t[]>,
+                Empty
+            > _index;
+        };
+
 
         struct CEKeyPageTable final {
             CEKeyPageTable(io::IReadableStream& stream, Header const& header);
@@ -80,9 +104,9 @@ namespace tact::data {
             size_t size() const;
             size_t fileSize() const;
 
-            std::span<uint8_t const> operator [] (size_t index) const;
+            tact::EKey operator [] (size_t index) const;
 
-            std::span<uint8_t const> ckey() const;
+            tact::CKey ckey() const;
 
         private:
             friend struct Encoding;
@@ -112,12 +136,8 @@ namespace tact::data {
             uint64_t _fileSize = 0;   // Of the encoded version of the file.
         };
 
-        size_t count() const;
-        size_t specCount() const;
+        Header _header;
 
-        std::optional<tact::data::FileLocation> FindFile(tact::CKey const& ckey) const;
-
-    private:
         size_t _cekeyPageCount = 0;
         std::unique_ptr<Page<CEKeyPageTable, false>[]> _cekeyPages;
         std::unique_ptr<Page<EKeySpecPageTable, false>[]> _keySpecPageTables;

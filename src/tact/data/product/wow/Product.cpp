@@ -1,6 +1,9 @@
+#include "tact/BLTE.hpp"
 #include "tact/data/product/wow/Product.hpp"
 #include "io/LocalCache.hpp"
 #include "io/net/Download.hpp"
+
+#include <fstream>
 
 namespace tact::data::product::wow {
     bool Product::LoadRoot() {
@@ -12,15 +15,33 @@ namespace tact::data::product::wow {
         if (!rootLocation)
             return false;
 
-        for (size_t i = 0; i < rootLocation->keyCount(); ++i) {
-            std::span<const uint8_t> encodingKey = (*rootLocation)[i];
+        std::optional<tact::BLTE> stream = Open(*rootLocation);
+        if (!stream.has_value())
+            return false;
 
-            // We don't use tact::EKey and tact::CKey internally, so jump through some hoops
-            // (This is probably a design flaw; all EKey and CKey should be is probably std::span in disguise)
-            
-            // TODO: Read root here
-            // io::net::Download expects a CKey, which isn't great
-        }
+        _root.emplace(stream->GetStream(), _localInstance->GetContentKeySize());
         return true;
+    }
+
+    std::optional<tact::data::FileLocation> Product::FindFile(std::string_view fileName) const {
+        if (!_root.has_value())
+            return std::nullopt;
+
+        std::optional<tact::CKey> contentKey = _root->FindFile(fileName);
+        if (!contentKey.has_value())
+            return std::nullopt;
+
+        return tact::data::product::Product::FindFile(*contentKey);
+    }
+
+    std::optional<tact::data::FileLocation> Product::FindFile(uint32_t fileDataID) const {
+        if (!_root.has_value())
+            return std::nullopt;
+
+        std::optional<tact::CKey> contentKey = _root->FindFile(fileDataID);
+        if (!contentKey.has_value())
+            return std::nullopt;
+
+        return tact::data::product::Product::FindFile(*contentKey);
     }
 }

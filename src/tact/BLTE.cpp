@@ -20,7 +20,14 @@ struct ChunkHeader {
 };
 
 namespace tact {
+    std::optional<BLTE> BLTE::Parse(io::IReadableStream& fstream) {
+        return _Parse(fstream, nullptr, nullptr);
+    }
     std::optional<BLTE> BLTE::Parse(io::IReadableStream& fstream, tact::EKey const& ekey, tact::CKey const& ckey) {
+        return _Parse(fstream, &ekey, &ckey);
+    }
+
+    std::optional<BLTE> BLTE::_Parse(io::IReadableStream& fstream, tact::EKey const* ekey, tact::CKey const* ckey) {
         uint32_t magic = fstream.Read<uint32_t>(std::endian::big);
         if (magic != 'BLTE')
             return std::nullopt;
@@ -56,8 +63,8 @@ namespace tact {
         engine.Finalize();
         crypto::MD5::Digest checksum = engine.GetDigest();
 
-        if (!std::equal(ekey.Value().begin(), ekey.Value().end(), checksum.begin(), checksum.end())) {
-            spdlog::critical("Validation of BLTE archive {} failed: EKey key does not match header checksum.", ekey.ToString());
+        if (ekey != nullptr && *ekey != checksum) {
+            spdlog::critical("Validation of BLTE archive {} failed: EKey key does not match header checksum.", ekey->ToString());
 
             return std::nullopt;
         }
@@ -66,14 +73,15 @@ namespace tact {
         for (size_t i = 0; i < chunkCount; ++i) {
             fstream.SeekRead(chunks[i].Offset);
             if (!blte.LoadChunk(fstream, chunks[i].CompressedSize, chunks[i].DecompressedSize, chunks[i].Checksum)) {
-                spdlog::critical("Failed to read a chunk from BLTE archive {}: checksum mismatch.", ekey.ToString());
+                spdlog::critical("Failed to read a chunk from BLTE archive {}: checksum mismatch.", ekey->ToString());
 
                 return std::nullopt;
             }
         }
 
-        if (!blte.Validate(ckey)) {
-            spdlog::critical("Validation of BLTE archive {} failed: CKey does not match contents checksum.", ekey.ToString());
+        if (ckey != nullptr && !blte.Validate(*ckey)) {
+            if (ekey != nullptr)
+                spdlog::critical("Validation of BLTE archive {} failed: CKey does not match contents checksum.", ekey->ToString());
 
             return std::nullopt;
         }
@@ -153,6 +161,6 @@ namespace tact {
     bool BLTE::Validate(tact::CKey const& ckey) const {
         crypto::MD5::Digest checksum = crypto::MD5::Of(_dataBuffer.AsSpan());
 
-        return std::equal(checksum.begin(), checksum.end(), ckey.Value().begin(), ckey.Value().end());
+        return ckey == checksum;
     }
 }

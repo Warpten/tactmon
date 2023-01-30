@@ -1,7 +1,7 @@
-#include "tact/data/product/Product.hpp"
-#include "net/ribbit/Commands.hpp"
-
 #include "logging/Sinks.hpp"
+#include "net/ribbit/Commands.hpp"
+#include "tact/EKey.hpp"
+#include "tact/data/product/Product.hpp"
 
 #include <filesystem>
 
@@ -33,11 +33,13 @@ namespace tact::data::product {
         if (!versions.has_value())
             return false;
 
+#if !_DEBUG
         if (versions->SequenceID != summaryItr->SequenceID) {
             ribbitLogger->error("Received stale version (expected {}, got {})", summaryItr->SequenceID, versions->SequenceID);
 
             return false;
         }
+#endif
 
         ribbit::CommandExecutor<ribbit::Command::ProductCDNs, ribbit::Region::EU, ribbit::Version::V1> cdnsCommand{ _context };
         std::optional<ribbit::types::CDNs> cdns = cdnsCommand("wow"sv);
@@ -46,5 +48,28 @@ namespace tact::data::product {
 
         _localInstance.emplace(std::filesystem::current_path(), *cdns, versions->Records[0], _context);
         return LoadRoot();
+    }
+
+    std::optional<tact::data::FileLocation> Product::FindFile(tact::CKey const& contentKey) const {
+        return _localInstance->FindFile(contentKey);
+    }
+
+    std::optional<tact::BLTE> Product::Open(tact::data::FileLocation const& location) const {
+        for (size_t i = 0; i < location.keyCount(); ++i) {
+            tact::EKey encodingKey { location[i] };
+
+            auto stream = _localInstance->ResolveData<tact::BLTE>(encodingKey.ToString(), [](io::IReadableStream& stream) -> std::optional<tact::BLTE> {
+                std::optional<tact::BLTE> decompressedFile = tact::BLTE::Parse(stream);
+                if (decompressedFile.has_value())
+                    return decompressedFile;
+                
+                return std::nullopt;
+            });
+
+            if (stream.has_value())
+                return stream;
+        }
+
+        return std::nullopt;
     }
 }

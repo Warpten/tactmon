@@ -1,6 +1,11 @@
 #pragma once
 
+#include "tact/CKey.hpp"
 #include "tact/data/product/Product.hpp"
+
+namespace io {
+    struct IReadableStream;
+}
 
 namespace tact::data::product::wow {
     struct Root final {
@@ -40,70 +45,22 @@ namespace tact::data::product::wow {
             ptPT = 0x00010000,
         };
 
-        Root(io::IReadableStream& stream) {
-            uint32_t magic = stream.Read<uint32_t>(std::endian::little);
+        Root(io::IReadableStream& stream, size_t contentKeySize);
 
-            bool interleave = true;
-            bool canSkip = false;
+        std::optional<tact::CKey> FindFile(uint32_t fileDataID) const;
+        std::optional<tact::CKey> FindFile(std::string_view fileName) const;
 
-            if (magic == 0x4D465354) {
-                uint32_t totalFileCount = stream.Read<uint32_t>(std::endian::little);
-                uint32_t namedFileCount = stream.Read<uint32_t>(std::endian::little);
+        struct Entry {
+            tact::CKey ContentKey;
+            uint32_t FileDataID;
+            uint64_t NameHash;
 
-                interleave = false;
-                canSkip = totalFileCount != namedFileCount;
-            }
+            Entry(Entry const& other) : ContentKey(other.ContentKey), FileDataID(other.FileDataID), NameHash(other.NameHash) { }
 
-            while (stream.GetReadCursor() < stream.GetLength()) {
-                if (!stream.CanRead(12))
-                    return; // TODO: Throw
+            Entry(tact::CKey contentKey, uint32_t fileDataID, uint64_t nameHash) : ContentKey(contentKey), FileDataID(fileDataID), NameHash(nameHash) { }
+        };
 
-                uint32_t numRecords = stream.Read<uint32_t>(std::endian::little);
-                ContentFlags contentFlags = static_cast<ContentFlags>(stream.Read<uint32_t>(std::endian::little));
-                LocaleFlags numRecords = static_cast<LocaleFlags>(stream.Read<uint32_t>(std::endian::little));
-
-                fileDataIDs.resize(fileDataIDs.size() + numRecords);
-
-                std::vector<uint32_t> fileDataIDs;
-                fileDataIDs.resize(numRecords);
-                stream.Read(std::span{ fileDataIDs }, std::endian::little);
-
-                int32_t deltaBase = -1;
-                for (uint32_t& sectionFDID : fileDataIDs) {
-                    sectionFDID += deltaBase + 1;
-                    deltaBase = sectionFDID;
-                }
-
-                if (interleave) {
-                    for (size_t i = 0; i < numRecords; ++i) {
-                        std::array<uint8_t, 0x10> hash;
-                        stream.Read(std::span{ hash }, std::endian::little);
-
-                        uint64_t nameHash = stream.Read<uint64_t>(std::endian::little);
-
-                        _entries.emplace_back(std::span{ hash }, fileDataIDs[i], nameHash);
-                    }
-                }
-                else {
-                    std::unique_ptr<uint8_t[]> hashBuffer = std::make_unique<uint8_t[]>(numRecords * 0x10);
-                    stream.Read(std::span{ hashBuffer }, std::endian::little);
-                    std::span<uint8_t> hashSpan{ hashBuffer.get(), numRecords * 0x10 };
-
-                    if (!canSkip || (static_cast<uint32_t>(contentFlags) & static_cast<uint32_t>(ContentFlags::NoNameHash)) == 0) {
-                        for (size_t i = 0; i < numRecords; ++i) {
-                            uint64_t nameHash = stream.Read<uint64_t>(std::endian::little);
-
-                            _entries.emplace_back(hashSpan.subspan(i * 0x10, 0x10), fileDataIDs[i], nameHash);
-                        }
-                    }
-                    else {
-                        for (size_t i = 0; i < numRecords; ++i
-                            _entries.emplace_back(hashSpan.subspan(i * 0x10, 0x10), fileDataIDs[i], 0);
-                    }
-                }
-
-
-            }
-        }
+    private:
+        std::vector<Entry> _entries;
     };
 }

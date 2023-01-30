@@ -30,7 +30,7 @@ namespace tact::config {
             [](BuildConfig& cfg, auto tokens) {
                 cfg.Install.Key.ContentKey = CKey { tokens[1] };
                 if (tokens.size() == 3)
-                    cfg.Install.Key.EncodingKey = EKey{ tokens[2] };
+                    cfg.Install.Key.EncodingKey = EKey { tokens[2] };
             }
         }, { "install-size",
             [](BuildConfig& cfg, auto tokens) {

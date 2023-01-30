@@ -21,9 +21,8 @@ namespace io {
     struct LocalCache final {
         LocalCache(std::filesystem::path installationRoot, net::ribbit::types::CDNs const& cdns, net::ribbit::types::versions::Record const& version, boost::asio::io_context& ctx);
 
-    private:
         template <typename T>
-        std::optional<T> ResolveConfig(std::string_view key, std::function<std::optional<T>(io::IReadableStream&)> parser) {
+        std::optional<T> ResolveConfig(std::string_view key, std::function<std::optional<T>(io::IReadableStream&)> parser) const {
             for (net::ribbit::types::cdns::Record const& cdn : _cdns) {
                 std::string remotePath{ std::format("{}/config/{}/{}/{}", cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
                 std::filesystem::path localPath = _installRoot / remotePath;
@@ -51,11 +50,9 @@ namespace io {
         }
 
         template <typename T>
-        std::optional<T> ResolveData(tact::CKey const& ckey, tact::EKey const& ekey, std::function<std::optional<T>(io::IReadableStream&)> parser) {
-            std::string key = ekey.ToString();
-
+        std::optional<T> ResolveData(std::string_view hash, std::function<std::optional<T>(io::IReadableStream&)> parser) const {
             for (net::ribbit::types::cdns::Record const& cdn : _cdns) {
-                std::string remotePath{ std::format("{}/data/{}/{}/{}", cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
+                std::string remotePath{ std::format("{}/data/{}/{}/{}", cdn.Path, hash.substr(0, 2), hash.substr(2, 2), hash) };
                 std::filesystem::path localPath = _installRoot / remotePath;
 
                 if (std::filesystem::is_regular_file(localPath)) {
@@ -81,6 +78,8 @@ namespace io {
         }
 
     public:
+        size_t GetContentKeySize() const;
+
         std::optional<tact::config::BuildConfig> const& GetBuildConfig() const { return _buildConfig; }
 
         std::optional<tact::data::FileLocation> FindFile(tact::CKey const& ckey) const;
