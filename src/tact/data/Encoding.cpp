@@ -183,4 +183,19 @@ namespace tact::data {
             value += _cekeyPages[i].size();
         return value;
     }
+
+    std::optional<tact::data::FileLocation> Encoding::FindFile(tact::CKey const& ckey) const {
+        for (size_t i = 0; i < _cekeyPageCount; ++i) {
+            Page<CEKeyPageTable> const& page = _cekeyPages[i];
+
+            for (size_t j = 0; j < page.size(); ++j) {
+                auto&& entry = page[j].ckey();
+                if (std::equal(entry.begin(), entry.end(), ckey.Value().begin(), ckey.Value().end())) {
+                    return tact::data::FileLocation { page[j].fileSize(), page[j].size(), std::span<uint8_t> { page[j]._ekeys.get(), page[j]._ekeySize }};
+                }
+            }
+        }
+
+        return std::nullopt;
+    }
 }

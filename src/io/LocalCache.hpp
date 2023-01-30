@@ -10,6 +10,7 @@
 #include "tact/config/BuildConfig.hpp"
 #include "tact/data/Encoding.hpp"
 #include "tact/data/Install.hpp"
+#include "tact/CKey.hpp"
 
 #include <filesystem>
 #include <functional>
@@ -26,6 +27,13 @@ namespace io {
             for (net::ribbit::types::cdns::Record const& cdn : _cdns) {
                 std::string remotePath{ std::format("{}/config/{}/{}/{}", cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
                 std::filesystem::path localPath = _installRoot / remotePath;
+
+				if (std::filesystem::is_regular_file(localPath)) {
+					io::MemoryMappedFileStream fileStream{ localPath, std::endian::little };
+					std::optional<T> parsedValue = parser(fileStream);
+					if (parsedValue.has_value())
+						return parsedValue;
+				}
 
                 for (std::string_view host : cdn.Hosts) {
                     if (!io::Download(_context, host, remotePath, localPath))
@@ -71,6 +79,11 @@ namespace io {
 
             return std::nullopt;
         }
+
+    public:
+        std::optional<tact::config::BuildConfig> const& GetBuildConfig() const { return _buildConfig; }
+
+        std::optional<tact::data::FileLocation> FindFile(tact::CKey const& ckey) const;
 
     private:
 		boost::asio::io_context& _context;

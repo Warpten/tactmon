@@ -70,4 +70,8 @@ namespace io {
 
         _logger->info("Found {} entries in install manifest.", _install->size());
     }
+
+    std::optional<tact::data::FileLocation> LocalCache::FindFile(tact::CKey const& ckey) const {
+        return _encoding->FindFile(ckey);
+    }
 }

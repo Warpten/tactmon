@@ -1,9 +1,12 @@
 #pragma once
 
-#include <io/IStream.hpp>
+#include "io/IStream.hpp"
+#include "tact/CKey.hpp"
+#include "tact/data/FileLocation.hpp"
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <span>
 #include <vector>
 
@@ -82,6 +85,8 @@ namespace tact::data {
             std::span<uint8_t const> ckey() const;
 
         private:
+            friend struct Encoding;
+
             size_t _ekeySize;
             size_t _ckeySize;
 
@@ -109,6 +114,8 @@ namespace tact::data {
 
         size_t count() const;
         size_t specCount() const;
+
+        std::optional<tact::data::FileLocation> FindFile(tact::CKey const& ckey) const;
 
     private:
         size_t _cekeyPageCount = 0;
