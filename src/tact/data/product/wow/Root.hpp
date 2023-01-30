@@ -50,6 +50,8 @@ namespace tact::data::product::wow {
         std::optional<tact::CKey> FindFile(uint32_t fileDataID) const;
         std::optional<tact::CKey> FindFile(std::string_view fileName) const;
 
+        size_t size() const { return _entries.size(); }
+
         struct Entry {
             tact::CKey ContentKey;
             uint32_t FileDataID;

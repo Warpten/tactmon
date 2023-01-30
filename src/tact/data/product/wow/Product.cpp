@@ -20,6 +20,8 @@ namespace tact::data::product::wow {
             return false;
 
         _root.emplace(stream->GetStream(), _localInstance->GetContentKeySize());
+
+        _localInstance->GetLogger()->info("Found {} entries in root manifest.", _root->size());
         return true;
     }
 

@@ -71,6 +71,11 @@ namespace io {
         _logger->info("Found {} entries in install manifest.", _install->size());
     }
 
+
+    std::shared_ptr<spdlog::logger> LocalCache::GetLogger() const {
+        return _logger;
+    }
+
     std::optional<tact::data::FileLocation> LocalCache::FindFile(tact::CKey const& ckey) const {
         return _encoding->FindFile(ckey);
     }

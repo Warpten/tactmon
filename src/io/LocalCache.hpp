@@ -84,6 +84,8 @@ namespace io {
 
         std::optional<tact::data::FileLocation> FindFile(tact::CKey const& ckey) const;
 
+        std::shared_ptr<spdlog::logger> GetLogger() const;
+
     private:
         boost::asio::io_context& _context;
         std::shared_ptr<spdlog::logger> _logger;

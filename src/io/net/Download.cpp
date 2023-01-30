@@ -29,24 +29,28 @@ namespace io {
         tcp::resolver r{ ctx };
 
         stream.connect(r.resolve(host, "80"), ec);
-        if (ec.failed()) return false;
+        if (ec.failed())
+            return false;
 
         http::request<http::string_body> req{ http::verb::get, std::format("/{}", query), 11 };
         req.set(http::field::host, host);
 
         http::write(stream, req, ec);
-        if (ec.failed()) return false;
+        if (ec.failed())
+            return false;
 
         std::filesystem::create_directories(filePath.parent_path());
 
         http::response_parser<http::file_body> res;
         res.body_limit({ });
         res.get().body().open(filePath.string().data(), boost::beast::file_mode::write, ec);
-        if (ec.failed()) return false;
+        if (res.get().result() != boost::beast::http::status::ok || ec.failed())
+            return false;
 
         boost::beast::flat_buffer buffer;
         boost::beast::http::read(stream, buffer, res, ec);
-        if (ec.failed()) return false;
+        if (ec.failed())
+            return false;
 
         logger_->trace("Downloaded '{}/{}' to '{}' ({} bytes).", host, query, filePath.string(), res.get()[http::field::content_length]);
 
