@@ -1,5 +1,7 @@
 #pragma once
 
+#include "tact/CKey.hpp"
+
 #include <cstdint>
 #include <list>
 #include <memory>
@@ -35,11 +37,17 @@ namespace tact::data {
 
         size_t size() const { return _entries.size(); }
 
+        std::optional<tact::CKey> FindFile(std::string_view fileName) const;
+
     private:
         Install();
 
         struct Entry {
             Entry(Install const& install, io::IReadableStream& stream, size_t hashSize, std::string_view name);
+
+            std::string_view name() const { return _name; }
+
+            tact::CKey const& ckey() const { return _hash; }
 
         private:
             Install const& _install;
@@ -47,8 +55,7 @@ namespace tact::data {
             std::string_view _name;
             size_t _fileSize;
             
-            size_t _hashSize;
-            std::unique_ptr<uint8_t[]> _hash;
+            tact::CKey _hash;
         };
 
         std::list<std::string> _tagNames; // Actual storage for tag names

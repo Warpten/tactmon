@@ -43,12 +43,10 @@ namespace tact::data {
     Install::Install() { }
 
     Install::Entry::Entry(Install const& install, io::IReadableStream& stream, size_t hashSize, std::string_view name)
-        : _install(install)
+        : _install(install), _hash((uint8_t*) stream.Data(), hashSize)
     {
-        _hashSize = hashSize;
-        _hash = std::make_unique<uint8_t[]>(_hashSize);
-        stream.Read(std::span { _hash.get(), hashSize }, std::endian::little);
-
+        // This is the hash, but we read it "in-place" in the initialization list.
+        stream.SkipRead(hashSize);
         _fileSize = stream.Read<uint32_t>(std::endian::big);
     }
 
@@ -76,5 +74,13 @@ namespace tact::data {
 
         other._bitmaskSize = 0;
         return *this;
+    }
+
+    std::optional<tact::CKey> Install::FindFile(std::string_view fileName) const {
+        auto itr = _entries.find(fileName);
+        if (itr != _entries.end())
+            return itr->second.ckey();
+
+        return std::nullopt;
     }
 }

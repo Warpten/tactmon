@@ -73,7 +73,8 @@ namespace tact {
         for (size_t i = 0; i < chunkCount; ++i) {
             fstream.SeekRead(chunks[i].Offset);
             if (!blte.LoadChunk(fstream, chunks[i].CompressedSize, chunks[i].DecompressedSize, chunks[i].Checksum)) {
-                spdlog::critical("Failed to read a chunk from BLTE archive {}: checksum mismatch.", ekey->ToString());
+                if (ekey != nullptr)
+                    spdlog::critical("Failed to read a chunk from BLTE archive {}: checksum mismatch.", ekey->ToString());
 
                 return std::nullopt;
             }
@@ -95,11 +96,7 @@ namespace tact {
         if (stream.GetReadCursor() + compressedSize > stream.GetLength())
             return false;
 
-        std::unique_ptr<uint8_t[]> buffer = std::make_unique<uint8_t[]>(compressedSize);
-        std::span<uint8_t> chunkSpan { buffer.get(), compressedSize };
-        size_t readCount = stream.Read(chunkSpan, std::endian::little);
-        if (readCount != compressedSize)
-            return false;
+        std::span<uint8_t> chunkSpan { (uint8_t*) stream.Data(), compressedSize };
 
         // Ensure data matches checksum
         crypto::MD5::Digest digest = crypto::MD5::Of(chunkSpan);

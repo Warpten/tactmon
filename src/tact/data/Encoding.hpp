@@ -37,8 +37,9 @@ namespace tact::data {
             struct {
                 uint32_t PageSize = 0;
                 uint32_t PageCount = 0;
-                uint8_t HashSize = 0;
             } CEKey, EKeySpec;
+            uint32_t EncodingKeySize = 0;
+            uint32_t ContentKeySize = 0;
             uint32_t ESpecBlockSize = 0;
 
             Header(io::IReadableStream& stream);
@@ -101,21 +102,14 @@ namespace tact::data {
 
             static size_t HashSize(Header const& header);
 
-            size_t size() const;
-            size_t fileSize() const;
+            size_t keyCount() const { return _keyCount; }
+            size_t fileSize() const { return _fileSize; }
 
-            tact::EKey operator [] (size_t index) const;
-
-            tact::CKey ckey() const;
+            tact::EKey ekey(size_t index, Encoding const& owner) const;
+            tact::CKey ckey(Encoding const& owner) const;
 
         private:
             friend struct Encoding;
-
-            // TODO: Moving these up in Encoding saves ~30MB of RAM.
-            // The rationale is that all entries share the same ekey/ckey sizes
-            // (and it is already persisted in Encoding::_header).
-            size_t _ekeySize = 0;
-            size_t _ckeySize = 0;
 
             uint64_t _fileSize; // Of the non-encoded version of the file
             std::unique_ptr<uint8_t[]> _ckey = nullptr;

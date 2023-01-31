@@ -22,8 +22,8 @@ namespace tact::data {
 
         Signature          = stream.Read<uint16_t>(std::endian::big);
         Version            = stream.Read<uint8_t>(std::endian::little);
-        CEKey.HashSize     = stream.Read<uint8_t>(std::endian::little);
-        EKeySpec.HashSize  = stream.Read<uint8_t>(std::endian::little);
+        EncodingKeySize    = stream.Read<uint8_t>(std::endian::little);
+        ContentKeySize     = stream.Read<uint8_t>(std::endian::little);
         CEKey.PageSize     = stream.Read<uint16_t>(std::endian::big) * 1024;
         EKeySpec.PageSize  = stream.Read<uint16_t>(std::endian::big) * 1024;
         CEKey.PageCount    = stream.Read<uint32_t>(std::endian::big);
@@ -33,28 +33,25 @@ namespace tact::data {
     }
 
     Encoding::CEKeyPageTable::CEKeyPageTable(io::IReadableStream& stream, Header const& header)
-        : _ekeySize(header.CEKey.HashSize), _ckeySize(header.EKeySpec.HashSize)
     {
         _keyCount = stream.Read<uint8_t>(std::endian::little);
         _fileSize = ReadUInt40(stream, std::endian::big);
 
-        _ckey = std::make_unique<uint8_t[]>(_ckeySize);
-        stream.Read(std::span { _ckey.get(), _ckeySize }, std::endian::little);
+        _ckey = std::make_unique<uint8_t[]>(header.ContentKeySize);
+        stream.Read(std::span { _ckey.get(), header.ContentKeySize }, std::endian::little);
 
-        if (_keyCount * _ekeySize > 0) {
-            _ekeys = std::make_unique<uint8_t[]>(_ekeySize * _keyCount);
-            stream.Read(std::span{ _ekeys.get(), _ekeySize * _keyCount }, std::endian::little);
+        if (_keyCount * header.EncodingKeySize > 0) {
+            _ekeys = std::make_unique<uint8_t[]>(header.EncodingKeySize * _keyCount);
+            stream.Read(std::span{ _ekeys.get(), header.EncodingKeySize * _keyCount }, std::endian::little);
         }
     }
 
     Encoding::CEKeyPageTable::CEKeyPageTable(CEKeyPageTable&& other) noexcept 
-        : _ekeySize(other._ekeySize), _ckeySize(other._ckeySize), _fileSize(other._fileSize),
+        : _fileSize(other._fileSize),
         _ckey(std::move(other._ckey)), _ekeys(std::move(other._ekeys)), _keyCount(other._keyCount)
     { }
 
     Encoding::CEKeyPageTable& Encoding::CEKeyPageTable::operator = (Encoding::CEKeyPageTable&& other) noexcept {
-        _ekeySize = other._ekeySize;
-        _ckeySize = other._ckeySize;
         _fileSize = other._fileSize;
         _ckey = std::move(other._ckey);
         _ekeys = std::move(other._ekeys);
@@ -68,21 +65,14 @@ namespace tact::data {
     }
 
     /* static */ size_t Encoding::CEKeyPageTable::HashSize(Header const& header) {
-        return header.CEKey.HashSize;
+        return header.ContentKeySize;
     }
 
-    size_t Encoding::CEKeyPageTable::size() const {
-        return _keyCount;
+    tact::EKey Encoding::CEKeyPageTable::ekey(size_t index, Encoding const& owner) const {
+        return { _ekeys.get() + index * owner._header.EncodingKeySize, owner._header.EncodingKeySize };
     }
-
-    tact::EKey Encoding::CEKeyPageTable::operator [] (size_t index) const {
-        return { _ekeys.get() + index * _ekeySize, _ekeySize };
-    }
-
-    size_t Encoding::CEKeyPageTable::fileSize() const { return _fileSize; }
-
-    tact::CKey Encoding::CEKeyPageTable::ckey() const {
-        return { _ckey.get(), _ckeySize };
+    tact::CKey Encoding::CEKeyPageTable::ckey(Encoding const& owner) const {
+        return { _ckey.get(), owner._header.ContentKeySize };
     }
 
     // ^^^ CEKeyPageTable / EKeySpecPageTable vvv
@@ -109,18 +99,19 @@ namespace tact::data {
     }
 
     Encoding::EKeySpecPageTable::EKeySpecPageTable(io::IReadableStream& stream, Header const& header) {
-        if (!stream.CanRead(header.EKeySpec.HashSize + 4 + 5))
+        size_t encodingKeySize = HashSize(header);
+        if (!stream.CanRead(encodingKeySize + 4 + 5))
             return;
 
-        _ekey = std::make_unique<uint8_t[]>(header.EKeySpec.HashSize);
-        stream.Read(std::span{ _ekey.get(), header.EKeySpec.HashSize }, std::endian::little);
+        _ekey = std::make_unique<uint8_t[]>(encodingKeySize);
+        stream.Read(std::span{ _ekey.get(), encodingKeySize }, std::endian::little);
 
         _especIndex = stream.Read<uint32_t>(std::endian::big);
         _fileSize = ReadUInt40(stream, std::endian::big);
     }
 
     /* static */ size_t Encoding::EKeySpecPageTable::HashSize(Header const& header) {
-        return header.EKeySpec.HashSize;
+        return header.EncodingKeySize;
     }
 
     // ^^^ EKeySpecPageTable / Encoding vvv
@@ -131,7 +122,7 @@ namespace tact::data {
 
         stream.SkipRead(_header.ESpecBlockSize); // Skip ESpec strings
 
-        size_t pageStart = stream.GetReadCursor() + _header.CEKey.PageCount * (_header.CEKey.HashSize + 0x10);
+        size_t pageStart = stream.GetReadCursor() + _header.CEKey.PageCount * (_header.EncodingKeySize + 0x10);
 
         _cekeyPageCount = _header.CEKey.PageCount;
         _cekeyPages = std::make_unique<Page<CEKeyPageTable>[]>(_header.CEKey.PageCount);
@@ -174,7 +165,7 @@ namespace tact::data {
     }
 
     size_t Encoding::GetContentKeySize() const {
-        return _header.CEKey.HashSize;
+        return _header.ContentKeySize;
     }
 
     std::optional<tact::data::FileLocation> Encoding::FindFile(tact::CKey const& contentKey) const {
@@ -182,10 +173,10 @@ namespace tact::data {
             Page<CEKeyPageTable> const& page = _cekeyPages[i];
 
             for (size_t j = 0; j < page.size(); ++j) {
-                auto&& entry = page[j].ckey();
+                auto&& entry = page[j].ckey(*this);
 
                 if (entry == contentKey)
-                    return tact::data::FileLocation { page[j].fileSize(), page[j].size(), std::span<uint8_t> { page[j]._ekeys.get(), page[j]._ekeySize }};
+                    return tact::data::FileLocation { page[j].fileSize(), page[j].keyCount(), std::span<uint8_t> { page[j]._ekeys.get(), page[j].keyCount() * _header.EncodingKeySize }};
             }
         }
 

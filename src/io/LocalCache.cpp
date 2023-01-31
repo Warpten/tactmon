@@ -83,4 +83,8 @@ namespace io {
     size_t LocalCache::GetContentKeySize() const {
         return _encoding->GetContentKeySize();
     }
+
+    std::optional<tact::CKey> LocalCache::FindFile(std::string_view fileName) const {
+        return _install->FindFile(fileName);
+    }
 }

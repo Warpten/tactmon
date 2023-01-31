@@ -120,6 +120,8 @@ namespace io {
 
         virtual bool CanRead(size_t amount) const = 0;
 
+        virtual std::byte const* Data() const = 0;
+
         /**
          * Reads a value from the stream, using the given endianness.
          * 

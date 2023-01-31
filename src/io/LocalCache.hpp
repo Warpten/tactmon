@@ -83,6 +83,7 @@ namespace io {
         std::optional<tact::config::BuildConfig> const& GetBuildConfig() const { return _buildConfig; }
 
         std::optional<tact::data::FileLocation> FindFile(tact::CKey const& ckey) const;
+        std::optional<tact::CKey> FindFile(std::string_view fileName) const;
 
         std::shared_ptr<spdlog::logger> GetLogger() const;
 

@@ -26,13 +26,18 @@ namespace tact::data::product::wow {
     }
 
     std::optional<tact::data::FileLocation> Product::FindFile(std::string_view fileName) const {
-        if (!_root.has_value())
-            return std::nullopt;
+        if (_root.has_value()) {
+            std::optional<tact::CKey> contentKey = _root->FindFile(fileName);
+            if (!contentKey.has_value())
+                return std::nullopt;
 
-        std::optional<tact::CKey> contentKey = _root->FindFile(fileName);
+            return tact::data::product::Product::FindFile(*contentKey);
+        }
+
+        std::optional<tact::CKey> contentKey = _localInstance->FindFile(fileName);
         if (!contentKey.has_value())
             return std::nullopt;
-
+        
         return tact::data::product::Product::FindFile(*contentKey);
     }
 
