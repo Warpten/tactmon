@@ -28,16 +28,16 @@ namespace tact::data::product::wow {
     std::optional<tact::data::FileLocation> Product::FindFile(std::string_view fileName) const {
         if (_root.has_value()) {
             std::optional<tact::CKey> contentKey = _root->FindFile(fileName);
-            if (!contentKey.has_value())
-                return std::nullopt;
-
-            return tact::data::product::Product::FindFile(*contentKey);
+            if (contentKey.has_value())
+                return tact::data::product::Product::FindFile(*contentKey);
         }
 
+        // Try to look into Install.
         std::optional<tact::CKey> contentKey = _localInstance->FindFile(fileName);
         if (!contentKey.has_value())
             return std::nullopt;
         
+        // Resolve this CKey.
         return tact::data::product::Product::FindFile(*contentKey);
     }
 

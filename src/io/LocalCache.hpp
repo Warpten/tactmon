@@ -8,8 +8,10 @@
 #include "net/ribbit/types/Versions.hpp"
 
 #include "tact/config/BuildConfig.hpp"
+#include "tact/config/CDNConfig.hpp"
 #include "tact/data/Encoding.hpp"
 #include "tact/data/Install.hpp"
+#include "tact/data/Index.hpp"
 #include "tact/CKey.hpp"
 
 #include <filesystem>
@@ -97,7 +99,10 @@ namespace io {
         net::ribbit::types::versions::Record _version;
 
         std::optional<tact::config::BuildConfig> _buildConfig;
+        std::optional<tact::config::CDNConfig> _cdnConfig;
+
         std::optional<tact::data::Encoding> _encoding;
         std::optional<tact::data::Install> _install;
+        std::vector<tact::data::Index> _indices;
     };
 }

@@ -21,7 +21,16 @@ namespace io {
         });
 
         if (!_buildConfig.has_value()) {
-            _logger->error("An error occured while parsing build configuration");
+            _logger->error("An error occured while parsing build configuration.");
+            return;
+        }
+
+        _cdnConfig = ResolveConfig<tact::config::CDNConfig>(_version.CDNConfig, [](io::IReadableStream& fstream) -> std::optional<tact::config::CDNConfig> {
+            return tact::config::CDNConfig { fstream };
+        });
+
+        if (!_cdnConfig.has_value()) {
+            _logger->error("An error occured while parsing CDN configuration.");
             return;
         }
 
@@ -69,6 +78,22 @@ namespace io {
         }
 
         _logger->info("Found {} entries in install manifest.", _install->size());
+
+        _cdnConfig->ForEachArchive(
+            [this](std::string_view archiveName, size_t archiveSize) {
+                this->_logger->debug("Processing {}.index.", archiveName);
+
+                this->ResolveData<int>(std::format("{}.index", archiveName),
+                    [this, archiveName](io::IReadableStream& dataStream) -> std::optional<int> {
+                        this->_indices.emplace_back(archiveName, dataStream);
+
+                        return 1;
+                    }
+                );
+            }
+        );
+
+        _logger->info("Processed {} archive indices.", _indices.size());
     }
 
 

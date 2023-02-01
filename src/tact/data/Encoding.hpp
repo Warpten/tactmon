@@ -51,14 +51,14 @@ namespace tact::data {
             Page() = default;
 
             Page(io::IReadableStream& stream, Header const& header, size_t pageOffset, size_t pageEnd) {
-                _hashSize = T::HashSize(header);
+                size_t hashSize = T::HashSize(header);
 
                 if constexpr (!Indexed) {
-                    stream.SkipRead(_hashSize + 0x10);
+                    stream.SkipRead(hashSize + 0x10);
                 }
                 else {
-                    _index = std::make_unique<uint8_t[]>(_hashSize + 0x10);
-                    stream.Read(std::span{ _index.get(), _hashSize + 0x10 }, std::endian::little);
+                    _index = std::make_unique<uint8_t[]>(hashSize + 0x10);
+                    stream.Read(std::span{ _index.get(), hashSize + 0x10 }, std::endian::little);
                 }
 
                 size_t position = stream.GetReadCursor();
@@ -81,7 +81,6 @@ namespace tact::data {
             size_t size() const { return _entries.size(); }
 
         private:
-            size_t _hashSize;
             std::vector<T> _entries;
 
             //! Because I can't be bothered specializing on the boolean.

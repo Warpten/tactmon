@@ -58,6 +58,8 @@ namespace tact::data::product {
         for (size_t i = 0; i < location.keyCount(); ++i) {
             tact::EKey encodingKey { location[i] };
 
+            // Try via indexes
+
             auto stream = _localInstance->ResolveData<tact::BLTE>(encodingKey.ToString(), [](io::IReadableStream& stream) -> std::optional<tact::BLTE> {
                 std::optional<tact::BLTE> decompressedFile = tact::BLTE::Parse(stream);
                 if (decompressedFile.has_value())
