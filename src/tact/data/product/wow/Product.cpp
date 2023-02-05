@@ -12,20 +12,28 @@ namespace tact::data::product::wow {
         if (!rootLocation)
             return false;
 
-        std::optional<tact::data::product::wow::Root> root = Base::ResolveCachedData<tact::data::product::wow::Root>(_buildConfig->Root.ToString(), [&encoding = _encoding](io::FileStream& fstream) -> std::optional<tact::data::product::wow::Root> {
-            std::optional<tact::BLTE> blte = tact::BLTE::Parse(fstream);
-            if (blte.has_value())
-                return tact::data::product::wow::Root { blte->GetStream(), encoding->GetContentKeySize() };
-            
-            return std::nullopt;
-        });
+        _root = [&]() -> std::optional<tact::data::product::wow::Root> {
+            for (size_t i = 0; i < rootLocation->keyCount(); ++i) {
+                tact::CKey key{ (*rootLocation)[i] };
 
-        if (!root.has_value())
+                auto root = Base::ResolveCachedData<tact::data::product::wow::Root>(key.ToString(), [&encoding = _encoding](io::FileStream& fstream) -> std::optional<tact::data::product::wow::Root> {
+                    std::optional<tact::BLTE> blte = tact::BLTE::Parse(fstream);
+                    if (blte.has_value())
+                        return tact::data::product::wow::Root{ blte->GetStream(), encoding->GetContentKeySize() };
+
+                    return std::nullopt;
+                });
+                if (root.has_value())
+                    return root;
+            }
+
+            return std::nullopt;
+        }();
+
+        if (!_root.has_value())
             return false;
 
-        _root.emplace(std::move(*root));
-
-        _logger->info("Found {} entries in root manifest.", _root->size());
+        _logger->info("{} entries found in root manifest.", _root->size());
         return true;
     }
 

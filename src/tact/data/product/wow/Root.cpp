@@ -1,3 +1,4 @@
+#include "crypto/Jenkins.hpp"
 #include "tact/data/product/wow/Root.hpp"
 
 namespace tact::data::product::wow {
@@ -98,6 +99,11 @@ namespace tact::data::product::wow {
     }
 
     std::optional<tact::CKey> Root::FindFile(std::string_view fileName) const {
+        uint32_t jenkinsHash = crypto::JenkinsHash(fileName);
+        for (Entry const& entry : _entries)
+            if (entry.NameHash == jenkinsHash)
+                return entry.ContentKey;
+
         return std::nullopt;
     }
 }

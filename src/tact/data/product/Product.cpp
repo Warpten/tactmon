@@ -80,6 +80,7 @@ namespace tact::data::product {
 
         _logger->info("Detected encoding manifest: {}.", _buildConfig->Encoding.Key.EncodingKey.ToString());
         _logger->info("Detected install manifest: {}.", _buildConfig->Install.Key.EncodingKey.ToString());
+        _logger->info("Detected root manifest: {}.", _buildConfig->Root.ToString());
 
         _encoding = ResolveCachedData<tact::data::Encoding>(_buildConfig->Encoding.Key.EncodingKey.ToString(),
             [&key = _buildConfig->Encoding.Key](io::FileStream& fstream) -> std::optional<tact::data::Encoding>
