@@ -152,7 +152,7 @@ namespace tact::data::product {
          * 
          * @returns The location of the file, or an empty optional if not found.
          */
-        virtual std::optional<tact::data::FileLocation> FindFile(std::string_view fileName) const { return std::nullopt; }
+        virtual std::optional<tact::data::FileLocation> FindFile(std::string_view fileName) const;
 
         /**
          * Locates a file by FDID.

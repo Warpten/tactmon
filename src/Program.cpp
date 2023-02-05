@@ -81,9 +81,11 @@ using namespace std::string_view_literals;
 namespace fs = std::filesystem;
 
 void Execute(boost::asio::io_context& context) {
-    tact::data::product::wow::Product wow("wow", context);
+    tact::data::product::wow::Product wow("wow", std::filesystem::current_path() / "cache", context);
     wow.Refresh();
 
-    using namespace std::chrono_literals;
-    std::this_thread::sleep_for(10s);
+    std::optional<tact::data::FileLocation> fileLocation = wow.FindFile("Wow.exe"); // or wow.FindFile(some_fdid)
+    if (fileLocation.has_value()) {
+        std::optional<tact::BLTE> fileStream = wow.Open(*fileLocation);
+    }
 }

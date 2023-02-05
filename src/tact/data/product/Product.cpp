@@ -132,6 +132,14 @@ namespace tact::data::product {
         return true;
     }
 
+    std::optional<tact::data::FileLocation> Product::FindFile(std::string_view fileName) const {
+        std::optional<tact::CKey> installKey = _install->FindFile(fileName);
+        if (installKey.has_value())
+            return FindFile(*installKey);
+
+        return std::nullopt;
+    }
+
     std::optional<tact::data::FileLocation> Product::FindFile(tact::CKey const& contentKey) const {
         if (!_encoding.has_value())
             return std::nullopt;
