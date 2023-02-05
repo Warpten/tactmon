@@ -253,4 +253,13 @@ namespace net::ribbit {
         boost::asio::io_context& _ctx;
         boost::asio::ip::tcp::socket _socket;
     };
+
+    template <Region R, Version V = Version::V1>
+    using CDNs = CommandExecutor<Command::ProductCDNs, R, V>;
+
+    template <Region R, Version V = Version::V1>
+    using Versions = CommandExecutor<Command::ProductVersions, R, V>;
+
+    template <Region R, Version V = Version::V1>
+    using Summary = CommandExecutor<Command::Summary, R, V>;
 }

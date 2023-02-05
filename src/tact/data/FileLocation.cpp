@@ -9,4 +9,10 @@ namespace tact::data {
         size_t keySize = _keys.size() / _keyCount;
         return _keys.subspan(index * keySize, keySize);
     }
+
+    IndexFileLocation::IndexFileLocation(std::string_view archiveName) : _archiveName(archiveName) { }
+
+    IndexFileLocation::IndexFileLocation(std::string_view archiveName, size_t offset, size_t size)
+        : _archiveName(archiveName), _fileSize(size), _offset(offset)
+    { }
 }

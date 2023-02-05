@@ -30,6 +30,8 @@ namespace tact {
 
         std::string ToString() const;
 
+        std::span<uint8_t const> data() const { return std::span<uint8_t const> { _data.get(), _size }; }
+
         friend bool operator == (CKey const& left, CKey const& right) noexcept;
 
         template <typename T>

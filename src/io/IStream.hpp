@@ -51,11 +51,11 @@ namespace io {
 
         template <typename T>
         size_t Write(T value, std::endian endianness) {
-            if constexpr (detail::is_span<T>::value) {
-                return _WriteSpan(value, endianness, sizeof(typename T::value_type));
-            } else {
+            if constexpr (detail::is_span_v<T>) {
+                return _WriteSpan(value, endianness, sizeof(T));
+            }
+            else {
                 std::span<T> valueSpan{ std::addressof(value), 1 };
-
                 return _WriteSpan(valueSpan, endianness, sizeof(T));
             }
         }

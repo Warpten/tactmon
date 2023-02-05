@@ -10,7 +10,8 @@
 
 namespace tact::data::product::wow {
     struct Product final : tact::data::product::Product {
-        using tact::data::product::Product::Product;
+        using Base = tact::data::product::Product;
+        using Base::Base;
 
         struct Entry final {
             Entry(std::span<uint8_t, 0x10> hash, uint64_t fileDataID, uint64_t nameHash) noexcept
@@ -27,8 +28,7 @@ namespace tact::data::product::wow {
         std::optional<tact::data::FileLocation> FindFile(std::string_view fileName) const override;
         std::optional<tact::data::FileLocation> FindFile(uint32_t fileDataID) const override;
 
-    protected:
-        bool LoadRoot() override;
+        bool Refresh() noexcept override;
 
     private:
         std::vector<Entry> _entries;

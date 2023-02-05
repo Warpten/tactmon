@@ -24,6 +24,6 @@ namespace tact {
         io::IReadableStream& GetStream() { return _dataBuffer; }
 
     private:
-        io::mem::GrowableMemoryStream _dataBuffer{ std::endian::little };
+        io::mem::GrowableMemoryStream _dataBuffer { std::endian::little };
     };
 }

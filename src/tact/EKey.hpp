@@ -33,6 +33,8 @@ namespace tact {
         std::string ToString() const;
 
         friend bool operator == (EKey const& left, EKey const& right) noexcept;
+
+        std::span<uint8_t const> data() const { return std::span<uint8_t const> { _data.get(), _size }; }
         
         template <typename T>
         requires requires (T instance) {

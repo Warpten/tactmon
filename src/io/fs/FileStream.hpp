@@ -1,27 +1,32 @@
+#pragma once
+
 #include "io/IStream.hpp"
 
-#include <bit>
 #include <filesystem>
-#include <fstream>
+
+#include <boost/iostreams/device/mapped_file.hpp>
 
 namespace io {
     struct FileStream final : IReadableStream {
-        FileStream(std::filesystem::path filePath, std::endian endianness);
+        FileStream(std::filesystem::path filePath, std::endian fileEndianness);
 
     public: // IStream
         size_t GetLength() const override;
-        operator bool() const { return _fileHandle.is_open(); }
+        operator bool() const override { return _stream.is_open(); }
 
     public: // IReadableStream
         size_t SeekRead(size_t offset) override;
         size_t GetReadCursor() const override;
-        bool CanRead(size_t count) const override { return GetReadCursor() + count <= GetLength(); }
+        void SkipRead(size_t offset) override { _cursor += offset; }
+        bool CanRead(size_t count) const override { return _cursor + count <= _stream.size(); }
+
+        std::byte const* Data() const override { return reinterpret_cast<std::byte const*>(_stream.data() + _cursor); }
 
     protected: // IReadableStream
         size_t _ReadImpl(std::span<std::byte> bytes) override;
 
     private:
-        std::fstream _fileHandle;
-        std::filesystem::path _filePath;
+        boost::iostreams::mapped_file_source _stream{ };
+        size_t _cursor = 0;
     };
 }
