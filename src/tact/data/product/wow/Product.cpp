@@ -1,6 +1,5 @@
 #include "tact/BLTE.hpp"
 #include "tact/data/product/wow/Product.hpp"
-#include "io/net/Download.hpp"
 
 #include <fstream>
 
@@ -13,11 +12,18 @@ namespace tact::data::product::wow {
         if (!rootLocation)
             return false;
 
-        std::optional<tact::BLTE> stream = Open(*rootLocation);
-        if (!stream.has_value())
+        std::optional<tact::data::product::wow::Root> root = Base::ResolveCachedData<tact::data::product::wow::Root>(_buildConfig->Root.ToString(), [&encoding = _encoding](io::FileStream& fstream) -> std::optional<tact::data::product::wow::Root> {
+            std::optional<tact::BLTE> blte = tact::BLTE::Parse(fstream);
+            if (blte.has_value())
+                return tact::data::product::wow::Root { blte->GetStream(), encoding->GetContentKeySize() };
+            
+            return std::nullopt;
+        });
+
+        if (!root.has_value())
             return false;
 
-        _root.emplace(stream->GetStream(), _encoding->GetContentKeySize());
+        _root.emplace(std::move(*root));
 
         _logger->info("Found {} entries in root manifest.", _root->size());
         return true;

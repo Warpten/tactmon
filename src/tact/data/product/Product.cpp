@@ -99,6 +99,8 @@ namespace tact::data::product {
             return false;
         }
 
+        _logger->info("{} entries found in encoding manifest.", _encoding->count());
+
         _install = ResolveCachedData<tact::data::Install>(_buildConfig->Install.Key.EncodingKey.ToString(),
             [&key = _buildConfig->Install.Key](io::FileStream& fstream) -> std::optional<tact::data::Install>
             {
@@ -116,6 +118,8 @@ namespace tact::data::product {
             _logger->error("An error occured while parsing install manifest.");
             return false;
         }
+
+        _logger->info("{} entries found in install manifest.", _install->size());
 
         _cdnConfig->ForEachArchive([this](std::string_view archiveName, size_t i) {
             auto dataStream = ResolveCachedData<io::FileStream>(std::format("{}.index", archiveName), [](io::FileStream& fstream) -> std::optional<io::FileStream> {

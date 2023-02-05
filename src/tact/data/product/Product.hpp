@@ -27,7 +27,7 @@ namespace tact::data::product {
         Product(std::string_view productName, std::filesystem::path installationRoot,
             boost::asio::io_context& context);
 
-    private: // Resource resolution APIs
+    protected: // Resource resolution APIs
 
         /**
         * Resolves a configuration file.

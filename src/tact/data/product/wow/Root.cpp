@@ -64,6 +64,31 @@ namespace tact::data::product::wow {
         }
     }
 
+    Root::Root(Root&& other) noexcept : _entries(std::move(other._entries)) {
+
+    }
+
+    Root& Root::operator = (Root&& other) noexcept {
+        _entries = std::move(other._entries);
+        return *this;
+    }
+
+    Root::Entry::Entry(Entry&& other) noexcept : ContentKey(std::move(other.ContentKey)), FileDataID(other.FileDataID), NameHash(other.NameHash) {
+        other.FileDataID = 0;
+        other.NameHash = 0;
+    }
+
+    Root::Entry& Root::Entry::operator = (Entry&& other) noexcept {
+        ContentKey = std::move(other.ContentKey);
+        FileDataID = other.FileDataID;
+        NameHash = other.NameHash;
+
+        other.FileDataID = 0;
+        other.NameHash = 0;
+
+        return *this;
+    }
+
     std::optional<tact::CKey> Root::FindFile(uint32_t fileDataID) const {
         for (Entry const& entry : _entries)
             if (entry.FileDataID == fileDataID)

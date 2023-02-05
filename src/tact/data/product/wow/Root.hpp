@@ -46,6 +46,9 @@ namespace tact::data::product::wow {
         };
 
         Root(io::IReadableStream& stream, size_t contentKeySize);
+        Root(Root&& other) noexcept;
+
+        Root& operator = (Root&& other) noexcept;
 
         std::optional<tact::CKey> FindFile(uint32_t fileDataID) const;
         std::optional<tact::CKey> FindFile(std::string_view fileName) const;
@@ -56,6 +59,9 @@ namespace tact::data::product::wow {
             tact::CKey ContentKey;
             uint32_t FileDataID;
             uint64_t NameHash;
+
+            Entry(Entry&& other) noexcept;
+            Entry& operator = (Entry&& other) noexcept;
 
             Entry(Entry const& other) : ContentKey(other.ContentKey), FileDataID(other.FileDataID), NameHash(other.NameHash) { }
 
