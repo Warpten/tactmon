@@ -4,8 +4,8 @@
 #include <fstream>
 
 namespace tact::data::product::wow {
-    bool Product::Refresh() noexcept {
-        if (!tact::data::product::Product::Refresh())
+    bool Product::Load(std::string_view buildConfig, std::string_view cdnConfig) noexcept {
+        if (!tact::data::product::Product::Load(buildConfig, cdnConfig))
             return false;
 
         std::optional<tact::data::FileLocation> rootLocation = Base::FindFile(_buildConfig->Root);

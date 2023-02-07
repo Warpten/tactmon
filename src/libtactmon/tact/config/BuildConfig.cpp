@@ -55,6 +55,10 @@ namespace tact::config {
                 if (tokens.size() == 3)
                     std::from_chars(tokens[2].data(), tokens[2].data() + tokens[2].size(), cfg.Encoding.Size[1]);
             }
+        }, { "build-name",
+            [](BuildConfig& cfg, auto tokens) {
+                cfg.BuildName = tokens[1];
+            }
         }
     };
 
@@ -79,8 +83,6 @@ namespace tact::config {
                 handler.Handler(*this, std::move(tokens));
                 break;
             }
-
-            // TODO: Process everything else?
         }
     }
 }

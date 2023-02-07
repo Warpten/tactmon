@@ -28,7 +28,7 @@ namespace tact::data::product::wow {
         std::optional<tact::data::FileLocation> FindFile(std::string_view fileName) const override;
         std::optional<tact::data::FileLocation> FindFile(uint32_t fileDataID) const override;
 
-        bool Refresh() noexcept override;
+        bool Load(std::string_view buildConfig, std::string_view cdnConfig) noexcept override;
 
     private:
         std::vector<Entry> _entries;

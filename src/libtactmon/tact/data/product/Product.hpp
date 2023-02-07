@@ -27,6 +27,8 @@ namespace tact::data::product {
         Product(std::string_view productName, std::filesystem::path installationRoot,
             boost::asio::io_context& context);
 
+        std::string_view name() const { return _productName; }
+
     protected: // Resource resolution APIs
 
         /**
@@ -143,7 +145,9 @@ namespace tact::data::product {
         }
 
     public: // Front-facing API
-        virtual bool Refresh() noexcept;
+        std::optional<net::ribbit::types::Versions> Refresh() noexcept;
+
+        virtual bool Load(std::string_view buildConfig, std::string_view cdnConfig) noexcept;
 
         /**
          * Locates a file.
@@ -199,7 +203,6 @@ namespace tact::data::product {
         std::shared_ptr<spdlog::logger> _logger;
 
         std::optional<net::ribbit::types::CDNs> _cdns;
-        std::optional<net::ribbit::types::versions::Record> _version;
 
         std::optional<tact::config::BuildConfig> _buildConfig;
         std::optional<tact::config::CDNConfig> _cdnConfig;

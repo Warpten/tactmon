@@ -57,8 +57,8 @@ namespace tact::data::product::wow {
 
         struct Entry {
             tact::CKey ContentKey;
-            uint32_t FileDataID;
-            uint64_t NameHash;
+            uint32_t FileDataID = 0;
+            uint64_t NameHash = 0;
 
             Entry(Entry&& other) noexcept;
             Entry& operator = (Entry&& other) noexcept;
