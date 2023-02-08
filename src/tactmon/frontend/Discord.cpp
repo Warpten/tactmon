@@ -1,3 +1,5 @@
+#include "backend/Queries.hpp"
+#include "backend/Entities.hpp"
 #include "frontend/Discord.hpp"
 
 #include <ext/Literal.hpp>
@@ -186,7 +188,11 @@ namespace frontend {
                 return;
             }
 
-            std::optional<backend::Database::Build> buildEntry = _database.SelectBuild(selectedBuildName);
+            namespace db = backend::db;
+            namespace entities = db::entities;
+            namespace build = entities::build;
+
+            std::optional<build::Entity> buildEntry = _database.SelectBuild(selectedBuildName);
             if (!buildEntry.has_value()) {
                 event.edit_response(dpp::message().add_embed(
                     dpp::embed()
@@ -200,15 +206,20 @@ namespace frontend {
                 return;
             }
 
-            if (!product->Load(buildEntry->BuildConfig, buildEntry->CdnConfig)) {
+            std::string buildConfig { db::get<build::build_config>(*buildEntry) };
+            std::string cdnConfig { db::get<build::cdn_config>(*buildEntry) };
+
+            if (!product->Load(buildConfig, cdnConfig)) {
                 event.edit_response(dpp::message().add_embed(
                     dpp::embed()
                         .set_title(productName)
                         .set_color(0x00FF0000u)
                         .set_description("An internal error occured.")
                         .set_footer(dpp::embed_footer()
-                            .set_text(std::format("{} - {} / {}", selectedBuildName, buildEntry->BuildConfig, buildEntry->CdnConfig)))
-                ));
+                            .set_text(std::format("{} - {} / {}", selectedBuildName, buildConfig, cdnConfig))
+                        )
+                    )
+                );
 
                 return;
             }
@@ -246,7 +257,12 @@ namespace frontend {
     }
 
     void Discord::OnDownloadCommand(dpp::slashcommand_t const& event, std::string const& product, std::string const& file) {
-        std::vector<backend::Database::Build> builds = _database.SelectBuilds(product);
+
+        namespace db = backend::db;
+        namespace entities = db::entities;
+        namespace build = entities::build;
+
+        auto builds = _database.SelectBuilds(product);
         if (builds.empty()) {
             event.reply(dpp::message().add_embed(
                 dpp::embed()
@@ -265,8 +281,16 @@ namespace frontend {
             .set_id("client_build_for_download")
             .set_placeholder("Please select a build");
 
-        for (backend::Database::Build const& build : builds)
-            buildSelectionComponent.add_select_option(dpp::select_option(build.Name, std::format("key-{}", build.ID)));
+        {
+            using namespace backend::db::entities;
+            for (build::dto::BuildName const& entity : builds)
+                buildSelectionComponent.add_select_option(
+                    dpp::select_option(
+                        db::get<build::build_name>(entity),
+                        std::format("key-{}", db::get<build::id>(entity))
+                    )
+                );
+        }
 
         event.reply(dpp::message().set_content("Select the client build for which you want this file.")
             .add_component(dpp::component().add_component(buildSelectionComponent))
