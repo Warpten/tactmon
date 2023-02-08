@@ -21,6 +21,8 @@ namespace backend {
 
         std::vector<entities::build::dto::BuildName> SelectBuilds(std::string const& productName);
 
+        std::optional<entities::build::dto::ProductStatistics> SelectProductStatistics(std::string const& productName);
+
     private:
         pqxx::connection _connection;
     };

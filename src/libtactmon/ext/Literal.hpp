@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <string>
 
 namespace ext {
     template <size_t N>
@@ -9,7 +10,7 @@ namespace ext {
             std::copy_n(val, N, Value);
         }
 
-        static constexpr std::string ToString() { return Value; }
+        constexpr std::string ToString() const { return Value; }
 
         constexpr static const size_t Size = N;
         char Value[N];

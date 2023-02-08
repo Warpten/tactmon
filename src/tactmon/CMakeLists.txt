@@ -34,11 +34,6 @@ target_compile_definitions(tactmon
     BOOST_BEAST_USE_STD_STRING_VIEW
 )
 
-set_target_properties(tactmon
-  PROPERTIES
-  LINK_FLAGS "${wownitor_LINK_FLAGS}"
-)
-
 set_property(TARGET tactmon
   PROPERTY
     CXX_STANDARD 20

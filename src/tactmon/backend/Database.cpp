@@ -17,6 +17,7 @@ namespace backend {
     {
         entities::build::queries::SelectByName::Prepare(_connection);
         entities::build::queries::SelectForProduct::Prepare(_connection);
+        entities::build::queries::SelectProductStatistics::Prepare(_connection);
     }
 
     auto Database::SelectBuild(std::string const& buildName) -> std::optional<entities::build::Entity> {
@@ -27,5 +28,10 @@ namespace backend {
     auto Database::SelectBuilds(std::string const& productName) -> std::vector<entities::build::dto::BuildName> {
         pqxx::transaction<pqxx::read_committed, pqxx::write_policy::read_only> transaction { _connection };
         return entities::build::queries::SelectForProduct::Execute(transaction, productName);
+    }
+
+    auto Database::SelectProductStatistics(std::string const& productName) -> std::optional<entities::build::dto::ProductStatistics> {
+        pqxx::transaction<pqxx::read_committed, pqxx::write_policy::read_only> transaction{ _connection };
+        return entities::build::queries::SelectProductStatistics::ExecuteOne(transaction, productName);
     }
 }

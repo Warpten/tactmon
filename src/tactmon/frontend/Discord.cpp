@@ -127,6 +127,10 @@ namespace frontend {
         .Handler = &Discord::OnDownloadCommand
     };
 
+    namespace db = backend::db;
+    namespace entities = db::entities;
+    namespace build = entities::build;
+
     Discord::Discord(std::string_view token, tact::data::product::Manager& productManager, backend::Database&& database)
         : _bot(std::string{ token }), _handler(&_bot), _productManager(productManager), _database(std::move(database))
     {
@@ -136,6 +140,7 @@ namespace frontend {
         _bot.on_ready(std::bind(&Discord::HandleReadyEvent, this, std::placeholders::_1));
         _bot.on_slashcommand(std::bind(&Discord::HandleSlashCommand, this, std::placeholders::_1));
         _bot.on_form_submit(std::bind(&Discord::HandleFormSubmitEvent, this, std::placeholders::_1));
+        _bot.on_select_click(std::bind(&Discord::HandleSelectClickEvent, this, std::placeholders::_1));
         _bot.on_log(std::bind(&Discord::HandleLogEvent, this, std::placeholders::_1));
     }
 
@@ -167,9 +172,9 @@ namespace frontend {
         if (DownloadCommand.TryHandle(this, event)) return;
     }
 
-    void Discord::HandleFormSubmitEvent(dpp::form_submit_t const& event) {
+    void Discord::HandleSelectClickEvent(dpp::select_click_t const& event) {
         if (event.command.get_command_name() == "download_build_selection_modal") {
-            std::string selectedBuildName = std::get<std::string>(event.components[0].value);
+            std::string selectedBuildName = event.values[0];
             std::string productName = std::get<std::string>(event.get_parameter("product"));
             std::string file = std::get<std::string>(event.get_parameter("file"));
 
@@ -252,15 +257,33 @@ namespace frontend {
         }
     }
 
+    void Discord::HandleFormSubmitEvent(dpp::form_submit_t const& event) {
+    }
+
     void Discord::OnListProductCommand(dpp::slashcommand_t const& event, std::string const& product) {
-        OnDownloadCommand(event, product, "WoW.exe");
+        std::optional<build::dto::ProductStatistics> entity = _database.SelectProductStatistics(product);
+        if (!entity.has_value())
+        {
+            event.reply(std::format("No version found for the **{}** product.", product));
+
+            return;
+        }
+
+        event.reply(dpp::message().add_embed(
+            dpp::embed()
+                .set_color(0x0000FF00u)
+                .set_description(
+                    std::format("Most recent build: **{}**", db::get<build::build_name>(*entity))
+                )
+                .set_footer(dpp::embed_footer()
+                    .set_text(
+                        std::format("**{}** known builds for product **{}**.", db::get<build::dto::columns::id_count>(*entity), product)
+                    )
+                )
+        ));
     }
 
     void Discord::OnDownloadCommand(dpp::slashcommand_t const& event, std::string const& product, std::string const& file) {
-
-        namespace db = backend::db;
-        namespace entities = db::entities;
-        namespace build = entities::build;
 
         auto builds = _database.SelectBuilds(product);
         if (builds.empty()) {
@@ -270,7 +293,8 @@ namespace frontend {
                     .set_description("No known builds for this product.")
                     .set_footer(dpp::embed_footer()
                         .set_text(product))
-            ));
+                )
+            );
 
             return;
         }
@@ -281,16 +305,13 @@ namespace frontend {
             .set_id("client_build_for_download")
             .set_placeholder("Please select a build");
 
-        {
-            using namespace backend::db::entities;
-            for (build::dto::BuildName const& entity : builds)
-                buildSelectionComponent.add_select_option(
-                    dpp::select_option(
-                        db::get<build::build_name>(entity),
-                        std::format("key-{}", db::get<build::id>(entity))
-                    )
-                );
-        }
+        for (build::dto::BuildName const& entity : builds)
+            buildSelectionComponent.add_select_option(
+                dpp::select_option(
+                    db::get<build::build_name>(entity),
+                    std::format("key-{}", db::get<build::id>(entity))
+                )
+            );
 
         event.reply(dpp::message().set_content("Select the client build for which you want this file.")
             .add_component(dpp::component().add_component(buildSelectionComponent))
