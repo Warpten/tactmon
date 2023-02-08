@@ -132,10 +132,23 @@ namespace backend::db {
      */
     template <ext::Literal N, typename... Ts>
     requires (detail::is_column<Ts>::value && ...)
-    struct Entity final : Projection<Ts...> {
+    struct Entity : Projection<Ts...> {
         explicit Entity(pqxx::row& row) : Projection<Ts...>(row) { }
 
         constexpr static const ext::Literal Name = N;
+
+        static void RenderTableName(std::ostream& strm) {
+            strm << Name.Value;
+        }
+
+    };
+
+    template <ext::Literal S, typename E>
+    struct Schema final : E {
+        static void RenderTableName(std::ostream& strm) {
+            strm << S.Value << ".";
+            E::RenderTableName(strm);
+        }
     };
 
     /**
@@ -228,10 +241,11 @@ namespace backend::db {
             std::stringstream query;
             query << "SELECT ";
             P::RenderProjection(query);
-            query << " FROM " << E::Name.Value;
+            query << " FROM ";
+            E::RenderTableName(query);
             if constexpr (C::Size > 0) {
                 query << " WHERE ";
-                C::template Render<0, 0>(query);
+                C::template Render<0, 1>(query);
             }
             L::Render(query);
 
