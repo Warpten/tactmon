@@ -3,6 +3,7 @@
 #include "backend/db/DSL.hpp"
 
 #include <chrono>
+#include <format>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -14,6 +15,10 @@
 
 #include <pqxx/connection>
 
+#include <logging/Sinks.hpp>
+#include <spdlog/stopwatch.h>
+#include <fmt/chrono.h>
+
 namespace backend::db::repository {
     using namespace std::chrono_literals;
 
@@ -24,7 +29,8 @@ namespace backend::db::repository {
         template <auto B = CACHING> // Make dependant
         explicit Repository(std::shared_ptr<boost::asio::io_context> context, pqxx::connection& connection,
             std::chrono::seconds interval = 60s, std::enable_if_t<B, int> _ = 0)
-            : _connection(connection), _context(context), _refreshTimer(*_context), _refreshInterval(interval)
+            : _logger(logging::GetAsyncLogger(std::format("db::{}", ENTITY::Name.Value))),
+                _connection(connection), _context(context), _refreshTimer(*_context), _refreshInterval(interval)
         {
             LOAD_STATEMENT::Prepare(connection);
 
@@ -32,7 +38,10 @@ namespace backend::db::repository {
         }
 
         template <auto B = CACHING> // Make dependant
-        explicit Repository(pqxx::connection& connection, std::enable_if_t<!B, int> _ = 0) : _connection(connection) {
+        explicit Repository(pqxx::connection& connection, std::enable_if_t<!B, int> _ = 0)
+            : _logger(logging::GetAsyncLogger(std::format("db::{}", ENTITY::Name.Value))),
+                _connection(connection)
+        {
             LOAD_STATEMENT::Prepare(connection);
 
             LoadFromDB_();
@@ -119,18 +128,32 @@ namespace backend::db::repository {
         }
 
         void LoadFromDB_() {
+            namespace chrono = std::chrono;
+
+            _logger->info("Refreshing cache entries for db::{}.", ENTITY::Name.Value);
+            spdlog::stopwatch sw { };
+
             std::vector<typename ENTITY::as_projection> storage = Execute<LOAD_STATEMENT>();
+
+            _logger->info("Loaded {} db::{} entries from database in {:%M:%S}.",
+                storage.size(), ENTITY::Name.Value, chrono::duration_cast<chrono::milliseconds>(sw.elapsed()));
+
+            sw.reset();
 
             std::unique_lock<std::mutex> lock(_storageMutex);
             _storage.clear();
             for (auto&& entity : storage)
                 _storage.emplace(db::get<PRIMARY_KEY>(entity), entity);
+
+            _logger->info("Cache for db::{} filled in {:%M:%S}.",
+                ENTITY::Name.Value, chrono::duration_cast<chrono::milliseconds>(sw.elapsed()));
         }
 
     protected:
         pqxx::connection& _connection;
 
     private:
+        std::shared_ptr<spdlog::async_logger> _logger;
 
         std::shared_ptr<boost::asio::io_context> _context = nullptr;
         std::optional<boost::asio::steady_timer> _refreshTimer = std::nullopt;

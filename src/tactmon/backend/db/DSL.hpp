@@ -65,6 +65,8 @@ namespace backend::db {
     struct Entity : Projection<COMPONENTS...> {
         explicit Entity() { }
 
+        constexpr static const auto Name = NAME;
+
         using as_projection = Projection<COMPONENTS...>;
     };
 

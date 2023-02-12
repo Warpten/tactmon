@@ -8,6 +8,7 @@ GroupSources(${CMAKE_CURRENT_SOURCE_DIR})
 
 find_package(dpp CONFIG REQUIRED)
 find_package(libpqxx REQUIRED)
+find_package(spdlog REQUIRED)
 
 add_executable(tactmon
   ${PRIVATE_SOURCES}
@@ -16,7 +17,6 @@ add_executable(tactmon
 add_dependencies(tactmon
   boost
   openssl
-  spdlog
   libtactmon
   libpqxx
 )
@@ -48,10 +48,11 @@ target_link_libraries(tactmon
     boost
     openssl
     ${ZLIB_LIBRARIES}
-    spdlog
     dpp::dpp
     libtactmon
     pqxx
+    spdlog::spdlog
+    spdlog::spdlog_header_only
 )
 
 install(TARGETS tactmon

@@ -6,6 +6,8 @@ CollectSourceFiles(
 
 GroupSources(${CMAKE_CURRENT_SOURCE_DIR})
 
+find_package(spdlog REQUIRED)
+
 add_library(libtactmon
   STATIC
     ${PRIVATE_SOURCES}
@@ -14,7 +16,6 @@ add_library(libtactmon
 add_dependencies(libtactmon
   boost
   openssl
-  spdlog
 )
 
 target_include_directories(libtactmon
@@ -50,7 +51,9 @@ target_link_libraries(libtactmon
     boost
     openssl
     ${ZLIB_LIBRARIES}
-    spdlog
+  PUBLIC
+    spdlog::spdlog
+    spdlog::spdlog_header_only
 )
 
 install(TARGETS libtactmon
