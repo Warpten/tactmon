@@ -18,11 +18,12 @@
 #include <chrono>
 #include <csignal>
 #include <filesystem>
+#include <memory>
 #include <string_view>
 #include <thread>
 #include <utility>
 
-void Execute(boost::program_options::variables_map vm, boost::asio::io_context& context);
+void Execute(boost::program_options::variables_map vm, std::shared_ptr<boost::asio::io_context> context);
 
 int main(int argc, char** argv) {
     namespace po = boost::program_options;
@@ -44,10 +45,10 @@ int main(int argc, char** argv) {
         po::store(po::parse_command_line(argc, argv, desc), vm);
         po::notify(vm);
 
-        asio::io_context ioContext;
-        asio::executor_work_guard<asio::io_context::executor_type> guard = asio::make_work_guard(ioContext);
+        std::shared_ptr<asio::io_context> ioContext = std::make_shared<asio::io_context>();
+        asio::executor_work_guard<asio::io_context::executor_type> guard = asio::make_work_guard(*ioContext);
 
-        asio::signal_set signals(ioContext, SIGINT, SIGTERM);
+        asio::signal_set signals(*ioContext, SIGINT, SIGTERM);
 #if _WIN32
         signals.add(SIGBREAK);
 #endif
@@ -67,7 +68,7 @@ int main(int argc, char** argv) {
                     // Otherwise we just hit an error; exit faultily.
                 }
             }
-        }, std::ref(ioContext));
+        }, std::ref(*ioContext));
 
         Execute(std::move(vm), ioContext);
 
@@ -87,14 +88,15 @@ int main(int argc, char** argv) {
 using namespace std::string_view_literals;
 namespace fs = std::filesystem;
 
-void Execute(boost::program_options::variables_map vm, boost::asio::io_context& context) {
-    tact::data::product::Manager manager{ context };
+void Execute(boost::program_options::variables_map vm, std::shared_ptr<boost::asio::io_context> context) {
+    tact::data::product::Manager manager{ *context };
     // Register known products for simplicity
     manager.Register("wow", [](boost::asio::io_context& context) -> std::shared_ptr<tact::data::product::Product> {
         return std::make_shared<tact::data::product::wow::Product>("wow", std::filesystem::current_path() / "cache", context);
     });
 
     backend::Database database{
+        context,
         vm["database-username"].as<std::string>(),
         vm["database-password"].as<std::string>(),
         vm["database-host"].as<std::string>(),
@@ -102,24 +104,13 @@ void Execute(boost::program_options::variables_map vm, boost::asio::io_context& 
         vm["database-name"].as<std::string>()
     };
 
-    std::thread thread([manager = std::move(manager), database = std::move(database), vm = std::move(vm), &context]() mutable {
-        try {
-            frontend::Discord bot { vm["discord-token"].as<std::string>(), manager, std::move(database) };
-            bot.Run();
-        }
-        catch (std::exception const& ex) {
-            std::cerr << ex.what() << '\n';
-        }
-    });
-    thread.detach(); // TODO: Use a notification variable instead, or wire this to the asio context somehow.
-
-#if 0
-    tact::data::product::wow::Product wow("wow", std::filesystem::current_path() / "cache", context);
-    wow.Refresh();
-
-    std::optional<tact::data::FileLocation> fileLocation = wow.FindFile("sound/music/zonemusic/terokkar/tf_bonewalkuni03.mp3"); // or wow.FindFile(some_fdid)
-    if (fileLocation.has_value()) {
-        std::optional<tact::BLTE> fileStream = wow.Open(*fileLocation);
-    }
-#endif
+    boost::asio::post(*context,
+        [manager = std::move(manager), database = std::move(database), vm = std::move(vm), &context]() mutable {
+            try {
+                frontend::Discord bot { vm["discord-token"].as<std::string>(), manager, std::move(database) };
+                bot.Run();
+            } catch (std::exception const& ex) {
+                std::cerr << ex.what() << '\n';
+            }
+        });
 }

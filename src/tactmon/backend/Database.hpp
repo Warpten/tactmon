@@ -1,7 +1,7 @@
 #pragma once
 
-#include "backend/Entities.hpp"
-#include "backend/Queries.hpp"
+#include "backend/db/entity/Build.hpp"
+#include "backend/db/repository/Build.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -11,19 +11,18 @@
 
 #include <pqxx/connection>
 
+#include <boost/asio/io_context.hpp>
+
 namespace backend {
-    namespace entities = db::entities;
-
     struct Database final {
-        Database(std::string_view username, std::string_view password, std::string_view host, uint64_t port, std::string_view name);
+        Database(std::shared_ptr<boost::asio::io_context> context, 
+            std::string_view username, std::string_view password, std::string_view host, uint64_t port, std::string_view name);
 
-        std::optional<entities::build::Entity> SelectBuild(std::string const& buildName);
-
-        std::vector<entities::build::dto::BuildName> SelectBuilds(std::string const& productName);
-
-        std::optional<entities::build::dto::ProductStatistics> SelectProductStatistics(std::string const& productName);
+        db::repository::Build const& GetBuildRepository() const { return _buildRepository; }
 
     private:
         pqxx::connection _connection;
+
+        db::repository::Build _buildRepository;
     };
 }

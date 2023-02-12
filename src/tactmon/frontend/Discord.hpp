@@ -25,6 +25,7 @@ namespace frontend {
         void HandleFormSubmitEvent(dpp::form_submit_t const& event);
         void HandleLogEvent(dpp::log_t const& event);
         void HandleSelectClickEvent(dpp::select_click_t const& event);
+        void HandleAutoCompleteEvent(dpp::autocomplete_t const& event);
 
     public: // Command handlers
         void OnListProductCommand(dpp::slashcommand_t const& event, std::string const& product);
@@ -35,7 +36,6 @@ namespace frontend {
         tact::data::product::Manager& _productManager;
 
         dpp::cluster _bot;
-        dpp::commandhandler _handler;
 
         std::shared_ptr<spdlog::logger> _logger;
     };

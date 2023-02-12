@@ -12,26 +12,9 @@
 #include <pqxx/pqxx>
 
 namespace backend {
-    Database::Database(std::string_view username, std::string_view password, std::string_view host, uint64_t port, std::string_view name)
+    Database::Database(std::shared_ptr<boost::asio::io_context> context, std::string_view username, std::string_view password, std::string_view host, uint64_t port, std::string_view name)
         : _connection(std::format("user={} password={} host={} port={} dbname={} target_session_attrs=read-write", username, password, host, port, name))
+        , _buildRepository(context, _connection)
     {
-        entities::build::queries::SelectByName::Prepare(_connection);
-        entities::build::queries::SelectForProduct::Prepare(_connection);
-        entities::build::queries::SelectProductStatistics::Prepare(_connection);
-    }
-
-    auto Database::SelectBuild(std::string const& buildName) -> std::optional<entities::build::Entity> {
-        pqxx::transaction<pqxx::read_committed, pqxx::write_policy::read_only> transaction { _connection };
-        return entities::build::queries::SelectByName::ExecuteOne(transaction, std::tuple { buildName });
-    }
-
-    auto Database::SelectBuilds(std::string const& productName) -> std::vector<entities::build::dto::BuildName> {
-        pqxx::transaction<pqxx::read_committed, pqxx::write_policy::read_only> transaction { _connection };
-        return entities::build::queries::SelectForProduct::Execute(transaction, productName);
-    }
-
-    auto Database::SelectProductStatistics(std::string const& productName) -> std::optional<entities::build::dto::ProductStatistics> {
-        pqxx::transaction<pqxx::read_committed, pqxx::write_policy::read_only> transaction{ _connection };
-        return entities::build::queries::SelectProductStatistics::ExecuteOne(transaction, productName);
     }
 }
