@@ -116,7 +116,7 @@ namespace frontend {
     };
 
     Command<
-        Parameter<"product", dpp::co_string, "The name of the product", false, true>
+        Parameter<"product", dpp::co_string, "The name of the product", false, false>
     > ProductListCommand {
         .Name = "list",
         .Description = "Lists known versions of a specific product.",
@@ -124,9 +124,9 @@ namespace frontend {
     };
 
     Command<
-        Parameter<"product", dpp::co_string, "The name of the product", false, true>,
+        Parameter<"product", dpp::co_string, "The name of the product", false, false>,
         Parameter<"version", dpp::co_string, "The name of the version", false, true>,
-        Parameter<"file", dpp::co_string, "Complete path to the file", false, true>
+        Parameter<"file", dpp::co_string, "Complete path to the file", false, false>
     > DownloadCommand{
         .Name = "download2",
         .Description = "Downloads a file for a specific build",
