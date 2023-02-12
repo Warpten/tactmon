@@ -14,8 +14,9 @@ namespace backend::db::entity::build {
     using build_name = db::Column<"build_name", std::string>;
     using build_config = db::Column<"build_config", std::string>;
     using cdn_config = db::Column<"cdn_config", std::string>;
+    using detected_at = db::Column<"detected_at", uint64_t>;
 
-    using Entity = db::Entity<"builds", "public", id, product_name, build_name, build_config, cdn_config>;
+    using Entity = db::Entity<"builds", "public", id, product_name, build_name, build_config, cdn_config, detected_at>;
 
     namespace dto {
         namespace columns {
@@ -26,7 +27,7 @@ namespace backend::db::entity::build {
         }
 
         using BuildName = db::Projection<id, build_name>;
-        using BuildStatistics = db::Projection<columns::id_count, build_name>;
+        using BuildStatistics = db::Projection<columns::id_count, build_name, detected_at, build_config, cdn_config>;
     }
 
     namespace queries {

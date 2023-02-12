@@ -12,6 +12,7 @@
 #include <boost/asio/placeholders.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/container/flat_map.hpp>
+#include <boost/range/adaptor/map.hpp>
 
 #include <pqxx/connection>
 
@@ -27,22 +28,22 @@ namespace backend::db::repository {
     struct Repository {
     protected:
         template <auto B = CACHING> // Make dependant
-        explicit Repository(std::shared_ptr<boost::asio::io_context> context, pqxx::connection& connection,
+        explicit Repository(std::shared_ptr<boost::asio::io_context> context, std::shared_ptr<pqxx::connection> connection,
             std::chrono::seconds interval = 60s, std::enable_if_t<B, int> _ = 0)
             : _logger(logging::GetAsyncLogger(std::format("db::{}", ENTITY::Name.Value))),
                 _connection(connection), _context(context), _refreshTimer(*_context), _refreshInterval(interval)
         {
-            LOAD_STATEMENT::Prepare(connection);
+            LOAD_STATEMENT::Prepare(*_connection, _logger);
 
             Refresh_({ });
         }
 
         template <auto B = CACHING> // Make dependant
-        explicit Repository(pqxx::connection& connection, std::enable_if_t<!B, int> _ = 0)
+        explicit Repository(std::shared_ptr<pqxx::connection> connection, std::enable_if_t<!B, int> _ = 0)
             : _logger(logging::GetAsyncLogger(std::format("db::{}", ENTITY::Name.Value))),
                 _connection(connection)
         {
-            LOAD_STATEMENT::Prepare(connection);
+            LOAD_STATEMENT::Prepare(*_connection, _logger);
 
             LoadFromDB_();
         }
@@ -50,7 +51,8 @@ namespace backend::db::repository {
         explicit Repository(Repository&& other) noexcept : _connection(other._connection),
             _context(other._context),
             _refreshTimer(std::move(other._refreshTimer)),
-            _refreshInterval(other._refreshInterval)
+            _refreshInterval(other._refreshInterval),
+            _storage(std::move(other._storage))
         {
             if (other._refreshTimer.has_value())
                 other._refreshTimer->cancel();
@@ -58,10 +60,11 @@ namespace backend::db::repository {
 
         Repository& operator = (Repository&& other) noexcept {
             _context = other._context;
-            _connection = std::move(other._connection);
+            _connection = other._connection;
             _refreshTimer = std::move(other._refreshTimer);
             _refreshInterval = other._refreshInterval;
             _storageMutex = std::move(other._storageMutex);
+            _storage = std::move(other._storage);
 
             if (other._refreshTimer.has_value())
                 other._refreshTimer->cancel();
@@ -94,7 +97,7 @@ namespace backend::db::repository {
         {
             using transaction_type = typename PREPARED_STATEMENT::transaction_type;
 
-            transaction_type transaction{ _connection };
+            transaction_type transaction { *_connection };
             return PREPARED_STATEMENT::ExecuteOne(transaction, std::forward_as_tuple<Args...>(args...));
         }
 
@@ -107,8 +110,12 @@ namespace backend::db::repository {
         {
             using transaction_type = typename PREPARED_STATEMENT::transaction_type;
 
-            transaction_type transaction { _connection };
+            transaction_type transaction { *_connection };
             return PREPARED_STATEMENT::Execute(transaction, std::forward_as_tuple<Args...>(args...));
+        }
+
+        auto values() const {
+            return boost::adaptors::values(_storage);
         }
 
     private:
@@ -135,7 +142,7 @@ namespace backend::db::repository {
 
             std::vector<typename ENTITY::as_projection> storage = Execute<LOAD_STATEMENT>();
 
-            _logger->info("Loaded {} db::{} entries from database in {:%M:%S}.",
+            _logger->info("Loaded {} db::{} entries from database in {}.",
                 storage.size(), ENTITY::Name.Value, chrono::duration_cast<chrono::milliseconds>(sw.elapsed()));
 
             sw.reset();
@@ -145,15 +152,15 @@ namespace backend::db::repository {
             for (auto&& entity : storage)
                 _storage.emplace(db::get<PRIMARY_KEY>(entity), entity);
 
-            _logger->info("Cache for db::{} filled in {:%M:%S}.",
+            _logger->info("Cache for db::{} filled in {}.",
                 ENTITY::Name.Value, chrono::duration_cast<chrono::milliseconds>(sw.elapsed()));
         }
 
     protected:
-        pqxx::connection& _connection;
+        std::shared_ptr<pqxx::connection> _connection;
+        std::shared_ptr<spdlog::async_logger> _logger;
 
     private:
-        std::shared_ptr<spdlog::async_logger> _logger;
 
         std::shared_ptr<boost::asio::io_context> _context = nullptr;
         std::optional<boost::asio::steady_timer> _refreshTimer = std::nullopt;

@@ -16,6 +16,9 @@
 
 #include <spdlog/spdlog.h>
 
+#include <boost/algorithm/string.hpp>
+#include <boost/range/adaptor/filtered.hpp>
+
 namespace frontend {
     namespace detail {
         template <typename T> struct is_optional : std::false_type { };
@@ -122,9 +125,10 @@ namespace frontend {
 
     Command<
         Parameter<"product", dpp::co_string, "The name of the product", false, true>,
+        Parameter<"version", dpp::co_string, "The name of the version", false, true>,
         Parameter<"file", dpp::co_string, "Complete path to the file", false, true>
     > DownloadCommand{
-        .Name = "download",
+        .Name = "download2",
         .Description = "Downloads a file for a specific build",
         .Handler = &Discord::OnDownloadCommand
     };
@@ -143,6 +147,7 @@ namespace frontend {
         _bot.on_form_submit(std::bind(&Discord::HandleFormSubmitEvent, this, std::placeholders::_1));
         _bot.on_select_click(std::bind(&Discord::HandleSelectClickEvent, this, std::placeholders::_1));
         _bot.on_log(std::bind(&Discord::HandleLogEvent, this, std::placeholders::_1));
+        _bot.on_autocomplete(std::bind(&Discord::HandleAutoCompleteEvent, this, std::placeholders::_1));
     }
 
     void Discord::Run() {
@@ -161,8 +166,8 @@ namespace frontend {
     }
 
     void Discord::HandleReadyEvent(dpp::ready_t const& event) {
-        if (!dpp::run_once<struct command_registration_handler>())
-            return;
+        //if (!dpp::run_once<struct command_registration_handler>())
+        //    return;
 
         DownloadCommand.Register(this, _bot);
         ProductListCommand.Register(this, _bot);
@@ -174,7 +179,49 @@ namespace frontend {
     }
 
     void Discord::HandleAutoCompleteEvent(dpp::autocomplete_t const& event) {
+        std::optional<std::string> productName = std::nullopt;
 
+        for (dpp::command_option const& eventOption : event.options) {
+            // If the command allows for a product, use that as a filter for version selection
+            if (eventOption.name == "product")
+                productName = std::get<std::string>(eventOption.value);
+
+            if (!eventOption.focused)
+                continue;
+
+            if (eventOption.name == "version") {
+                std::string optionValue = std::get<std::string>(eventOption.value);
+
+                // Don't suggest on empty value (would explode)
+                if (optionValue.empty())
+                    break;
+
+                size_t selectedValueCount = 0;
+
+                dpp::interaction_response interactionResponse { dpp::ir_autocomplete_reply };
+                for (auto&& entry : _database.GetBuildRepository().values()) {
+                    std::string buildName = db::get<build::build_name>(entry);
+                    if (buildName.find(optionValue) == std::string_view::npos)
+                        continue;
+
+                    interactionResponse.add_autocomplete_choice(dpp::command_option_choice(buildName, buildName));
+                    // Limit to 100 values
+                    if (selectedValueCount++ >= 100)
+                        break;
+                }
+
+                _bot.interaction_response_create_sync(event.command.id, event.command.token, interactionResponse);
+                break;
+            }
+
+            if (eventOption.name == "file") {
+                // File autocompletion. There are a couple ways to do this; either we support listfiles (unlikely, let's be real)
+                // or we just mirror names as seen from Install manifest; except those are, as it stands, not exposed by libtactmon.
+            }
+        }
+
+        // Empty response by default.
+        _bot.interaction_response_create_sync(event.command.id, event.command.token, dpp::interaction_response { dpp::ir_autocomplete_reply });
     }
 
     void Discord::HandleSelectClickEvent(dpp::select_click_t const& event) {
@@ -287,21 +334,27 @@ namespace frontend {
             return;
         }
 
+        uint64_t seenTimestamp = db::get<build::detected_at>(*entity);
+        std::chrono::system_clock::time_point timePoint{ std::chrono::seconds { seenTimestamp  }  };
+
         event.reply(dpp::message().add_embed(
             dpp::embed()
                 .set_color(0x0000FF00u)
-                .set_description(
-                    std::format("Most recent build: **{}**", db::get<build::build_name>(*entity))
-                )
+                .set_title(
+                    std::format("Most recent build: {}.", db::get<build::build_name>(*entity))
+                ).set_description(
+                    std::format("First seen on **{:%D}** at **{:%r}**.", timePoint, timePoint)
+                ).add_field("build_config", std::format("`{}`", db::get<build::build_config>(*entity)), true)
+                .add_field("cdn_config", std::format("`{}`", db::get<build::cdn_config>(*entity)), true)
                 .set_footer(dpp::embed_footer()
                     .set_text(
-                        std::format("**{}** known builds for product **{}**.", db::get<build::dto::columns::id_count>(*entity), product)
+                        std::format("{} known builds for product {}.", db::get<build::dto::columns::id_count>(*entity), product)
                     )
                 )
         ));
     }
 
-    void Discord::OnDownloadCommand(dpp::slashcommand_t const& event, std::string const& product, std::string const& file) {
+    void Discord::OnDownloadCommand(dpp::slashcommand_t const& event, std::string const& product, std::string const& version, std::string const& file) {
         auto eligibleBuilds = _database.GetBuildRepository().GetByProductName(product);
         if (eligibleBuilds.empty()) {
             event.reply(dpp::message().add_embed(

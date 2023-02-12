@@ -3,6 +3,7 @@
 #include "backend/db/repository/Repository.hpp"
 #include "backend/db/entity/Build.hpp"
 
+#include <memory>
 #include <string>
 
 #include <pqxx/connection>
@@ -11,7 +12,7 @@ namespace backend::db::repository {
     struct Build : Repository<entity::build::Entity, entity::build::queries::Select, entity::build::id, true> {
         using Base = Repository<entity::build::Entity, entity::build::queries::Select, entity::build::id, true>;
 
-        Build(std::shared_ptr<boost::asio::io_context> context, pqxx::connection& connection);
+        Build(std::shared_ptr<boost::asio::io_context> context, std::shared_ptr<pqxx::connection> connection);
         
         /**
          * Returns the record for a build with the given name.

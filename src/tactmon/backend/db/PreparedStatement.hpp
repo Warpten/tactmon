@@ -11,6 +11,9 @@
 #include <pqxx/row>
 #include <pqxx/transaction_base>
 
+#include <spdlog/async_logger.h>
+#include <spdlog/logger.h>
+
 namespace backend::db {
     template <ext::Literal ALIAS, typename QUERY>
     struct PreparedStatement final {
@@ -18,9 +21,25 @@ namespace backend::db {
         using projection_type = typename QUERY::projection_type;
         using transaction_type = typename QUERY::transaction_type;
 
-        static void Prepare(pqxx::connection& connection)
-        {
-            connection.prepare(pqxx::zview{ ALIAS.Value, ALIAS.Size - 1 }, QUERY::Render());
+        static void Prepare(pqxx::connection& connection) {
+            std::string rendererQuery = QUERY::Render();
+            connection.prepare(pqxx::zview{ ALIAS.Value, ALIAS.Size - 1 }, rendererQuery);
+        }
+
+        static void Prepare(pqxx::connection& connection, std::shared_ptr<spdlog::async_logger> logger) {
+            std::string rendererQuery = QUERY::Render();
+            if (logger != nullptr)
+                logger->debug("Preparing query {}: '{}'", ALIAS.Value, rendererQuery);
+
+            connection.prepare(pqxx::zview{ ALIAS.Value, ALIAS.Size - 1 }, rendererQuery);
+        }
+
+        static void Prepare(pqxx::connection& connection, std::shared_ptr<spdlog::logger> logger) {
+            std::string rendererQuery = QUERY::Render();
+            if (logger != nullptr)
+                logger->debug("Preparing query {}: '{}'", ALIAS.Value, rendererQuery);
+
+            connection.prepare(pqxx::zview{ ALIAS.Value, ALIAS.Size - 1 }, rendererQuery);
         }
 
         template <typename... Args>

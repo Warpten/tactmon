@@ -21,7 +21,7 @@ namespace backend {
         db::repository::Build const& GetBuildRepository() const { return _buildRepository; }
 
     private:
-        pqxx::connection _connection;
+        std::shared_ptr<pqxx::connection> _connection;
 
         db::repository::Build _buildRepository;
     };

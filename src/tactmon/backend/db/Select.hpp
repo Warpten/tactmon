@@ -111,8 +111,10 @@ namespace backend::db::select {
         template <size_t PARAMETER, typename LEFT, typename RIGHT>
         static auto Render(std::ostream& strm, Proxy<Over<LEFT, RIGHT>>, ext::Constant<PARAMETER> parameterOffset) {
             auto nextParameterOffset = Render(strm, Proxy<LEFT> { }, parameterOffset);
-            strm << " OVER ";
-            return Render(strm, Proxy<RIGHT> { }, nextParameterOffset);
+            strm << " OVER (";
+            auto rightOfs = Render(strm, Proxy<RIGHT> { }, nextParameterOffset);
+            strm << ')';
+            return rightOfs;
         }
 
         template <size_t PARAMETER, typename... COMPONENTS>
@@ -147,7 +149,7 @@ namespace backend::db::select {
 
         template <size_t PARAMETER, typename COMPONENT>
         static auto Render(std::ostream& strm, Proxy<PartitionBy<COMPONENT>>, ext::Constant<PARAMETER> parameterOffset) {
-            strm << "PARTITION BY";
+            strm << "PARTITION BY ";
             return Render(strm, Proxy<COMPONENT> { }, parameterOffset);
         }
 
@@ -167,16 +169,20 @@ namespace backend::db::select {
         template <size_t PARAMETER, typename PROJECTION, typename FROM, typename CRITERIA, typename ORDER, typename LIMIT>
         static auto Render(std::ostream& strm, Proxy<Query<PROJECTION, FROM, CRITERIA, ORDER, LIMIT>>, ext::Constant<PARAMETER> p) {
             auto projectionOffset = Render(strm, Proxy<PROJECTION> { }, p);
+            strm << ' ';
             auto entityOffset = Render(strm, Proxy<FROM> { }, projectionOffset);
+            strm << ' ';
             auto criteriaOffset = Render(strm, Proxy<CRITERIA> { }, entityOffset);
+            strm << ' ';
             auto orderOffset = Render(strm, Proxy<ORDER> { }, entityOffset);
+            strm << ' ';
             auto limitOffset = Render(strm, Proxy<LIMIT> { }, orderOffset);
             return limitOffset;
         }
 
         template <size_t PARAMETER, typename CRITERIA>
         static auto Render(std::ostream& strm, Proxy<Where<CRITERIA>>, ext::Constant<PARAMETER> p) {
-            strm << " WHERE ";
+            strm << "WHERE ";
             return Render(strm, Proxy<CRITERIA> { }, p);
         }
 

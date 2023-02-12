@@ -29,7 +29,7 @@ namespace frontend {
 
     public: // Command handlers
         void OnListProductCommand(dpp::slashcommand_t const& event, std::string const& product);
-        void OnDownloadCommand(dpp::slashcommand_t const& event, std::string const& product, std::string const& file);
+        void OnDownloadCommand(dpp::slashcommand_t const& event, std::string const& product, std::string const& version, std::string const& file);
 
     private:
         backend::Database _database;
