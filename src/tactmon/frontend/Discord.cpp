@@ -128,7 +128,7 @@ namespace frontend {
         Parameter<"version", dpp::co_string, "The name of the version", false, true>,
         Parameter<"file", dpp::co_string, "Complete path to the file", false, false>
     > DownloadCommand{
-        .Name = "download2",
+        .Name = "download",
         .Description = "Downloads a file for a specific build",
         .Handler = &Discord::OnDownloadCommand
     };

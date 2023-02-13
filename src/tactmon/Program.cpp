@@ -4,6 +4,7 @@
 #include "tact/data/product/Manager.hpp"
 #include "tact/data/product/wow/Product.hpp"
 #include "logging/Sinks.hpp"
+#include "ThreadPool.hpp"
 
 #include <boost/program_options.hpp>
 #include <boost/asio/io_context.hpp>
@@ -45,10 +46,10 @@ int main(int argc, char** argv) {
         po::store(po::parse_command_line(argc, argv, desc), vm);
         po::notify(vm);
 
-        std::shared_ptr<asio::io_context> ioContext = std::make_shared<asio::io_context>();
-        asio::executor_work_guard<asio::io_context::executor_type> guard = asio::make_work_guard(*ioContext);
+        std::shared_ptr<asio::io_context> context = std::make_shared<asio::io_context>();
+        asio::executor_work_guard<asio::io_context::executor_type> guard = asio::make_work_guard(*context);
 
-        asio::signal_set signals(*ioContext, SIGINT, SIGTERM);
+        asio::signal_set signals(*context, SIGINT, SIGTERM);
 #if _WIN32
         signals.add(SIGBREAK);
 #endif
@@ -56,25 +57,14 @@ int main(int argc, char** argv) {
             guard.reset();
         });
 
-        std::thread ioContextRunner([](asio::io_context& context) {
-            for (;;) {
-                try {
-                    context.run();
+        ThreadPool threadPool{ };
+        for (size_t i = 0; i < std::thread::hardware_concurrency(); ++i)
+            threadPool.Submit([context]() { context->run(); });
 
-                    // If we get here, run() exited gracefully
-                    break;
-                }
-                catch (...) {
-                    // Otherwise we just hit an error; exit faultily.
-                }
-            }
-        }, std::ref(*ioContext));
-
-        Execute(std::move(vm), ioContext);
+        Execute(std::move(vm), context);
 
         // Interrupt io_context, join and exit
-        guard.reset();
-        ioContextRunner.join();
+        threadPool.Join();
     } catch (po::error const& ex) {
         std::cerr << ex.what() << '\n';
         std::cout << desc << '\n';

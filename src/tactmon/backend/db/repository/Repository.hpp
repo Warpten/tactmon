@@ -10,7 +10,7 @@
 #include <optional>
 
 #include <boost/asio/placeholders.hpp>
-#include <boost/asio/steady_timer.hpp>
+#include <boost/asio/high_resolution_timer.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/range/adaptor/map.hpp>
 
@@ -129,7 +129,7 @@ namespace backend::db::repository {
             LoadFromDB_();
 
             _refreshTimer->expires_at(std::chrono::high_resolution_clock::now() + _refreshInterval);
-            _refreshTimer->async_wait([=](boost::system::error_code const& ec) {
+            _refreshTimer->async_wait([this](boost::system::error_code const& ec) {
                 this->Refresh_(ec);
             });
         }
@@ -142,7 +142,7 @@ namespace backend::db::repository {
 
             std::vector<typename ENTITY::as_projection> storage = Execute<LOAD_STATEMENT>();
 
-            _logger->info("Loaded {} db::{} entries from database in {}.",
+            _logger->debug("Loaded {} db::{} entries from database in {}.",
                 storage.size(), ENTITY::Name.Value, chrono::duration_cast<chrono::milliseconds>(sw.elapsed()));
 
             sw.reset();
@@ -152,7 +152,7 @@ namespace backend::db::repository {
             for (auto&& entity : storage)
                 _storage.emplace(db::get<PRIMARY_KEY>(entity), entity);
 
-            _logger->info("Cache for db::{} filled in {}.",
+            _logger->debug("Cache for db::{} filled in {}.",
                 ENTITY::Name.Value, chrono::duration_cast<chrono::milliseconds>(sw.elapsed()));
         }
 
@@ -163,7 +163,7 @@ namespace backend::db::repository {
     private:
 
         std::shared_ptr<boost::asio::io_context> _context = nullptr;
-        std::optional<boost::asio::steady_timer> _refreshTimer = std::nullopt;
+        std::optional<boost::asio::high_resolution_timer> _refreshTimer = std::nullopt;
         std::chrono::seconds _refreshInterval;
         mutable std::mutex _storageMutex;
 
