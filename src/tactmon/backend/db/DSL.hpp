@@ -60,6 +60,8 @@ namespace backend::db {
      */
     template <typename... COMPONENTS>
     struct Projection {
+        explicit Projection() : _store() { }
+
         explicit Projection(pqxx::row& row) : _store(std::make_index_sequence<sizeof...(COMPONENTS)>{}, row) { }
 
         template <typename T, typename P>
@@ -82,11 +84,14 @@ namespace backend::db {
      */
     template <ext::Literal NAME, ext::Literal SCHEMA, typename... COMPONENTS>
     struct Entity : Projection<COMPONENTS...> {
-        explicit Entity() { }
+        using as_projection = Projection<COMPONENTS...>;
+
+        explicit Entity() : as_projection() { }
+
+        explicit Entity(pqxx::row& row) : as_projection(row) { }
 
         constexpr static const auto Name = NAME;
 
-        using as_projection = Projection<COMPONENTS...>;
     };
 
     /**

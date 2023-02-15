@@ -10,7 +10,7 @@ namespace backend::db::repository {
         entity::build::queries::SelStatistics::Prepare(_connection, _logger);
     }
 
-    std::optional<entity::build::Entity::as_projection> Build::GetByBuildName(std::string const& buildName) const {
+    std::optional<entity::build::Entity> Build::GetByBuildName(std::string const& buildName) const {
         return ExecuteOne<entity::build::queries::SelByName>(buildName);
     }
 

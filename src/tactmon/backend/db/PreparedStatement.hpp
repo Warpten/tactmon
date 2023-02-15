@@ -50,7 +50,7 @@ namespace backend::db {
             if (resultSet.empty())
                 return std::nullopt;
 
-            return typename QUERY::projection_type{ resultSet };
+            return typename QUERY::projection_type { resultSet };
         }
 
         template <typename... Args>

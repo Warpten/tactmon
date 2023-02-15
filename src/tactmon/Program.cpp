@@ -1,7 +1,7 @@
 #include "backend/Database.hpp"
+#include "backend/Product.hpp"
 #include "frontend/Discord.hpp"
 #include "net/ribbit/Commands.hpp"
-#include "tact/data/product/Manager.hpp"
 #include "tact/data/product/wow/Product.hpp"
 #include "logging/Sinks.hpp"
 
@@ -74,8 +74,9 @@ void Execute(boost::program_options::variables_map vm) {
 #else
     asio::signal_set signals(ctx, SIGINT, SIGTERM);
 #endif
-    signals.async_wait([&guard](boost::system::error_code const& ec, int signum) {
+    signals.async_wait([&guard, &ctx](boost::system::error_code const& ec, int signum) {
         guard.reset();
+        ctx.stop();
     });
 
     // 3. Create specific strands.
@@ -83,19 +84,22 @@ void Execute(boost::program_options::variables_map vm) {
     asio::io_context::strand discordStrand{ ctx }; // Single-shot strand for the discord bot instance.
 
     // 4. Create thread pool, initialize threads.
-    asio::thread_pool threadPool{ vm["thread-count"].as<uint32_t>() };
-    asio::post(threadPool, [&ctx]() { 
-        ctx.run();
-    });
+    size_t threadCount = vm["thread-count"].as<uint32_t>();
+    asio::thread_pool threadPool{ threadCount };
+    for (size_t i = 0; i < threadCount; ++i)
+        asio::post(threadPool, [&ctx]() { 
+            ctx.run();
+        });
 
     // 5. Initialize product manager.
     fs::path cacheRoot = std::filesystem::current_path() / "cache";
 
-    tact::data::product::Manager productManager{ };
+    backend::ProductCache productCache { };
+
     constexpr static const std::string_view WOW_PRODUCTS[] = { "wow", "wow_beta", "wow_classic", "wow_classic_beta", "wow_classic_ptr" };
     for (std::string_view gameProduct : WOW_PRODUCTS) {
-        productManager.Register(std::string { gameProduct }, [cacheRoot, gameProduct, &ctx]() -> std::shared_ptr<tact::data::product::Product> {
-            return std::make_shared<tact::data::product::wow::Product>(gameProduct, cacheRoot, ctx);
+        productCache.RegisterFactory(std::string { gameProduct }, [cacheRoot, gameProduct, &ctx]() -> backend::Product {
+            return backend::Product { std::make_shared<tact::data::product::wow::Product>(gameProduct, cacheRoot, ctx) };
         });
     }
 
@@ -110,7 +114,8 @@ void Execute(boost::program_options::variables_map vm) {
     };
 
     // 7. Initialize discord frontend
-    frontend::Discord bot { discordStrand, vm["discord-token"].as<std::string>(), productManager, database };
+    frontend::Discord bot { discordStrand, vm["discord-token"].as<std::string>(), productCache, database };
+    bot.Run();
 
     // 8. Wait for interrupts or end.
     threadPool.join();

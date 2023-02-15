@@ -166,9 +166,12 @@ namespace backend::db::select {
             return RenderVaradic<", ">(strm, parameterOffset, ext::Constant<0> { }, detail::type_list<COMPONENTS...> { });
         }
 
+        template <typename T, typename = void> struct SelectProjection { using type = T; };
+        template <typename T> struct SelectProjection<T, std::void_t<typename T::as_projection>> { using type = typename T::as_projection; };
+
         template <size_t PARAMETER, typename PROJECTION, typename FROM, typename CRITERIA, typename ORDER, typename LIMIT>
         static auto Render(std::ostream& strm, Proxy<Query<PROJECTION, FROM, CRITERIA, ORDER, LIMIT>>, ext::Constant<PARAMETER> p) {
-            auto projectionOffset = Render(strm, Proxy<PROJECTION> { }, p);
+            auto projectionOffset = Render(strm, Proxy<typename SelectProjection<PROJECTION>::type> { }, p);
             strm << ' ';
             auto entityOffset = Render(strm, Proxy<FROM> { }, projectionOffset);
             strm << ' ';

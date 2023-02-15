@@ -116,7 +116,7 @@ namespace backend::db::repository {
         Repository& operator = (Repository&& other) noexcept = delete;
 
     public:
-        std::optional<typename ENTITY::as_projection> operator [] (typename PRIMARY_KEY::value_type id) const {
+        std::optional<typename ENTITY> operator [] (typename PRIMARY_KEY::value_type id) const {
             return repository_base::WithMutex_([&]() -> std::optional<typename ENTITY::as_projection> {
                 auto itr = _storage.find(id);
                 if (itr == _storage.end())
@@ -169,7 +169,7 @@ namespace backend::db::repository {
             _logger->info("Refreshing cache entries for db::{}.", ENTITY::Name.Value);
             spdlog::stopwatch sw { };
 
-            std::vector<typename ENTITY::as_projection> storage = Execute<LOAD_STATEMENT>();
+            std::vector<ENTITY> storage = Execute<LOAD_STATEMENT>();
 
             _logger->debug("Loaded {} db::{} entries from database in {}.",
                 storage.size(), ENTITY::Name.Value, chrono::duration_cast<chrono::milliseconds>(sw.elapsed()));
@@ -191,6 +191,6 @@ namespace backend::db::repository {
         std::shared_ptr<spdlog::async_logger> _logger;
 
     private:
-        boost::container::flat_map<typename PRIMARY_KEY::value_type, typename ENTITY::as_projection> _storage;
+        boost::container::flat_map<typename PRIMARY_KEY::value_type, ENTITY> _storage;
     };
 }

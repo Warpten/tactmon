@@ -1,6 +1,8 @@
 #pragma once
 
 #include "backend/Database.hpp"
+#include "backend/Product.hpp"
+#include "frontend/Commands/ICommand.hpp"
 
 #include <memory>
 #include <string>
@@ -9,7 +11,6 @@
 #include <dpp/dpp.h>
 #include <spdlog/logger.h>
 
-#include <boost/asio/io_context.hpp>
 #include <boost/asio/io_context_strand.hpp>
 #include <boost/asio/post.hpp>
 
@@ -18,13 +19,22 @@ namespace tact::data::product {
 }
 
 namespace frontend {
-    struct Discord {
+    struct Discord final {
+        friend struct commands::ICommand;
+
         Discord(boost::asio::io_context::strand strand, std::string_view token,
-            tact::data::product::Manager& manager, backend::Database& database);
+            backend::ProductCache& manager, backend::Database& database);
+        ~Discord();
 
         void Run();
 
     private:
+        template <typename T>
+        void RegisterCommand() {
+            auto command = _commands.emplace_back(std::make_shared<T>());
+            bot.guild_command_create_sync(command->GetRegistrationInfo(bot), 377185808719020033);
+        }
+
         void HandleReadyEvent(dpp::ready_t const& event);
         void HandleSlashCommand(dpp::slashcommand_t const& event);
         void HandleFormSubmitEvent(dpp::form_submit_t const& event);
@@ -34,20 +44,22 @@ namespace frontend {
 
     public: // Command handlers
         void OnListProductCommand(dpp::slashcommand_t const& event, std::string const& product);
-        void OnDownloadCommand(dpp::slashcommand_t const& event, std::string const& product, std::string const& version, std::string const& file);
 
+    private:
         template <typename T>
         void RunAsync(T&& value) {
             boost::asio::post(_strand, value);
         }
 
-    private:
-        tact::data::product::Manager& _productManager;
-        backend::Database& _database;
+    public:
+        backend::ProductCache& productManager;
+        backend::Database& database;
+        dpp::cluster bot;
 
+    private:
         boost::asio::io_context::strand _strand;
         std::shared_ptr<spdlog::logger> _logger;
 
-        dpp::cluster _bot;
+        std::vector<std::shared_ptr<frontend::commands::ICommand>> _commands;
     };
 }

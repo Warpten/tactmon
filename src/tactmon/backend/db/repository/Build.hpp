@@ -20,7 +20,7 @@ namespace backend::db::repository {
          * 
          * @param[in] buildName The name of the build to retrieve information for.
          */
-        std::optional<entity::build::Entity::as_projection> GetByBuildName(std::string const& buildName) const;
+        std::optional<entity::build::Entity> GetByBuildName(std::string const& buildName) const;
 
         /**
          * Returns the name and the ID of all builds matching a specific product name.
