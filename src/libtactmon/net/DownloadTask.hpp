@@ -52,15 +52,17 @@ namespace net {
 
             beast::error_code ec;
 
-            logger->trace("Downloading '{}/{}' from {}.", resourcePath, _resourceName, host);
+            if (logger != nullptr)
+                logger->trace("Downloading '{}/{}' from {}.", resourcePath, _resourceName, host);
 
             beast::tcp_stream stream { context };
             tcp::resolver r { context };
 
             stream.connect(r.resolve(host, "80"), ec);
             if (ec.failed()) {
-                logger->error("An error occured while downloading {} from {}: {}.",
-                    _resourceName, host, ec.message());
+                if (logger != nullptr)
+                    logger->error("An error occured while downloading {} from {}: {}.",
+                        _resourceName, host, ec.message());
 
                 return std::nullopt;
             }
@@ -76,8 +78,9 @@ namespace net {
 
             http::write(stream, req, ec);
             if (ec.failed()) {
-                logger->error("An error occured while downloading {} from {}: {}.",
-                    _resourceName, host, ec.message());
+                if (logger != nullptr)
+                    logger->error("An error occured while downloading {} from {}: {}.",
+                        _resourceName, host, ec.message());
 
                 return std::nullopt;
             }
@@ -87,8 +90,9 @@ namespace net {
 
             ec = Initialize(res.get().body());
             if (ec.failed()) {
-                logger->error("An error occured while downloading {} from {}: {}.",
-                    _resourceName, host, ec.message());
+                if (logger != nullptr)
+                    logger->error("An error occured while downloading {} from {}: {}.",
+                        _resourceName, host, ec.message());
 
                 return std::nullopt;
             }
@@ -96,13 +100,15 @@ namespace net {
             beast::flat_buffer buffer;
             http::read(stream, buffer, res, ec);
             if (ec.failed() || res.get().result() != http::status::ok) {
-                logger->error("An error occured while downloading {} from {}: {}.", _resourceName, host, ec.message());
+                if (logger != nullptr)
+                    logger->error("An error occured while downloading {} from {}: {}.", _resourceName, host, ec.message());
             }
 
             if (res.get().result() == http::status::ok) {
-                logger->trace("Downloaded '{}/{}' from {} ({} bytes)",
-                    host, resourcePath, _resourceName, res.get()[http::field::content_length]
-                );
+                if (logger != nullptr)
+                    logger->trace("Downloaded '{}/{}' from {} ({} bytes)",
+                        host, resourcePath, _resourceName, res.get()[http::field::content_length]
+                    );
             }
 
             stream.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both);

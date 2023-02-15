@@ -1,13 +1,13 @@
 #include "backend/db/repository/Build.hpp"
 
 namespace backend::db::repository {
-    Build::Build(std::shared_ptr<boost::asio::io_context> context, std::shared_ptr<pqxx::connection> connection)
+    Build::Build(boost::asio::io_context::strand context, pqxx::connection& connection)
         : Base(context, connection)
     {
-        entity::build::queries::SelById::Prepare(*_connection, _logger);
-        entity::build::queries::SelByName::Prepare(*_connection, _logger);
-        entity::build::queries::SelByProduct::Prepare(*_connection, _logger);
-        entity::build::queries::SelStatistics::Prepare(*_connection, _logger);
+        entity::build::queries::SelById::Prepare(_connection, _logger);
+        entity::build::queries::SelByName::Prepare(_connection, _logger);
+        entity::build::queries::SelByProduct::Prepare(_connection, _logger);
+        entity::build::queries::SelStatistics::Prepare(_connection, _logger);
     }
 
     std::optional<entity::build::Entity::as_projection> Build::GetByBuildName(std::string const& buildName) const {

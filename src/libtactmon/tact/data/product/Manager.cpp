@@ -2,10 +2,8 @@
 #include "tact/data/product/wow/Product.hpp"
 
 namespace tact::data::product {
-    Manager::Manager(boost::asio::io_context& context) : _context(context) { }
-
-    void Manager::Register(std::string const& product, std::function<std::shared_ptr<tact::data::product::Product>(boost::asio::io_context&)> factory) {
-        _productFactories.emplace(product, [=]() { return factory(_context); });
+    void Manager::Register(std::string product, std::function<std::shared_ptr<tact::data::product::Product>()> factory) {
+        _productFactories.emplace(product, [=]() { return factory(); });
     }
 
     std::shared_ptr<tact::data::product::Product> Manager::Rent(std::string const& productName) const {

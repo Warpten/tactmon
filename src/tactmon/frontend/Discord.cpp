@@ -72,7 +72,8 @@ namespace frontend {
             dpp::slashcommand command(Name, Description, bot.me.id);
             (Register_<Args>(command), ...);
 
-            bot.global_command_create(command);
+            //bot.global_command_create(command);
+            bot.guild_command_create_sync(command, 377185808719020033);
         }
 
         bool TryHandle(Discord* self, dpp::slashcommand_t const& event) {
@@ -128,17 +129,26 @@ namespace frontend {
         Parameter<"version", dpp::co_string, "The name of the version", false, true>,
         Parameter<"file", dpp::co_string, "Complete path to the file", false, false>
     > DownloadCommand{
-        .Name = "download",
+        .Name = "dwnld",
         .Description = "Downloads a file for a specific build",
         .Handler = &Discord::OnDownloadCommand
     };
+
+    // Command <
+    //     Parameter<"product", dpp::co_string, "The name of the product", false, false>,
+    // > RefreshProductCommand{
+    //     .Name = "refresh",
+    //     .Description = "Queries Ribbit for the latest version information.",
+    //     .Handler = &Discord::OnRefreshProductCommand
+    // };
 
     namespace db = backend::db;
     namespace entity = db::entity;
     namespace build = entity::build;
 
-    Discord::Discord(std::string_view token, tact::data::product::Manager& productManager, backend::Database&& database)
-        : _bot(std::string{ token }), _productManager(productManager), _database(std::move(database))
+    Discord::Discord(boost::asio::io_context::strand strand, std::string_view token,
+        tact::data::product::Manager& productManager, backend::Database& database)
+        : _bot(std::string{ token }), _productManager(productManager), _database(database), _strand(strand)
     {
         _logger = logging::GetLogger("discord");
 
@@ -151,7 +161,7 @@ namespace frontend {
     }
 
     void Discord::Run() {
-        _bot.start(dpp::start_type::st_wait);
+        _bot.start(dpp::start_type::st_return);
     }
 
     void Discord::HandleLogEvent(dpp::log_t const& event) {
@@ -166,8 +176,8 @@ namespace frontend {
     }
 
     void Discord::HandleReadyEvent(dpp::ready_t const& event) {
-        //if (!dpp::run_once<struct command_registration_handler>())
-        //    return;
+        if (!dpp::run_once<struct command_registration_handler>())
+            return;
 
         DownloadCommand.Register(this, _bot);
         ProductListCommand.Register(this, _bot);
@@ -178,10 +188,10 @@ namespace frontend {
         if (DownloadCommand.TryHandle(this, event)) return;
     }
 
-    void Discord::HandleAutoCompleteEvent(dpp::autocomplete_t const& event) {
+    void Discord::HandleAutoCompleteEvent(dpp::autocomplete_t const& evt) {
         std::optional<std::string> productName = std::nullopt;
 
-        for (dpp::command_option const& eventOption : event.options) {
+        for (dpp::command_option const& eventOption : evt.options) {
             // If the command allows for a product, use that as a filter for version selection
             if (eventOption.name == "product")
                 productName = std::get<std::string>(eventOption.value);
@@ -199,18 +209,20 @@ namespace frontend {
                 size_t selectedValueCount = 0;
 
                 dpp::interaction_response interactionResponse { dpp::ir_autocomplete_reply };
-                for (auto&& entry : _database.GetBuildRepository().values()) {
-                    std::string buildName = db::get<build::build_name>(entry);
-                    if (buildName.find(optionValue) == std::string_view::npos)
-                        continue;
+                _database.GetBuildRepository().WithValues([&](auto entries) {
+                    for (entity::build::Entity::as_projection const& entry : entries) {
+                        std::string buildName = db::get<build::build_name>(entry);
+                        if (buildName.find(optionValue) == std::string::npos || (productName.has_value() && db::get<build::product_name>(entry) != productName))
+                            continue;
 
-                    interactionResponse.add_autocomplete_choice(dpp::command_option_choice(buildName, buildName));
-                    // Limit to 100 values
-                    if (selectedValueCount++ >= 100)
-                        break;
-                }
+                        interactionResponse.add_autocomplete_choice(dpp::command_option_choice(buildName, buildName));
+                        // Limit to 100 values
+                        if (selectedValueCount++ >= 100)
+                            break;
+                    }
+                });
 
-                _bot.interaction_response_create_sync(event.command.id, event.command.token, interactionResponse);
+                _bot.interaction_response_create_sync(evt.command.id, evt.command.token, interactionResponse);
                 break;
             }
 
@@ -221,106 +233,10 @@ namespace frontend {
         }
 
         // Empty response by default.
-        _bot.interaction_response_create_sync(event.command.id, event.command.token, dpp::interaction_response { dpp::ir_autocomplete_reply });
+        _bot.interaction_response_create_sync(evt.command.id, evt.command.token, dpp::interaction_response { dpp::ir_autocomplete_reply });
     }
 
     void Discord::HandleSelectClickEvent(dpp::select_click_t const& event) {
-        if (event.command.get_command_name() != "client_build_for_download") {
-            std::string productName = std::get<std::string>(event.get_parameter("product"));
-            std::string file = std::get<std::string>(event.get_parameter("file"));
-
-            uint32_t selectedBuildID = 0;
-            auto validBuildID = [&]() {
-                if (!event.values[0].starts_with("key-"))
-                    return false;
-
-                auto [ptr, ec] = std::from_chars(event.values[0].data() + 4, event.values[0].data() + event.values[0].size(), selectedBuildID);
-                return ec == std::errc { };
-            }();
-
-            if (!validBuildID) {
-                event.edit_response(dpp::message().add_embed(
-                    dpp::embed()
-                        .set_color(0x00FF0000u)
-                        .set_title(productName)
-                        .set_description("Invalid build received")
-                ));
-            }
-
-            // Load product on the specific build config
-            // Do it asynchronously (even though this function call itself is async, we don't want it to starve the thread
-            // managing it)
-            auto product = _productManager.Rent(productName);
-            if (product == nullptr) {
-                event.edit_response(dpp::message().add_embed(
-                    dpp::embed()
-                        .set_color(0x00FF0000u)
-                        .set_title(productName)
-                        .set_description("This product is not currently tracked.")
-                ));
-
-                return;
-            }
-
-            auto buildEntry = _database.GetBuildRepository()[selectedBuildID];
-            if (!buildEntry.has_value()) {
-                event.edit_response(dpp::message().add_embed(
-                    dpp::embed()
-                        .set_title(productName)
-                        .set_color(0x00FF0000u)
-                        .set_description("Build configuration cannot be found.")
-                        // .set_footer(dpp::embed_footer()
-                        //     .set_text(selectedBuildName))
-                ));
-
-                return;
-            }
-
-            std::string buildName { db::get<build::build_name>(*buildEntry) };
-            std::string buildConfig { db::get<build::build_config>(*buildEntry) };
-            std::string cdnConfig { db::get<build::cdn_config>(*buildEntry) };
-
-            if (!product->Load(buildConfig, cdnConfig)) {
-                event.edit_response(dpp::message().add_embed(
-                    dpp::embed()
-                        .set_title(productName)
-                        .set_color(0x00FF0000u)
-                        .set_description("An internal error occured.")
-                        .set_footer(dpp::embed_footer()
-                            .set_text(std::format("{} - {} / {}", buildName, buildConfig, cdnConfig))
-                        )
-                    )
-                );
-
-                return;
-            }
-
-            std::optional<tact::data::FileLocation> fileLocation = product->FindFile(file);
-            if (!fileLocation.has_value()) {
-                event.edit_response(dpp::message().add_embed(
-                    dpp::embed()
-                        .set_title(productName)
-                        .set_color(0x00FF0000u)
-                        .set_description(std::format("`{}` does not exist.", file))
-                        .set_footer(dpp::embed_footer()
-                            .set_text(buildName))
-                ));
-                
-                return;
-            }
-
-            // Generate a link to the http server
-            // The server will perform routing over all available CDN servers for the provided build
-            // and stream the response to the client.
-            event.edit_response(dpp::message().add_embed(
-                dpp::embed()
-                    .set_title("Download this file.")
-                    .set_url("http://www.google.fr") // TODO: Generate link
-                    .set_description(std::format("Click here to download `{}`", file))
-                    .set_footer(dpp::embed_footer()
-                        .set_text(buildName))
-            ));
-        }
     }
 
     void Discord::HandleFormSubmitEvent(dpp::form_submit_t const& event) {
@@ -354,43 +270,166 @@ namespace frontend {
         ));
     }
 
-    void Discord::OnDownloadCommand(dpp::slashcommand_t const& event, std::string const& product, std::string const& version, std::string const& file) {
-        auto eligibleBuilds = _database.GetBuildRepository().GetByProductName(product);
-        if (eligibleBuilds.empty()) {
-            event.reply(dpp::message().add_embed(
+    void Discord::OnDownloadCommand(dpp::slashcommand_t const& evnt,
+        std::string const& productName, std::string const& versionName, std::string const& file)
+    {
+        evnt.thinking(true);
+
+        auto buildEntry = _database.GetBuildRepository().GetByBuildName(versionName);
+        if (!buildEntry.has_value()) {
+            evnt.edit_response(dpp::message().add_embed(
                 dpp::embed()
+                    .set_title(productName)
                     .set_color(0x00FF0000u)
-                    .set_description("No known builds for this product.")
-                    .set_footer(dpp::embed_footer()
-                        .set_text(product))
-                )
-            );
+                    .set_description("Build configuration cannot be found.")
+            ));
 
             return;
         }
 
-        dpp::component buildSelectionComponent = dpp::component()
-            .set_label("Client build")
-            .set_type(dpp::cot_selectmenu)
-            .set_id("client_build_for_download")
-            .set_placeholder("Please select a build");
+        // 1. If user-provided product and database-backed product don't match, error out
+        if (productName != db::get<build::product_name>(*buildEntry)) {
+            evnt.edit_response(dpp::message().add_embed(
+                dpp::embed()
+                    .set_title(productName)
+                    .set_color(0x00FF0000u)
+                    .set_description("Build configuration cannot be found for this product.")
+            ));
 
-        for (build::dto::BuildName const& entity : eligibleBuilds)
-            buildSelectionComponent.add_select_option(
-                dpp::select_option(
-                    db::get<build::build_name>(entity),
-                    std::format("key-{}", db::get<build::id>(entity))
-                )
-            );
+            return;
+        }
 
-        event.reply(dpp::message()
-            .set_content(std::format("Select the client build for which you want to download `{}`.", file))
-            .add_component(dpp::component()
-                .set_type(dpp::cot_action_row)
-                .add_component(buildSelectionComponent)
-                .add_component(dpp::component().set_default_value(product))
-                .add_component(dpp::component().set_default_value(file))
-            )
+        evnt.edit_response(dpp::message().add_embed(
+            dpp::embed()
+                .set_title(versionName)
+                .set_description("Loading... This may take a while.")
+                .set_color(0x0000FF00u)
+        ));
+
+        RunAsync(
+            [this, productName, versionName, file, evnt = std::move(evnt), buildEntry = std::move(*buildEntry)]() {
+                // 2. Rent a new product instance.
+                auto product = _productManager.Rent(productName);
+                if (product == nullptr) {
+                    evnt.edit_response(dpp::message().add_embed(
+                        dpp::embed()
+                        .set_color(0x00FF0000u)
+                        .set_title(productName)
+                        .set_description("This product is not currently tracked.")
+                    ));
+
+                    return;
+                }
+
+                std::string buildConfig = db::get<build::build_config>(buildEntry);
+                std::string cdnConfig = db::get<build::cdn_config>(buildEntry);
+
+                // 3. Load the build into the product.
+                if (!product->Load(buildConfig, cdnConfig)) {
+                    evnt.edit_response(dpp::message().add_embed(
+                        dpp::embed()
+                        .set_title(productName)
+                        .set_color(0x00FF0000u)
+                        .set_description("An internal error occured.")
+                        .set_footer(dpp::embed_footer()
+                            .set_text(std::format("{} - {} / {}", versionName, buildConfig, cdnConfig))
+                        )
+                    ));
+
+                    return;
+                }
+
+                // 4. Locate the file
+                std::optional<tact::data::FileLocation> fileLocation = product->FindFile(file);
+                if (!fileLocation.has_value()) {
+                    evnt.edit_response(dpp::message().add_embed(
+                        dpp::embed()
+                        .set_title(productName)
+                        .set_color(0x00FF0000u)
+                        .set_description(std::format("`{}` does not exist.", file))
+                        .set_footer(dpp::embed_footer()
+                            .set_text(versionName))
+                    ));
+
+                    return;
+                }
+
+                // 5. Generate download link
+                // Generate a link to the http server
+                // The server will perform routing over all available CDN servers for the provided build
+                // and stream the response to the client.
+                evnt.edit_response(dpp::message().add_embed(
+                    dpp::embed()
+                    .set_title("Download this file.")
+                    .set_url("http://www.google.fr") // TODO: Generate link
+                    .set_description(std::format("Click here to download `{}`", file))
+                    .set_footer(dpp::embed_footer()
+                        .set_text(versionName))
+                ));
+            }
         );
+
+        return;
+
+        // 2. Rent a new product instance.
+        auto product = _productManager.Rent(productName);
+        if (product == nullptr) {
+            evnt.edit_response(dpp::message().add_embed(
+                dpp::embed()
+                .set_color(0x00FF0000u)
+                .set_title(productName)
+                .set_description("This product is not currently tracked.")
+            ));
+
+            return;
+        }
+
+
+        std::string buildName{ db::get<build::build_name>(*buildEntry) };
+        std::string buildConfig{ db::get<build::build_config>(*buildEntry) };
+        std::string cdnConfig{ db::get<build::cdn_config>(*buildEntry) };
+
+        // 3. Load the build into the product.
+        if (!product->Load(buildConfig, cdnConfig)) {
+            evnt.edit_response(dpp::message().add_embed(
+                dpp::embed()
+                .set_title(productName)
+                .set_color(0x00FF0000u)
+                .set_description("An internal error occured.")
+                .set_footer(dpp::embed_footer()
+                    .set_text(std::format("{} - {} / {}", buildName, buildConfig, cdnConfig))
+                )
+            ));
+
+            return;
+        }
+
+        // 4. Locate the file
+        std::optional<tact::data::FileLocation> fileLocation = product->FindFile(file);
+        if (!fileLocation.has_value()) {
+            evnt.edit_response(dpp::message().add_embed(
+                dpp::embed()
+                .set_title(productName)
+                .set_color(0x00FF0000u)
+                .set_description(std::format("`{}` does not exist.", file))
+                .set_footer(dpp::embed_footer()
+                    .set_text(buildName))
+            ));
+
+            return;
+        }
+
+        // 5. Generate download link
+        // Generate a link to the http server
+        // The server will perform routing over all available CDN servers for the provided build
+        // and stream the response to the client.
+        evnt.edit_response(dpp::message().add_embed(
+            dpp::embed()
+            .set_title("Download this file.")
+            .set_url("http://www.google.fr") // TODO: Generate link
+            .set_description(std::format("Click here to download `{}`", file))
+            .set_footer(dpp::embed_footer()
+                .set_text(buildName))
+        ));
     }
 }

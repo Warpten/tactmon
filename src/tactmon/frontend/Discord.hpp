@@ -9,13 +9,18 @@
 #include <dpp/dpp.h>
 #include <spdlog/logger.h>
 
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/io_context_strand.hpp>
+#include <boost/asio/post.hpp>
+
 namespace tact::data::product {
     struct Manager;
 }
 
 namespace frontend {
     struct Discord {
-        Discord(std::string_view token, tact::data::product::Manager& manager, backend::Database&& database);
+        Discord(boost::asio::io_context::strand strand, std::string_view token,
+            tact::data::product::Manager& manager, backend::Database& database);
 
         void Run();
 
@@ -31,12 +36,18 @@ namespace frontend {
         void OnListProductCommand(dpp::slashcommand_t const& event, std::string const& product);
         void OnDownloadCommand(dpp::slashcommand_t const& event, std::string const& product, std::string const& version, std::string const& file);
 
+        template <typename T>
+        void RunAsync(T&& value) {
+            boost::asio::post(_strand, value);
+        }
+
     private:
-        backend::Database _database;
         tact::data::product::Manager& _productManager;
+        backend::Database& _database;
+
+        boost::asio::io_context::strand _strand;
+        std::shared_ptr<spdlog::logger> _logger;
 
         dpp::cluster _bot;
-
-        std::shared_ptr<spdlog::logger> _logger;
     };
 }

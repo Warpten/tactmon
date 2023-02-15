@@ -15,13 +15,13 @@
 
 namespace backend {
     struct Database final {
-        Database(std::shared_ptr<boost::asio::io_context> context, 
+        Database(boost::asio::io_context::strand strand,
             std::string_view username, std::string_view password, std::string_view host, uint64_t port, std::string_view name);
-
+        
         db::repository::Build const& GetBuildRepository() const { return _buildRepository; }
 
     private:
-        std::shared_ptr<pqxx::connection> _connection;
+        pqxx::connection _connection;
 
         db::repository::Build _buildRepository;
     };
