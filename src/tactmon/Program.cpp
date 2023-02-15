@@ -80,8 +80,9 @@ void Execute(boost::program_options::variables_map vm) {
     });
 
     // 3. Create specific strands.
-    asio::io_context::strand databaseStrand{ ctx }; // Serializes database cache updates.
-    asio::io_context::strand discordStrand{ ctx }; // Single-shot strand for the discord bot instance.
+    asio::io_context::strand databaseStrand { ctx }; // Serializes database cache updates.
+    asio::io_context::strand discordStrand  { ctx }; // Single-shot strand for the discord bot instance.
+    asio::io_context::strand productStrand  { ctx };
 
     // 4. Create thread pool, initialize threads.
     size_t threadCount = vm["thread-count"].as<uint32_t>();
@@ -94,7 +95,7 @@ void Execute(boost::program_options::variables_map vm) {
     // 5. Initialize product manager.
     fs::path cacheRoot = std::filesystem::current_path() / "cache";
 
-    backend::ProductCache productCache { };
+    backend::ProductCache productCache { productStrand };
 
     constexpr static const std::string_view WOW_PRODUCTS[] = { "wow", "wow_beta", "wow_classic", "wow_classic_beta", "wow_classic_ptr" };
     for (std::string_view gameProduct : WOW_PRODUCTS) {

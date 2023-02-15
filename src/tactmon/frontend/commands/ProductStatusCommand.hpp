@@ -3,8 +3,8 @@
 #include "frontend/commands/ICommand.hpp"
 
 namespace frontend::commands {
-    struct DownloadCommand final : ICommand {
-        explicit DownloadCommand() { }
+    struct ProductStatusCommand : ICommand {
+        explicit ProductStatusCommand() { }
 
         bool Matches(dpp::interaction const& evnt) const override;
 

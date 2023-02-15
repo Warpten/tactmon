@@ -1,4 +1,5 @@
-#include "frontend/Commands/DownloadCommand.hpp"
+#include "frontend/commands/DownloadCommand.hpp"
+#include "frontend/commands/ProductStatusCommand.hpp"
 #include "frontend/Discord.hpp"
 #include "backend/db/entity/Build.hpp"
 #include "backend/db/repository/Build.hpp"
@@ -26,7 +27,7 @@ namespace frontend {
 
     Discord::Discord(boost::asio::io_context::strand strand, std::string_view token,
         backend::ProductCache& productManager, backend::Database& database)
-        : bot(std::string{ token }), productManager(productManager), database(database), _strand(strand)
+        : bot(std::string{ token }), productManager(productManager), db(database), _strand(strand)
     {
         _logger = logging::GetLogger("discord");
 
@@ -63,15 +64,15 @@ namespace frontend {
             return;
 
         RegisterCommand<frontend::commands::DownloadCommand>();
+        RegisterCommand<frontend::commands::ProductStatusCommand>();
     }
 
     void Discord::HandleSlashCommand(dpp::slashcommand_t const& evnt) {
         evnt.thinking(false);
 
-        for (std::shared_ptr<frontend::commands::ICommand> command : _commands) {
+        for (std::shared_ptr<frontend::commands::ICommand> command : _commands)
             if (command->OnSlashCommand(evnt, *this))
                 return;
-        }
 
         evnt.reply(dpp::message().add_embed(
             dpp::embed()
@@ -101,34 +102,5 @@ namespace frontend {
         }
     }
 
-    void Discord::HandleFormSubmitEvent(dpp::form_submit_t const& event) {
-    }
-
-    void Discord::OnListProductCommand(dpp::slashcommand_t const& event, std::string const& product) {
-        auto entity = database.GetBuildRepository().GetStatisticsForProduct(product);
-        if (!entity.has_value()) {
-            event.reply(std::format("No version found for the **{}** product.", product));
-
-            return;
-        }
-
-        uint64_t seenTimestamp = db::get<build::detected_at>(*entity);
-        std::chrono::system_clock::time_point timePoint{ std::chrono::seconds { seenTimestamp  }  };
-
-        event.reply(dpp::message().add_embed(
-            dpp::embed()
-                .set_color(0x0000FF00u)
-                .set_title(
-                    std::format("Most recent build: {}.", db::get<build::build_name>(*entity))
-                ).set_description(
-                    std::format("First seen on **{:%D}** at **{:%r}**.", timePoint, timePoint)
-                ).add_field("build_config", std::format("`{}`", db::get<build::build_config>(*entity)), true)
-                .add_field("cdn_config", std::format("`{}`", db::get<build::cdn_config>(*entity)), true)
-                .set_footer(dpp::embed_footer()
-                    .set_text(
-                        std::format("{} known builds for product {}.", db::get<build::dto::columns::id_count>(*entity), product)
-                    )
-                )
-        ));
-    }
+    void Discord::HandleFormSubmitEvent(dpp::form_submit_t const& evnt) { }
 }

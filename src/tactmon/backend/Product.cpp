@@ -1,6 +1,10 @@
 #include "backend/Product.hpp"
 
+#include <chrono>
+
 namespace backend {
+    using namespace std::chrono_literals;
+
     Product::Product(std::shared_ptr<tact::data::product::Product> product) : _product(product), _loading(false) {
 
     }
@@ -16,6 +20,22 @@ namespace backend {
         _callbacks = std::move(other._callbacks);
 
         return *this;
+    }
+
+    ProductCache::ProductCache(boost::asio::io_context::strand cacheStrand)
+        : _cacheStrand(cacheStrand), _expirationTimer(cacheStrand.context())
+    {
+        RemoveExpiredEntries();
+    }
+
+    void ProductCache::RemoveExpiredEntries() {
+        _products.remove_if([](std::shared_ptr<Record> record) { return record->expirationTimer <= std::chrono::high_resolution_clock::now(); });
+
+        _expirationTimer.expires_at(std::chrono::high_resolution_clock::now() + 1min);
+        _expirationTimer.async_wait([this](boost::system::error_code ec) {
+            if (ec != boost::asio::error::operation_aborted)
+                this->RemoveExpiredEntries();
+        });
     }
 
     void Product::AddListener(std::function<void(Product&)> callback) {
@@ -39,24 +59,31 @@ namespace backend {
     }
 
     bool ProductCache::LoadConfiguration(std::string productName, db::entity::build::Entity const& configuration, std::function<void(Product&)> handler) {
-        for (Product& loadedProduct : _products) {
-            db::entity::build::Entity const& loadedConfiguration = loadedProduct.GetLoadedBuild();
+        for (std::shared_ptr<Record> loadedProduct : _products) {
+            db::entity::build::Entity const& loadedConfiguration = loadedProduct->product.GetLoadedBuild();
             if (db::get<db::entity::build::id>(loadedConfiguration) != db::get<db::entity::build::id>(configuration))
                 continue;
 
-            handler(loadedProduct);
+            handler(loadedProduct->product);
             return true;
         }
 
         auto factoryItr = _productFactories.find(productName);
-        // TODO: assert the iterator is valid
+        if (factoryItr == _productFactories.end())
+            return false;
 
-        Product& instance = _products.emplace_back(factoryItr->second());
-        instance.AddListener(handler);
-        return instance.Load(configuration);
+        auto itr = _products.insert(_products.end(), std::make_shared<Record>(factoryItr->second(), std::chrono::high_resolution_clock::now() + 15min));
+        (*itr)->product.AddListener(handler);
+        return (*itr)->product.Load(configuration);
     }
 
     void ProductCache::RegisterFactory(std::string productName, std::function<Product()> factory) {
         _productFactories.emplace(productName, factory);
+    }
+
+    ProductCache::Record::Record(Product product, std::chrono::high_resolution_clock::time_point expirationTimer)
+        : product(std::move(product)), expirationTimer(expirationTimer)
+    {
+
     }
 }

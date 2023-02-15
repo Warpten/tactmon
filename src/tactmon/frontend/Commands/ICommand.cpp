@@ -1,6 +1,5 @@
-#include "frontend/Commands/ICommand.hpp"
+#include "frontend/commands/ICommand.hpp"
 #include "frontend/Discord.hpp"
-
 
 namespace frontend::commands {
     bool ICommand::OnSlashCommand(dpp::slashcommand_t const& evnt, frontend::Discord& cluster) {

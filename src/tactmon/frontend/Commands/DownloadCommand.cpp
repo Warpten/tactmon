@@ -1,4 +1,4 @@
-#include "frontend/Commands/DownloadCommand.hpp"
+#include "frontend/commands/DownloadCommand.hpp"
 #include "frontend/Discord.hpp"
 
 #include "backend/db/DSL.hpp"
@@ -33,7 +33,7 @@ namespace frontend::commands {
         std::string version = std::get<std::string>(evnt.get_parameter("version"));
         std::string file = std::get<std::string>(evnt.get_parameter("file"));
 
-        auto buildEntry = cluster.database.GetBuildRepository().GetByBuildName(version);
+        auto buildEntry = cluster.db.builds.GetByBuildName(version);
         if (!buildEntry.has_value()) {
             evnt.edit_response(dpp::message().add_embed(
                 dpp::embed()
@@ -99,8 +99,6 @@ namespace frontend::commands {
     void DownloadCommand::HandleAutoCompleteEvent(dpp::autocomplete_t const& evnt, frontend::Discord& cluster) {
         std::optional<std::string> productName = std::nullopt;
 
-        _messageID = evnt.command.message_id;
-
         for (dpp::command_option const& eventOption : evnt.options) {
             // If the command allows for a product, use that as a filter for version selection
             if (eventOption.name == "product")
@@ -119,7 +117,7 @@ namespace frontend::commands {
                 size_t selectedValueCount = 0;
 
                 dpp::interaction_response interactionResponse{ dpp::ir_autocomplete_reply };
-                cluster.database.GetBuildRepository().WithValues([&](auto entries) {
+                cluster.db.builds.WithValues([&](auto entries) {
                     for (entity::build::Entity::as_projection const& entry : entries) {
                         std::string buildName = db::get<build::build_name>(entry);
                         if (buildName.find(optionValue) == std::string::npos || (productName.has_value() && db::get<build::product_name>(entry) != productName))

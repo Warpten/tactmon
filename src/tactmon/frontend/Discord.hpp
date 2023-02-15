@@ -2,7 +2,7 @@
 
 #include "backend/Database.hpp"
 #include "backend/Product.hpp"
-#include "frontend/Commands/ICommand.hpp"
+#include "frontend/commands/ICommand.hpp"
 
 #include <memory>
 #include <string>
@@ -42,9 +42,6 @@ namespace frontend {
         void HandleSelectClickEvent(dpp::select_click_t const& event);
         void HandleAutoCompleteEvent(dpp::autocomplete_t const& event);
 
-    public: // Command handlers
-        void OnListProductCommand(dpp::slashcommand_t const& event, std::string const& product);
-
     private:
         template <typename T>
         void RunAsync(T&& value) {
@@ -53,7 +50,7 @@ namespace frontend {
 
     public:
         backend::ProductCache& productManager;
-        backend::Database& database;
+        backend::Database& db;
         dpp::cluster bot;
 
     private:

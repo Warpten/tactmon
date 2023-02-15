@@ -3,11 +3,17 @@
 #include "backend/db/entity/Build.hpp"
 
 #include <atomic>
+#include <chrono>
 #include <functional>
+#include <list>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include <boost/asio/io_context_strand.hpp>
+#include <boost/asio/high_resolution_timer.hpp>
+#include <boost/container/stable_vector.hpp>
 
 #include <tact/data/product/Product.hpp>
 
@@ -36,15 +42,30 @@ namespace backend {
     };
 
     struct ProductCache final {
-        explicit ProductCache() = default;
+        explicit ProductCache(boost::asio::io_context::strand cacheStrand);
 
-        
         bool LoadConfiguration(std::string productName, db::entity::build::Entity const& configuration, std::function<void(Product&)> handler);
 
         void RegisterFactory(std::string productName, std::function<Product()> factory);
 
     private:
-        std::vector<Product> _products;
+        void RemoveExpiredEntries();
+
+        struct Record {
+            Record(Product product, std::chrono::high_resolution_clock::time_point expirationTimer);
+
+            Product product;
+            std::chrono::high_resolution_clock::time_point expirationTimer;
+        };
+
+        boost::asio::io_context::strand _cacheStrand;
+        boost::asio::high_resolution_timer _expirationTimer;
+        // We **want** iterator stability above all else
+#if 0
+        boost::container::stable_vector<Record> _products;
+#else
+        std::list<std::shared_ptr<Record>> _products;
+#endif
         std::unordered_map<std::string, std::function<Product()>> _productFactories;
     };
 }
