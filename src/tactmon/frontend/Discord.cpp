@@ -1,3 +1,4 @@
+#include "frontend/commands/CacheStatusCommand.hpp"
 #include "frontend/commands/DownloadCommand.hpp"
 #include "frontend/commands/ProductStatusCommand.hpp"
 #include "frontend/Discord.hpp"
@@ -65,6 +66,7 @@ namespace frontend {
 
         RegisterCommand<frontend::commands::DownloadCommand>();
         RegisterCommand<frontend::commands::ProductStatusCommand>();
+        RegisterCommand<frontend::commands::CacheStatusCommand>();
     }
 
     void Discord::HandleSlashCommand(dpp::slashcommand_t const& evnt) {

@@ -48,6 +48,10 @@ namespace backend {
 
         void RegisterFactory(std::string productName, std::function<Product()> factory);
 
+        void ForEachProduct(std::function<void(Product&, std::chrono::high_resolution_clock::time_point)> handler);
+
+        size_t size() const { return _products.size(); }
+
     private:
         void RemoveExpiredEntries();
 

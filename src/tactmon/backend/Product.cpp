@@ -44,7 +44,7 @@ namespace backend {
 
     bool Product::Load(db::entity::build::Entity const& entity) {
         if (db::get<db::entity::build::id>(entity) != db::get<db::entity::build::id>(_currentBuild)) {
-            // _product = entity; // TODO FIXME
+            _currentBuild = entity;
 
             if (!_loading.exchange(true)) {
                 if (!_product->Load(db::get<db::entity::build::build_config>(entity), db::get<db::entity::build::cdn_config>(entity)))
@@ -79,6 +79,11 @@ namespace backend {
 
     void ProductCache::RegisterFactory(std::string productName, std::function<Product()> factory) {
         _productFactories.emplace(productName, factory);
+    }
+
+    void ProductCache::ForEachProduct(std::function<void(Product&, std::chrono::high_resolution_clock::time_point)> handler) {
+        for (std::shared_ptr<Record> record : _products)
+            handler(record->product, record->expirationTimer);
     }
 
     ProductCache::Record::Record(Product product, std::chrono::high_resolution_clock::time_point expirationTimer)
