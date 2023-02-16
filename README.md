@@ -106,16 +106,16 @@ Returns the location of a file in the currently loaded configuration, or an empt
 
 Downloads to the local cache a given file, as specified by its location returned by one of the `FindFile` overloads. Returns a decompressed stream.
 
-6. `std::optional<tact::data::IndexFileLocation> Product::FindIndex(tact::EKey const& ekey) const`
+6. `std::optional<tact::data::ArchiveFileLocation> Product::FindArchive(tact::EKey const& ekey) const`
 
 Returns the location of a given encoding key in the archives of the loaded configuration. This function is used in conjunction with one of the `FindFile` overloads:
 
 ```cpp
-std::optional<tact::data::FileLocation> location = product.FindFile("Wow.exe");
+std::optional<tact::data::FileLocation> location = product.FindArchive("Wow.exe");
 if (location.has_value()) {
     for (size_t i = 0; i < location->keyCount(); ++i) {
-        std::optional<tact::data::IndexFileLocation> indexLocation = product.FindIndex((*location)[i]);
-        if (indexLocation.has_value()) {
+        std::optional<tact::data::ArchiveFileLocation> archiveLocation = product.FindIndex((*location)[i]);
+        if (archiveLocation.has_value()) {
             // Do things with the archive location; generate link or whatever, or just download it.
         }
     }
