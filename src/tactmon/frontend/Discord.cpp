@@ -27,7 +27,7 @@ namespace frontend {
     namespace build = entity::build;
 
     Discord::Discord(boost::asio::io_context::strand strand, std::string_view token,
-        backend::ProductCache& productManager, backend::Database& database, frontend::Proxy& httpServer)
+        backend::ProductCache& productManager, backend::Database& database, frontend::Tunnel& httpServer)
         : bot(std::string{ token }), productManager(productManager), db(database), _strand(strand), httpServer(httpServer)
     {
         _logger = logging::GetLogger("discord");

@@ -1,4 +1,4 @@
-#include "frontend/Proxy.hpp"
+#include "frontend/Tunnel.hpp"
 
 #include <tact/config/CDNConfig.hpp>
 
@@ -23,13 +23,13 @@ namespace db = backend::db;
 namespace build = db::entity::build;
 
 namespace frontend {
-    Proxy::Proxy(boost::asio::io_context& context, std::string_view localRoot, uint16_t listenPort)
+    Tunnel::Tunnel(boost::asio::io_context& context, std::string_view localRoot, uint16_t listenPort)
         : _context(context), _localRoot(localRoot), _acceptor(context, ip::tcp::endpoint { ip::tcp::v4(), listenPort })
     {
         Accept();
     }
 
-    std::string Proxy::GenerateAdress(build::Entity const& buildInfo, std::span<const uint8_t> location, std::string_view fileName, size_t decompressedSize) const {
+    std::string Tunnel::GenerateAdress(build::Entity const& buildInfo, std::span<const uint8_t> location, std::string_view fileName, size_t decompressedSize) const {
         std::string hexstr;
         boost::algorithm::hex(location.data(), location.data() + location.size(), std::back_inserter(hexstr));
         boost::algorithm::to_lower(hexstr);
@@ -40,14 +40,14 @@ namespace frontend {
             fileName);
     }
 
-    std::string Proxy::GenerateAdress(build::Entity const& buildInfo, tact::data::IndexFileLocation const& location, std::string_view fileName, size_t decompressedSize) const {
+    std::string Tunnel::GenerateAdress(build::Entity const& buildInfo, tact::data::IndexFileLocation const& location, std::string_view fileName, size_t decompressedSize) const {
         return std::format("{}/{}/{}/{}/{}/{}/{}", _localRoot,
             db::get<build::cdn_config>(buildInfo),
             location.name(), location.offset(), location.fileSize(), decompressedSize,
             fileName);
     }
 
-    void Proxy::ProcessRequest(boost::beast::http::request<boost::beast::http::dynamic_body> const& request, boost::beast::http::response<boost::beast::http::dynamic_body>& response) const {
+    void Tunnel::ProcessRequest(boost::beast::http::request<boost::beast::http::dynamic_body> const& request, boost::beast::http::response<boost::beast::http::dynamic_body>& response) const {
         std::string_view target = request.target();
         std::vector<std::string_view> tokens = ext::Tokenize(target, '/');
 
@@ -99,7 +99,7 @@ namespace frontend {
         //       Stream content from the CDN, decoded, to the client.
     }
 
-    void Proxy::Accept() {
+    void Tunnel::Accept() {
         boost::asio::ip::tcp::socket& socket = _socket.emplace(_context);
 
         _acceptor.async_accept(*_socket, [&](boost::system::error_code ec) {
@@ -109,11 +109,11 @@ namespace frontend {
         });
     }
 
-    Proxy::Connection::Connection(boost::asio::ip::tcp::socket socket, Proxy* proxy)
+    Tunnel::Connection::Connection(boost::asio::ip::tcp::socket socket, Tunnel* proxy)
         : _socket(std::move(socket)), _readStrand(proxy->_context), _writeStrand(proxy->_context), _deadline(_socket.get_executor(), 60s), _proxy(proxy)
     { }
 
-    void Proxy::Connection::Run() {
+    void Tunnel::Connection::Run() {
         AsyncReadRequest();
         _deadline.async_wait([this](boost::system::error_code ec) {
             if (!ec)
@@ -121,7 +121,7 @@ namespace frontend {
         });
     }
 
-    void Proxy::Connection::AsyncReadRequest() {
+    void Tunnel::Connection::AsyncReadRequest() {
         auto self = shared_from_this();
         http::async_read(_socket, _buffer, _request, boost::asio::bind_executor(_readStrand, [self](boost::beast::error_code ec, size_t bytesTransferred) {
             boost::ignore_unused(bytesTransferred);
@@ -130,7 +130,7 @@ namespace frontend {
         }));
     }
 
-    void Proxy::Connection::ProcessRequest() {
+    void Tunnel::Connection::ProcessRequest() {
         _response.version(_request.version());
         _response.keep_alive(false);
 
@@ -148,7 +148,7 @@ namespace frontend {
         AsyncWriteResponse();
     }
 
-    void Proxy::Connection::AsyncWriteResponse() {
+    void Tunnel::Connection::AsyncWriteResponse() {
         auto self = shared_from_this();
 
         _response.content_length(_response.body().size());

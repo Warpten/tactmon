@@ -3,7 +3,7 @@
 #include "backend/Database.hpp"
 #include "backend/Product.hpp"
 #include "frontend/commands/ICommand.hpp"
-#include "frontend/Proxy.hpp"
+#include "frontend/Tunnel.hpp"
 
 #include <memory>
 #include <string>
@@ -24,7 +24,7 @@ namespace frontend {
         friend struct commands::ICommand;
 
         Discord(boost::asio::io_context::strand strand, std::string_view token,
-            backend::ProductCache& manager, backend::Database& database, frontend::Proxy& httpServer);
+            backend::ProductCache& manager, backend::Database& database, frontend::Tunnel& httpServer);
         ~Discord();
 
         void Run();
@@ -50,7 +50,7 @@ namespace frontend {
         }
 
     public:
-        frontend::Proxy& httpServer;
+        frontend::Tunnel& httpServer;
         backend::ProductCache& productManager;
         backend::Database& db;
         dpp::cluster bot;

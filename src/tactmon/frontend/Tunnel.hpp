@@ -19,8 +19,8 @@
 #include <boost/beast/http/message.hpp>
 
 namespace frontend {
-    struct Proxy {
-        explicit Proxy(boost::asio::io_context& context, std::string_view localRoot, uint16_t listenPort);
+    struct Tunnel {
+        explicit Tunnel(boost::asio::io_context& context, std::string_view localRoot, uint16_t listenPort);
 
         std::string GenerateAdress(backend::db::entity::build::Entity const& buildInfo, tact::data::IndexFileLocation const& location, std::string_view fileName, size_t decompressedSize) const;
         std::string GenerateAdress(backend::db::entity::build::Entity const& buildInfo, std::span<const uint8_t> location, std::string_view fileName, size_t decompressedSize) const;
@@ -33,7 +33,7 @@ namespace frontend {
         friend struct Connection;
         
         struct Connection : std::enable_shared_from_this<Connection> {
-            explicit Connection(boost::asio::ip::tcp::socket socket, Proxy* proxy);
+            explicit Connection(boost::asio::ip::tcp::socket socket, Tunnel* proxy);
 
             void Run();
 
@@ -42,7 +42,7 @@ namespace frontend {
             void ProcessRequest();
             void AsyncWriteResponse();
 
-            Proxy* _proxy;
+            Tunnel* _proxy;
             boost::asio::ip::tcp::socket _socket;
             boost::asio::io_context::strand _readStrand;
             boost::asio::io_context::strand _writeStrand;
