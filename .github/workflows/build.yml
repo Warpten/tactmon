@@ -17,6 +17,8 @@ jobs:
             triplet: x64-windows
           - os: ubuntu-latest
             triplet: x64-linux
+            compiler: gcc
+            gcc: 12.2
     env:
       # Indicates the location of the vcpkg as a Git submodule of the project repository.
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
@@ -29,6 +31,12 @@ jobs:
       - name: "Create directory '${{ env.VCPKG_DEFAULT_BINARY_CACHE }}'"
         run: mkdir -p $VCPKG_DEFAULT_BINARY_CACHE
         shell: bash
+
+      - name: "Select compiler"
+        if: matrix.gcc
+        run: |
+          echo "CC=gcc-${{ matrix.gcc }}" >> $GITHUB_ENV
+          echo "CXX=g++-${{ matrix.gcc }}" >> $GITHUB_ENV
 
       # Setup the build machine with the most recent versions of CMake and Ninja.
       # Both are cached if not already: on subsequent runs both will be quickly
