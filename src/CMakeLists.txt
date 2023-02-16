@@ -1,2 +1,5 @@
 add_subdirectory(libtactmon)
-add_subdirectory(tactmon)
+if (COMPILE_TACTMON)
+  add_subdirectory(tactmon)
+endif ()
+
