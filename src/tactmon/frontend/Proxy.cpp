@@ -1,5 +1,9 @@
 #include "frontend/Proxy.hpp"
 
+#include <tact/config/CDNConfig.hpp>
+
+#include <ext/Tokenizer.hpp>
+
 #include <chrono>
 
 #include <boost/algorithm/hex.hpp>
@@ -25,28 +29,74 @@ namespace frontend {
         Accept();
     }
 
-    std::string Proxy::GenerateAdress(build::Entity const& buildInfo, std::span<const uint8_t> location, std::string_view fileName) const {
+    std::string Proxy::GenerateAdress(build::Entity const& buildInfo, std::span<const uint8_t> location, std::string_view fileName, size_t decompressedSize) const {
         std::string hexstr;
         boost::algorithm::hex(location.data(), location.data() + location.size(), std::back_inserter(hexstr));
         boost::algorithm::to_lower(hexstr);
 
-        return std::format("{}/{}/{}/{}/{}/{}/{}", _localRoot,
-            db::get<build::build_config>(buildInfo),
+        return std::format("{}/{}/{}/{}/{}/{}", _localRoot,
             db::get<build::cdn_config>(buildInfo),
-            hexstr, 0, 0,
+            hexstr, 0, 0, decompressedSize,
             fileName);
     }
 
-    std::string Proxy::GenerateAdress(build::Entity const& buildInfo, tact::data::IndexFileLocation const& location, std::string_view fileName) const {
+    std::string Proxy::GenerateAdress(build::Entity const& buildInfo, tact::data::IndexFileLocation const& location, std::string_view fileName, size_t decompressedSize) const {
         return std::format("{}/{}/{}/{}/{}/{}/{}", _localRoot,
-            db::get<build::build_config>(buildInfo),
             db::get<build::cdn_config>(buildInfo),
-            location.name(), location.offset(), location.fileSize(),
+            location.name(), location.offset(), location.fileSize(), decompressedSize,
             fileName);
     }
 
     void Proxy::ProcessRequest(boost::beast::http::request<boost::beast::http::dynamic_body> const& request, boost::beast::http::response<boost::beast::http::dynamic_body>& response) const {
+        std::string_view target = request.target();
+        std::vector<std::string_view> tokens = ext::Tokenize(target, '/');
 
+        std::string_view cdnConfig = tokens[0];
+        std::string_view archiveName = tokens[1];
+
+        uint64_t offset = 0; {
+            auto [ptr, ec] = std::from_chars(tokens[2].data(), tokens[2].data() + tokens[2].size(), offset);
+            if (ec != std::errc{ }) {
+                response.result(http::status::bad_request);
+                response.set(http::field::content_type, "text/plain");
+
+                boost::beast::ostream(response.body()) << "Invalid range start value";
+                return;
+            }
+        }
+
+        uint64_t length = 0; {
+            auto [ptr, ec] = std::from_chars(tokens[3].data(), tokens[3].data() + tokens[3].size(), length);
+            if (ec != std::errc{ }) {
+                response.result(http::status::bad_request);
+                response.set(http::field::content_type, "text/plain");
+
+                boost::beast::ostream(response.body()) << "Invalid range length value";
+                return;
+            }
+        }
+
+        uint64_t decompressedSize = 0; {
+            auto [ptr, ec] = std::from_chars(tokens[4].data(), tokens[4].data() + tokens[4].size(), decompressedSize);
+            if (ec != std::errc{ } || decompressedSize == 0) {
+                response.result(http::status::bad_request);
+                response.set(http::field::content_type, "text/plain");
+
+                boost::beast::ostream(response.body()) << "Invalid length";
+                return;
+            }
+        }
+
+        std::string_view fileName = tokens[5];
+
+        // response.result(http::status::ok);
+        // response.set(http::field::content_type, "application/octet-stream");
+
+        // TODO: Parse CDN config given its name, reead it (it should have been cached, it's a hard error if it hasn't)
+        //       Then open TCP socket to the first CDN that answers.
+        //       Parse data as it comes, as soon as a socket drops, failover to the next CDN and specify a content range to resume download.
+        //       If the last CDN fails, hard error (close the socket)
+        //       Stream content from the CDN, decoded, to the client.
     }
 
     void Proxy::Accept() {

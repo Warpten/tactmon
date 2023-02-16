@@ -2,6 +2,7 @@
 
 #include "io/fs/FileStream.hpp"
 #include "io/mem/MemoryStream.hpp"
+#include "tact/Cache.hpp"
 
 #include <cstdint>
 #include <filesystem>
@@ -29,8 +30,8 @@ namespace net {
 
         using MessageType = boost::beast::http::message<false, Body>;
 
-        explicit DownloadTask(std::string_view resourceName) : _resourceName(resourceName) { }
-        DownloadTask(std::string_view resourceName, size_t offset, size_t length) : DownloadTask(resourceName) {
+        explicit DownloadTask(std::string_view resourcePath) : _resourcePath(resourcePath) { }
+        DownloadTask(std::string_view resourcePath, size_t offset, size_t length) : DownloadTask(resourcePath) {
             _offset = offset;
             _size = length;
         }
@@ -40,7 +41,6 @@ namespace net {
 
         std::optional<R> Run(boost::asio::io_context& context,
             std::string_view host,
-            std::string_view resourcePath, 
             std::shared_ptr<spdlog::logger> logger)
         {
             namespace asio = boost::asio;
@@ -53,7 +53,7 @@ namespace net {
             beast::error_code ec;
 
             if (logger != nullptr)
-                logger->trace("Downloading '{}/{}' from {}.", resourcePath, _resourceName, host);
+                logger->trace("Downloading '{}' from {}.", _resourcePath, host);
 
             beast::tcp_stream stream { context };
             tcp::resolver r { context };
@@ -61,17 +61,12 @@ namespace net {
             stream.connect(r.resolve(host, "80"), ec);
             if (ec.failed()) {
                 if (logger != nullptr)
-                    logger->error("An error occured while downloading {} from {}: {}.",
-                        _resourceName, host, ec.message());
+                    logger->error("An error occured while downloading {} from {}: {}.", _resourcePath, host, ec.message());
 
                 return std::nullopt;
             }
 
-            http::request<http::string_body> req{
-                http::verb::get,
-                std::format("/{}/{}/{}/{}", resourcePath, _resourceName.substr(0, 2), _resourceName.substr(2, 2), _resourceName),
-                11 // HTTP 1.1
-            };
+            http::request<http::string_body> req { http::verb::get, _resourcePath, 11 };
             req.set(http::field::host, host);
             if (_offset != 0 && _size != 0)
                 req.set(http::field::range, std::format("{}-{}", _offset, _offset + _size - 1));
@@ -79,8 +74,7 @@ namespace net {
             http::write(stream, req, ec);
             if (ec.failed()) {
                 if (logger != nullptr)
-                    logger->error("An error occured while downloading {} from {}: {}.",
-                        _resourceName, host, ec.message());
+                    logger->error("An error occured while downloading {} from {}: {}.", _resourcePath, host, ec.message());
 
                 return std::nullopt;
             }
@@ -91,8 +85,7 @@ namespace net {
             ec = Initialize(res.get().body());
             if (ec.failed()) {
                 if (logger != nullptr)
-                    logger->error("An error occured while downloading {} from {}: {}.",
-                        _resourceName, host, ec.message());
+                    logger->error("An error occured while downloading {} from {}: {}.", _resourcePath, host, ec.message());
 
                 return std::nullopt;
             }
@@ -101,39 +94,38 @@ namespace net {
             http::read(stream, buffer, res, ec);
             if (ec.failed() || res.get().result() != http::status::ok) {
                 if (logger != nullptr)
-                    logger->error("An error occured while downloading {} from {}: {}.", _resourceName, host, ec.message());
+                    logger->error("An error occured while downloading {} from {}: {}.", _resourcePath, host, ec.message());
             }
 
             if (res.get().result() == http::status::ok) {
                 if (logger != nullptr)
-                    logger->trace("Downloaded '{}/{}' from {} ({} bytes)",
-                        host, resourcePath, _resourceName, res.get()[http::field::content_length]
-                    );
+                    logger->trace("Downloaded '{}' from {} ({} bytes)", host, _resourcePath, res.get()[http::field::content_length]);
             }
 
             stream.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             return TransformMessage(res.get());
         }
-    private:
-        std::string _resourceName;
+
+    protected:
+        std::string _resourcePath;
         size_t _size = 0;
         size_t _offset = 0;
     };
 
     struct FileDownloadTask final : DownloadTask<boost::beast::http::file_body, io::FileStream> {
-        FileDownloadTask(std::string_view resourceName, std::filesystem::path pathOnDisk) noexcept
-            : DownloadTask(resourceName), _pathOnDisk(pathOnDisk)
+        FileDownloadTask(std::string_view resourcePath, tact::Cache& localCache) noexcept
+            : DownloadTask(resourcePath), _localCache(localCache)
         { }
 
-        FileDownloadTask(std::string_view resourceName, size_t offset, size_t length, std::filesystem::path pathOnDisk) noexcept
-            : DownloadTask(resourceName, offset, length), _pathOnDisk(pathOnDisk)
+        FileDownloadTask(std::string_view resourcePath, size_t offset, size_t length, tact::Cache& localCache) noexcept
+            : DownloadTask(resourcePath, offset, length), _localCache(localCache)
         { }
 
         boost::system::error_code Initialize(ValueType& body) override;
         std::optional<io::FileStream> TransformMessage(MessageType& body) override;
 
     private:
-        std::filesystem::path _pathOnDisk;
+        tact::Cache& _localCache;
     };
 
     struct MemoryDownloadTask : DownloadTask<boost::beast::http::dynamic_body, io::mem::GrowableMemoryStream> {

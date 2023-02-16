@@ -2,10 +2,12 @@
 
 namespace net {
     boost::system::error_code FileDownloadTask::Initialize(ValueType& body) {
-        std::filesystem::create_directories(_pathOnDisk.parent_path());
+
+        std::filesystem::path absolutePath { _localCache.GetAbsolutePath(_resourcePath) };
+        std::filesystem::create_directories(absolutePath.parent_path());
 
         boost::system::error_code ec;
-        body.open(_pathOnDisk.string().data(), boost::beast::file_mode::write, ec);
+        body.open(absolutePath.string().data(), boost::beast::file_mode::write, ec);
         return ec;
     }
 
@@ -15,11 +17,11 @@ namespace net {
         if (message.result() != boost::beast::http::status::ok) {
             // Ideally we would prevent beast from writing to disk if http response is not 200 OK or some
             // other 2xx code.
-            std::filesystem::remove(_pathOnDisk);
+            _localCache.Delete(_resourcePath);
             return std::nullopt;
         }
 
-        return io::FileStream { _pathOnDisk, std::endian::little };
+        return _localCache.OpenWrite(_resourcePath);
     }
 
     boost::system::error_code MemoryDownloadTask::Initialize(ValueType& body) {

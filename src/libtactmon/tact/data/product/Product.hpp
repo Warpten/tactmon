@@ -5,6 +5,7 @@
 #include "net/ribbit/types/CDNs.hpp"
 #include "net/ribbit/types/Versions.hpp"
 #include "tact/BLTE.hpp"
+#include "tact/Cache.hpp"
 #include "tact/CKey.hpp"
 #include "tact/config/BuildConfig.hpp"
 #include "tact/config/CDNConfig.hpp"
@@ -24,7 +25,7 @@
 
 namespace tact::data::product {
     struct Product {
-        Product(std::string_view productName, std::filesystem::path installationRoot,
+        Product(std::string_view productName, Cache& localCache,
             boost::asio::io_context& context);
 
         std::string_view name() const { return _productName; }
@@ -40,21 +41,16 @@ namespace tact::data::product {
         * @returns The parsed configuration object, or an empty optional if an error occured.
         */
         template <typename T>
-        std::optional<T> ResolveConfig(std::string_view key, std::function<std::optional<T>(io::IReadableStream&)> parser) const {
+        std::optional<T> ResolveCachedConfig(std::string_view key, std::function<std::optional<T>(io::FileStream&)> parser) const {
             for (net::ribbit::types::cdns::Record const& cdn : *_cdns) {
-                std::string remotePath{ std::format("{}/config/{}/{}/{}", cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
-                std::filesystem::path localPath = _installRoot / remotePath;
-
-                if (std::filesystem::is_regular_file(localPath)) {
-                    io::FileStream fileStream { localPath, std::endian::little };
-                    std::optional<T> parsedValue = parser(fileStream);
-                    if (parsedValue.has_value())
-                        return parsedValue;
-                }
+                std::string relativePath { std::format("{}/config/{}/{}/{}", cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
+                std::optional<T> cachedValue = _localCache.Resolve(relativePath, parser);
+                if (cachedValue.has_value())
+                    return cachedValue;
 
                 for (std::string_view host : cdn.Hosts) {
-                    net::FileDownloadTask downloadTask{ key, localPath };
-                    auto taskResult = downloadTask.Run(_context, host, std::format("{}/config", cdn.Path), _logger);
+                    net::FileDownloadTask downloadTask { relativePath, _localCache };
+                    auto taskResult = downloadTask.Run(_context, host, _logger);
                     if (taskResult.has_value()) {
                         std::optional<T> parsedValue = parser(*taskResult);
                         if (parsedValue.has_value())
@@ -75,7 +71,7 @@ namespace tact::data::product {
         * @returns The parsed data file, or an empty optional if an error occured.
         */
         template <typename Task, typename R>
-        // requires std::is_base_of_v<net::DownloadTask, Task>
+        [[deprecated("Manually process IndexFileLocation and FileLocation!")]]
         std::optional<R> ResolveData(std::function<Task()> taskSupplier,
             std::function<std::optional<R>(typename Task::ResultType&)> resultSupplier) const
         {
@@ -85,8 +81,7 @@ namespace tact::data::product {
                 std::string_view queryPath = cdn.Path;
 
                 for (std::string_view host : cdn.Hosts) {
-                    typename Task::ResultType taskResult = downloadTask.Run(_context,
-                        host, std::format("{}/data", cdn.Path), _logger);
+                    typename Task::ResultType taskResult = downloadTask.Run(_context, host, _logger);
                     if (taskResult.has_value())
                         return resultSupplier(taskResult);
                 }
@@ -104,27 +99,17 @@ namespace tact::data::product {
         * @returns An optional encapsulating the deserialized resource.
         */
         template <typename R>
-        std::optional<R> ResolveCachedData(std::string_view key,
-            std::function<std::optional<R>(io::FileStream&)> resultSupplier) const {
-
-            namespace fs = std::filesystem;
-
+        std::optional<R> ResolveCachedData(std::string_view key, std::function<std::optional<R>(io::FileStream&)> resultSupplier) const {
             for (net::ribbit::types::cdns::Record const& cdn : *_cdns) {
-                std::string remotePath{ std::format("{}/data/{}/{}/{}", cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
-                std::filesystem::path localPath = _installRoot / remotePath;
+                std::string relativePath { std::format("{}/data/{}/{}/{}", cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
+                std::optional<R> cachedValue = _localCache.Resolve<R>(relativePath, resultSupplier);
+                if (cachedValue.has_value())
+                    return cachedValue;
 
-                if (fs::is_regular_file(localPath)) {
-                    io::FileStream fs { localPath, std::endian::little };
-                    return resultSupplier(fs);
-                }
-
-                net::FileDownloadTask fileTask { key, localPath };
-
-                std::string_view queryPath = cdn.Path;
+                net::FileDownloadTask fileTask { relativePath, _localCache };
 
                 for (std::string_view host : cdn.Hosts) {
-                    std::optional<io::FileStream> taskResult = fileTask.Run(_context,
-                        host, std::format("{}/data", cdn.Path), _logger);
+                    std::optional<io::FileStream> taskResult = fileTask.Run(_context, host, _logger);
 
                     if (taskResult.has_value())
                         return resultSupplier(*taskResult);
@@ -202,7 +187,7 @@ namespace tact::data::product {
         std::string _productName;
 
     private:
-        std::filesystem::path _installRoot;
+        Cache& _localCache;
 
     protected:
         std::shared_ptr<spdlog::logger> _logger;

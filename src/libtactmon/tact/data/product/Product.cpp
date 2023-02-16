@@ -12,9 +12,8 @@ namespace tact::data::product {
     using namespace std::string_view_literals;
     namespace ribbit = net::ribbit;
 
-    Product::Product(std::string_view productName, std::filesystem::path installationRoot,
-        boost::asio::io_context& context)
-        : _context(context), _productName(productName), _installRoot(installationRoot)
+    Product::Product(std::string_view productName, Cache& localCache, boost::asio::io_context& context)
+        : _context(context), _productName(productName), _localCache(localCache)
     {
     }
 
@@ -26,13 +25,13 @@ namespace tact::data::product {
             return false;
 
         // Load build config and cdn config; abort if invalid or not found.
-        _buildConfig = ResolveConfig<tact::config::BuildConfig>(buildConfig, [](io::IReadableStream& fstream) -> std::optional<tact::config::BuildConfig> {
+        _buildConfig = ResolveCachedConfig<tact::config::BuildConfig>(buildConfig, [](io::FileStream& fstream) -> std::optional<tact::config::BuildConfig> {
             return tact::config::BuildConfig { fstream };
         });
         if (!_buildConfig.has_value())
             return false;
 
-        _cdnConfig = ResolveConfig<tact::config::CDNConfig>(cdnConfig, [](io::IReadableStream& fstream) -> std::optional<tact::config::CDNConfig> {
+        _cdnConfig = ResolveCachedConfig<tact::config::CDNConfig>(cdnConfig, [](io::FileStream& fstream) -> std::optional<tact::config::CDNConfig> {
             return tact::config::CDNConfig{ fstream };
         });
         if (!_cdnConfig.has_value())
@@ -89,10 +88,10 @@ namespace tact::data::product {
                 [](io::FileStream& fstream) -> std::optional<io::FileStream> {
                     if (!fstream)
                         return std::nullopt;
-
+            
                     return fstream;
                 });
-
+            
             if (dataStream.has_value())
                 _indices.emplace_back(archiveName, *dataStream);
         });
