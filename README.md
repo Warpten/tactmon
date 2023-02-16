@@ -10,17 +10,37 @@
 
 A CDN tracker for Blizzard products. Has technically support for more than just World of Warcraft, but the intended audience being [TrinityCore](http://github.com/TrinityCore), this is what you get.
 
-## Compilation
-
-To be redacted.
-
 ## Dependencies
 
-1. Boost
-2. spdlog (`vcpkg install spdlog:x64-windows`)
-3. dpp (`vcpkg install dpp:x64-windows`)
-4. openssl (`vcpkg install openssl:x64-windows`)
-5. pqxx (`vcpkg install pqxx:x64-windows`)  (Requires PostgreSQL) (`tactmon` only)
+|                | `libtactmon` | `tactmon` |
+|----------------|--------------|-----------|
+| `Boost`        | ✔️ | ✔️ |
+| `spdlog`       | ✔️ | ✔️ |
+| `zlib`         | ✔️ | ❌ |
+| `openssl`      | ✔️ | ❌ |
+| `dpp`          | ❌ | ✔️ |
+| `libpqxx`      | ❌ | ✔️ |
+
+## Compiling
+
+### Windows
+
+Build requires CMake. `Boost`, `dpp`, `openssl`, `zlib`, `spdlog` and `libpqxx` must be available to find by CMake; this can be done through `vcpkg` by running the following commands:
+
+```
+vcpkg install dpp:x64-windows
+vcpkg install pqxx:w64-windows
+vcpkg install libpqxx:x64-windows
+vcpkg install openssl:x64-windows
+vcpkg install zlib:x64-windows
+vcpkg install spdlog:x64-windows
+```
+
+Then, make sure to run CMake with the `CMAKE_TOOLCHAIN_FILE` set to `$(VCPKG_INSTALL_ROOT)/scripts/buildsystems/vcpkg.cmake`. If all you're building is `libtactmon`, your only requirements are `zlib`, `spdlog`, `Boost` and `openssl`.
+
+### Linux
+
+To be redacted.
 
 ## libtactmon
 
