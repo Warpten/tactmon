@@ -1,0 +1,11 @@
+{
+  "name": "main",
+  "version-string": "latest",
+  "dependencies": [
+    "spdlog",
+    "boost",
+    "libpqxx",
+    "openssl",
+    "zlib"
+  ]
+}
