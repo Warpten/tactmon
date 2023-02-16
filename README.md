@@ -1,8 +1,14 @@
+<font size="7">
+⚠️ None of the code in this repository has been tested in production. Use at your own risk. ⚠️
+    
+⚠️ You **especially** should not see the code powering the database access used by `tactman`.⚠️
+</font>
+
+<hr />
+
 # tactmon
 
 A CDN tracker for Blizzard products. Has technically support for more than just World of Warcraft, but the intended audience being [TrinityCore](http://github.com/TrinityCore), this is what you get.
-
-⚠️None of the code in this repository has been tested in production. Use at your own risk. ⚠️
 
 ## Compilation
 
@@ -14,6 +20,7 @@ To be redacted.
 2. spdlog (`vcpkg install spdlog:x64-windows`)
 3. dpp (`vcpkg install dpp:x64-windows`)
 4. openssl (`vcpkg install openssl:x64-windows`)
+5. pqxx (`vcpkg install pqxx:x64-windows`)  (Requires PostgreSQL) (`tactmon` only)
 
 ## libtactmon
 
