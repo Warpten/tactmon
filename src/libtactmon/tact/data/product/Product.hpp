@@ -24,22 +24,33 @@
 #include <string_view>
 
 namespace tact::data::product {
+    /**
+     * An implementation of a game product.
+     */
     struct Product {
-        Product(std::string_view productName, Cache& localCache,
-            boost::asio::io_context& context);
+        /**
+         * Creates a new abstraction around a game product.
+         * 
+         * @param[in] productName The name of the product, as seen on Ribbit.
+         * @param[in] localCache  A local cache manager controlling where configuration and data files will be read from and written to.
+         */
+        Product(std::string_view productName, Cache& localCache, boost::asio::io_context& context);
 
+        /**
+         * The name of this product.
+         */
         std::string_view name() const { return _productName; }
 
     protected: // Resource resolution APIs
 
         /**
-        * Resolves a configuration file.
-        * 
-        * @param[in] key    The MD5 hash of the config file.
-        * @param[in] parser A function that parses the configuration file.
-        * 
-        * @returns The parsed configuration object, or an empty optional if an error occured.
-        */
+         * Resolves a configuration file.
+         * 
+         * @param[in] key    The MD5 hash of the config file.
+         * @param[in] parser A function that parses the configuration file.
+         * 
+         * @returns The parsed configuration object, or an empty optional if an error occured.
+         */
         template <typename T>
         std::optional<T> ResolveCachedConfig(std::string_view key, std::function<std::optional<T>(io::FileStream&)> parser) const {
             for (net::ribbit::types::cdns::Record const& cdn : *_cdns) {
@@ -63,13 +74,13 @@ namespace tact::data::product {
         }
 
         /**
-        * Resolves a data file.
-        * 
-        * @param[in] taskSupplier A function returning the task used to download said file.
-        * @param[in] resultSupplier A function that parses the data file.
-        * 
-        * @returns The parsed data file, or an empty optional if an error occured.
-        */
+         * Resolves a data file.
+         * 
+         * @param[in] taskSupplier   A function returning the task used to download said file.
+         * @param[in] resultSupplier A function that parses the data file.
+         * 
+         * @returns The parsed data file, or an empty optional if an error occured.
+         */
         template <typename Task, typename R>
         [[deprecated("Manually process IndexFileLocation and FileLocation!")]]
         std::optional<R> ResolveData(std::function<Task()> taskSupplier,
@@ -91,13 +102,13 @@ namespace tact::data::product {
         }
 
         /**
-        * Resolves a cached file data.
-        * 
-        * @param[in] resourcePath Path on disk to the resource.
-        * @param[in] resultSupplier A function that deserializes the resource.
-        * 
-        * @returns An optional encapsulating the deserialized resource.
-        */
+         * Resolves a cached file data.
+         * 
+         * @param[in] resourcePath   Path on disk to the resource.
+         * @param[in] resultSupplier A function that deserializes the resource.
+         * 
+         * @returns An optional encapsulating the deserialized resource.
+         */
         template <typename R>
         std::optional<R> ResolveCachedData(std::string_view key, std::function<std::optional<R>(io::FileStream&)> resultSupplier) const {
             for (net::ribbit::types::cdns::Record const& cdn : *_cdns) {
@@ -130,18 +141,27 @@ namespace tact::data::product {
         }
 
     public: // Front-facing API
+        /**
+         * Returns the current version of this product that Ribbit exposes.
+         */
         std::optional<net::ribbit::types::Versions> Refresh() noexcept;
 
+        /**
+         * Loads the given configuration files.
+         * 
+         * @param[in] buildConfig The name of the build configuration file.
+         * @param[in] cdnConfig   The name of the content domain network configuration file.
+         */
         virtual bool Load(std::string_view buildConfig, std::string_view cdnConfig) noexcept;
 
         /**
-         * Locates a file.
+         * Locates a file by its path.
          * 
-         * @param[in] fileName Complete path to the file.
+         * @param[in] filePath Complete path to the file.
          * 
          * @returns The location of the file, or an empty optional if not found.
          */
-        virtual std::optional<tact::data::FileLocation> FindFile(std::string_view fileName) const;
+        virtual std::optional<tact::data::FileLocation> FindFile(std::string_view filePath) const;
 
         /**
          * Locates a file by FDID.
@@ -175,12 +195,12 @@ namespace tact::data::product {
         std::optional<tact::BLTE> Open(tact::data::FileLocation const& location) const;
 
         /**
-         * Locates an encoding key in the indexes of this product.
+         * Locates the archive that encodes a given encoding key.
          * 
          * @param[in] ekey The encoding key.
          * @returns Location of the file in an archive, or an empty optional if the file could not be found.
          */
-        std::optional<tact::data::IndexFileLocation> FindIndex(tact::EKey const& ekey) const;
+        std::optional<tact::data::ArchiveFileLocation> FindArchive(tact::EKey const& ekey) const;
 
     private:
         boost::asio::io_context& _context;

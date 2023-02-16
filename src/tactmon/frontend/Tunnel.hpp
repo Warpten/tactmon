@@ -22,7 +22,7 @@ namespace frontend {
     struct Tunnel {
         explicit Tunnel(boost::asio::io_context& context, std::string_view localRoot, uint16_t listenPort);
 
-        std::string GenerateAdress(backend::db::entity::build::Entity const& buildInfo, tact::data::IndexFileLocation const& location, std::string_view fileName, size_t decompressedSize) const;
+        std::string GenerateAdress(backend::db::entity::build::Entity const& buildInfo, tact::data::ArchiveFileLocation const& location, std::string_view fileName, size_t decompressedSize) const;
         std::string GenerateAdress(backend::db::entity::build::Entity const& buildInfo, std::span<const uint8_t> location, std::string_view fileName, size_t decompressedSize) const;
 
     private:

@@ -9,21 +9,12 @@
 #include <vector>
 
 namespace tact::data::product::wow {
+    /**
+     * An implementation of World of Warcraft related game products.
+     */
     struct Product final : tact::data::product::Product {
         using Base = tact::data::product::Product;
         using Base::Base;
-
-        struct Entry final {
-            Entry(std::span<uint8_t, 0x10> hash, uint64_t fileDataID, uint64_t nameHash) noexcept
-                :  _fileDataID(fileDataID), _nameHash(nameHash)
-            {
-                std::copy_n(hash.begin(), 0x10, _hash.begin());
-            }
-
-            std::array<uint8_t, 0x10> _hash { 0 };
-            uint64_t _fileDataID = 0;
-            uint64_t _nameHash = 0;
-        };
 
         std::optional<tact::data::FileLocation> FindFile(std::string_view fileName) const override;
         std::optional<tact::data::FileLocation> FindFile(uint32_t fileDataID) const override;
@@ -31,8 +22,6 @@ namespace tact::data::product::wow {
         bool Load(std::string_view buildConfig, std::string_view cdnConfig) noexcept override;
 
     private:
-        std::vector<Entry> _entries;
-
         std::optional<tact::data::product::wow::Root> _root;
     };
 }

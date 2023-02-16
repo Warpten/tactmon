@@ -23,7 +23,6 @@ namespace crypto {
         using Digest = std::array<uint8_t, Size>;
 
         template <typename... Ts>
-        // requires requires ((std::is_same_v<decltype(Hash{}.UpdateData(Ts{})), Digest > && ...))
         static Digest Of(Ts&&... pack) {
             Hash hash{ };
             (hash.UpdateData(pack), ...);
@@ -52,7 +51,7 @@ namespace crypto {
             return *this;
         }
 
-        Hash& operator = (Hash&& other) {
+        Hash& operator = (Hash&& other) noexcept {
             _context = std::exchange(other._context, HashImpl::Creator());
             _digest = std::exchange(other._digest, Digest{ });
 
@@ -67,8 +66,7 @@ namespace crypto {
         void UpdateData(std::span<T const> data) {
             if constexpr (std::is_same_v<T, std::byte>) {
                 EVP_DigestUpdate(_context, reinterpret_cast<uint8_t*>(data.data()), data.size());
-            }
-            else {
+            } else {
                 UpdateData(std::as_bytes(data));
             }
         }

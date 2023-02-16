@@ -49,7 +49,7 @@ namespace tact::data {
         //   ????
 
         // Compute some file properties
-        size_t blockSize = blockSizeKb << 10;
+        size_t blockSize = blockSizeKb * 1024u;
         size_t entrySize = _keySizeBytes + sizeBytes + offsetBytes;
         size_t entryCount = blockSize / entrySize;
         size_t paddingSize = blockSize - entrySize * entryCount;

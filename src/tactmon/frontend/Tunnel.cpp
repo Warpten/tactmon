@@ -40,7 +40,7 @@ namespace frontend {
             fileName);
     }
 
-    std::string Tunnel::GenerateAdress(build::Entity const& buildInfo, tact::data::IndexFileLocation const& location, std::string_view fileName, size_t decompressedSize) const {
+    std::string Tunnel::GenerateAdress(build::Entity const& buildInfo, tact::data::ArchiveFileLocation const& location, std::string_view fileName, size_t decompressedSize) const {
         return std::format("{}/{}/{}/{}/{}/{}/{}", _localRoot,
             db::get<build::cdn_config>(buildInfo),
             location.name(), location.offset(), location.fileSize(), decompressedSize,

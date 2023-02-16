@@ -90,7 +90,7 @@ namespace frontend::commands {
             }();
 
             for (size_t i = 0; i < fileLocation->keyCount(); ++i) {
-                std::optional<tact::data::IndexFileLocation> indexLocation = productHandler->FindIndex((*fileLocation)[i]);
+                std::optional<tact::data::ArchiveFileLocation> indexLocation = productHandler->FindArchive((*fileLocation)[i]);
                 if (!indexLocation.has_value())
                     continue;
 

@@ -114,7 +114,7 @@ namespace tact::data::product {
             return std::nullopt;
 
         ribbit::Versions<ribbit::Region::EU, ribbit::Version::V1> versionsCommand { _context };
-        std::optional<ribbit::types::Versions> versions = versionsCommand("wow"sv); // Call op
+        std::optional<ribbit::types::Versions> versions = versionsCommand(std::string_view { _productName }); // Call op
         if (!versions.has_value())
             return std::nullopt;
 
@@ -150,7 +150,7 @@ namespace tact::data::product {
             tact::EKey encodingKey { location[i] };
 
             // Try via indexes
-            std::optional<tact::data::IndexFileLocation> indexLocation = FindIndex(encodingKey);
+            std::optional<tact::data::ArchiveFileLocation> indexLocation = FindArchive(encodingKey);
             if (indexLocation.has_value()) {
                 auto dataStream = ResolveData<net::MemoryDownloadTask, tact::BLTE>([&indexLocation]() -> net::MemoryDownloadTask {
                     return net::MemoryDownloadTask { indexLocation->name(), indexLocation->offset(), indexLocation->fileSize() };
@@ -181,11 +181,11 @@ namespace tact::data::product {
         return std::nullopt;
     }
 
-    std::optional<tact::data::IndexFileLocation> Product::FindIndex(tact::EKey const& ekey) const {
+    std::optional<tact::data::ArchiveFileLocation> Product::FindArchive(tact::EKey const& ekey) const {
         for (tact::data::Index const& index : _indices) {
             tact::data::Index::Entry const* entry = index[ekey];
             if (entry != nullptr)
-                return tact::data::IndexFileLocation{ index.name(), entry->offset(), entry->size() };
+                return tact::data::ArchiveFileLocation{ index.name(), entry->offset(), entry->size() };
         }
 
         return std::nullopt;
