@@ -27,8 +27,8 @@ namespace frontend {
     namespace build = entity::build;
 
     Discord::Discord(boost::asio::io_context::strand strand, std::string_view token,
-        backend::ProductCache& productManager, backend::Database& database)
-        : bot(std::string{ token }), productManager(productManager), db(database), _strand(strand)
+        backend::ProductCache& productManager, backend::Database& database, frontend::Proxy& httpServer)
+        : bot(std::string{ token }), productManager(productManager), db(database), _strand(strand), httpServer(httpServer)
     {
         _logger = logging::GetLogger("discord");
 
@@ -38,7 +38,6 @@ namespace frontend {
         bot.on_select_click(std::bind(&Discord::HandleSelectClickEvent, this, std::placeholders::_1));
         bot.on_log(std::bind(&Discord::HandleLogEvent, this, std::placeholders::_1));
         bot.on_autocomplete(std::bind(&Discord::HandleAutoCompleteEvent, this, std::placeholders::_1));
-
     }
 
     Discord::~Discord() {

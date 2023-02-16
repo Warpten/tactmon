@@ -7,6 +7,8 @@
 
 #include <tact/data/FileLocation.hpp>
 
+#include <string_view>
+
 namespace db = backend::db;
 namespace entity = db::entity;
 namespace build = entity::build;
@@ -65,7 +67,7 @@ namespace frontend::commands {
         ));
 
         // 2. Obtain an instance of the product.
-        cluster.productManager.LoadConfiguration(product, *buildEntry, [=](backend::Product& productHandler) {
+        cluster.productManager.LoadConfiguration(product, *buildEntry, [&](backend::Product& productHandler) {
             // 3. Locate the file
             std::optional<tact::data::FileLocation> fileLocation = productHandler->FindFile(file);
             if (!fileLocation.has_value()) {
@@ -80,19 +82,50 @@ namespace frontend::commands {
 
                 return;
             }
+            std::string_view fileNameComponent = [&]() {
+                size_t separatorPos = file.find_last_of("/\\");
+                if (separatorPos != std::string::npos)
+                    return std::string_view{ file }.substr(separatorPos + 1);
+                return std::string_view{ file };
+            }();
 
-            // 4. Generate download link
-            // Generate a link to the http server
-            // The server will perform routing over all available CDN servers for the provided build
-            // and stream the response to the client.
-            evnt.edit_response(dpp::message().add_embed(
-                dpp::embed()
-                .set_title("Download this file.")
-                .set_url("http://www.google.fr") // TODO: Generate link
-                .set_description(std::format("Click here to download `{}`", file))
-                .set_footer(dpp::embed_footer()
-                    .set_text(version))
-            ));
+            for (size_t i = 0; i < fileLocation->keyCount(); ++i) {
+                std::optional<tact::data::IndexFileLocation> indexLocation = productHandler->FindIndex((*fileLocation)[i]);
+                if (!indexLocation.has_value())
+                    continue;
+
+                std::string fileAddress = cluster.httpServer.GenerateAdress(*buildEntry, *indexLocation, fileNameComponent);
+
+                // 4. Generate download link
+                // Generate a link to the http server
+                // The server will perform routing over all available CDN servers for the provided build
+                // and stream the response to the client.
+                evnt.edit_response(dpp::message().add_embed(
+                    dpp::embed()
+                        .set_title("Download this file.")
+                        .set_url(fileAddress)
+                        .set_description(std::format("Click here to download `{}`", file))
+                        .set_footer(dpp::embed_footer().set_text(version))
+                ));
+
+                return; // Done.
+            }
+
+            // Otherwise, the ekey is literally a file on the CDN
+            // TODO: If there are multiple ekeys, provide multiple links to the client?
+            for (size_t i = 0; i < fileLocation->keyCount(); ++i) {
+                std::string fileAddress = cluster.httpServer.GenerateAdress(*buildEntry, (*fileLocation)[i], fileNameComponent);
+
+                evnt.edit_response(dpp::message().add_embed(
+                    dpp::embed()
+                        .set_title("Download this file.")
+                        .set_url(fileAddress)
+                        .set_description(std::format("Click here to download `{}`.", file))
+                        .set_footer(dpp::embed_footer().set_text(version))
+                ));
+
+                break;
+            }
         });
     }
 

@@ -64,6 +64,9 @@ namespace backend {
             if (db::get<db::entity::build::id>(loadedConfiguration) != db::get<db::entity::build::id>(configuration))
                 continue;
 
+            // Reinitialize expiry timer if this build is requested
+            loadedProduct->expirationTimer = std::chrono::high_resolution_clock::now() + 15min;
+
             handler(loadedProduct->product);
             return true;
         }

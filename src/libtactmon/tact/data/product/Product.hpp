@@ -189,7 +189,12 @@ namespace tact::data::product {
          */
         std::optional<tact::BLTE> Open(tact::data::FileLocation const& location) const;
 
-    private:
+        /**
+         * Locates an encoding key in the indexes of this product.
+         * 
+         * @param[in] ekey The encoding key.
+         * @returns Location of the file in an archive, or an empty optional if the file could not be found.
+         */
         std::optional<tact::data::IndexFileLocation> FindIndex(tact::EKey const& ekey) const;
 
     private:

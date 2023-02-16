@@ -28,7 +28,8 @@ namespace frontend::commands {
         cluster.productManager.ForEachProduct([&](backend::Product& product, std::chrono::high_resolution_clock::time_point expiryTime) {
             responseEmbed.add_field(
                 db::get<build::build_name>(product.GetLoadedBuild()),
-                std::format("Unloads in **{0:%M}** minutes and **{0:%S}** seconds.", std::chrono::duration_cast<std::chrono::seconds>(expiryTime - std::chrono::high_resolution_clock::now()))
+                std::format("Unloads in **{0:%M}** minutes and **{0:%S}** seconds.", std::chrono::duration_cast<std::chrono::seconds>(expiryTime - std::chrono::high_resolution_clock::now())),
+                true
             );
         });
 

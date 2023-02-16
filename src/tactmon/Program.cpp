@@ -1,6 +1,7 @@
 #include "backend/Database.hpp"
 #include "backend/Product.hpp"
 #include "frontend/Discord.hpp"
+#include "frontend/Proxy.hpp"
 #include "net/ribbit/Commands.hpp"
 #include "tact/data/product/wow/Product.hpp"
 #include "logging/Sinks.hpp"
@@ -42,8 +43,8 @@ int main(int argc, char** argv) {
         ("database-host", po::value<std::string>()->required(), "Host of the PostgreSQL database.")
         ("database-port", po::value<uint64_t>()->default_value(5432), "Port on which the database is listening. Defaults to 5432.")
         ("database-name", po::value<std::string>()->required(), "Name of the database to use.")
-        //("http-port", po::value<uint16_t>()->required(), "Port on which the http proxy server is active.")
-        //("http-proxy-document-root", po::value<std::string>()->required(), "The base of the URL used to generate download links to files.")
+        ("http-port", po::value<uint16_t>()->required(), "Port on which the http proxy server is active.")
+        ("http-proxy-document-root", po::value<std::string>()->required(), "The base of the URL used to generate download links to files.")
         ("thread-count", po::value<uint32_t>()->default_value(std::thread::hardware_concurrency() * 2), "The amount of threads to use.")
         ;
 
@@ -114,11 +115,14 @@ void Execute(boost::program_options::variables_map vm) {
         vm["database-name"].as<std::string>()
     };
 
-    // 7. Initialize discord frontend
-    frontend::Discord bot { discordStrand, vm["discord-token"].as<std::string>(), productCache, database };
+    // 7. Initialize HTTP proxy.
+    frontend::Proxy proxy { ctx, vm["http-proxy-document-root"].as<std::string>(), vm["http-port"].as<uint16_t>() };
+
+    // 8. Initialize discord frontend
+    frontend::Discord bot { discordStrand, vm["discord-token"].as<std::string>(), productCache, database, proxy };
     bot.Run();
 
-    // 8. Wait for interrupts or end.
+    // 9. Wait for interrupts or end.
     threadPool.join();
     ctx.stop();
 }
