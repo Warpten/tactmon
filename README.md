@@ -64,7 +64,7 @@ std::optional<net::ribbit::types::Summary> response = executor();
 
 ### `tact::data::product::Product`
 
-This is the basic implementation of a game-agnostic product. Construction of this object requires the name of the product as well as the path to a  directory that will behave as a local cache of the configuration and data files available on Blizzard CDNs.
+This is the basic implementation of a game-agnostic product. Construction of this object requires the name of the product as well as an instance of `tact::Cache` that will behave as a local cache of the configuration and data files available on Blizzard CDNs.
 
 1. `bool Product::Load(std::string_view buildConfig, std::string_view cdnConfig)`
 
