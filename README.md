@@ -2,11 +2,13 @@
 
 A CDN tracker for Blizzard products. Has technically support for more than just World of Warcraft, but the intended audience being [TrinityCore](http://github.com/TrinityCore), this is what you get.
 
-### Compilation
+⚠️None of the code in this repository has been tested in production. Use at your own risk. ⚠️
+
+## Compilation
 
 To be redacted.
 
-### Dependencies
+## Dependencies
 
 1. Boost
 2. spdlog (`vcpkg install spdlog:x64-windows`)
@@ -96,3 +98,4 @@ if (location.has_value()) {
 ### `tact::data::product::wow::Product`
 
 This is a specialization of `tact::data::product::Product` tailored for CDN installations of various World of Warcraft products.
+
