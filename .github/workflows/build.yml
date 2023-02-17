@@ -24,12 +24,17 @@ jobs:
       # Tells vcpkg where binary packages are stored.
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg/bincache
       VCPKG_DISABLE_METRICS: 1
+      DOWNLOAD_ROOT: ${{ github.workspace }}/wget-root
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: true
       - name: "Create directory '${{ env.VCPKG_DEFAULT_BINARY_CACHE }}'"
         run: mkdir -p $VCPKG_DEFAULT_BINARY_CACHE
+        shell: bash
+
+      - name: "Create directory '${{ env.DOWNLOAD_ROOT }}'"
+        run: mkdir -p $DOWNLOAD_ROOT
         shell: bash
 
       - name: "Install Linux Developer Tools"
@@ -51,9 +56,11 @@ jobs:
       - name: "Select Clang"
         if: matrix.compiler == 'clang'
         run: |
-         sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+         sudo wget https://apt.llvm.org/llvm.sh -O $DOWNLOAD_ROOT/llvm.sh
+         sudo chmod +x $DOWNLOAD_ROOT/llvm.sh
+         sudo $DOWNLOAD_ROOT/llvm.sh
          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-15 100
-         # Done in a separate pass because the default install sets them up separately
+         # Done in a separate pass because the default install sets them up separately (??)
          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-15 100
          sudo update-alternatives --display cc
         shell: bash
