@@ -35,14 +35,14 @@ jobs:
         shell: bash
 
       - name: "Select GCC"
-        if: matrix.compiler == "gcc"
+        if: matrix.compiler == 'gcc'
         run: |
          sudo apt update
          sudo apt install gcc-12 g++-12
         shell: bash
         
       - name: "Select Clang"
-        if: matrix.compiler == "clang"
+        if: matrix.compiler == 'clang'
         run: |
          sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         shell: bash
