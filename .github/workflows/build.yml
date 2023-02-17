@@ -11,14 +11,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest-gcc, ubuntu-latest-clang, windows-latest]
         include:
           - os: windows-latest
             triplet: x64-windows
-          - os: ubuntu-latest
+          - os: ubuntu-latest-gcc
             triplet: x64-linux
             compiler: gcc
-          - os: ubuntu-latest
+          - os: ubuntu-latest-clang
             triplet: x64-linux
             compiler: clang
     env:
@@ -39,6 +39,7 @@ jobs:
         run: |
          sudo apt update
          sudo apt install gcc-12 g++-12
+         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 --slave /usr/bin/g++ g++ /usr/bin/g++-12
         shell: bash
         
       - name: "Select Clang"
