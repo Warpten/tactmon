@@ -17,7 +17,7 @@ jobs:
             triplet: x64-windows
           - os: ubuntu-latest
             triplet: x64-linux
-            compiler: gcc
+            compiler: clang
     env:
       # Indicates the location of the vcpkg as a Git submodule of the project repository.
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
@@ -51,6 +51,7 @@ jobs:
         if: matrix.compiler == 'clang'
         run: |
          sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+         sudo update-alternatives --install /usr/bin/clang-15 clang /usr/bin/clang-15 100 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-15
         shell: bash
 
       # Setup the build machine with the most recent versions of CMake and Ninja.
