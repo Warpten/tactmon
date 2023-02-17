@@ -7,7 +7,7 @@ CollectSourceFiles(
 GroupSources(${CMAKE_CURRENT_SOURCE_DIR})
 
 find_package(dpp CONFIG REQUIRED)
-find_package(libpqxx CONFIG REQUIRED)
+find_package(libpqxx REQUIRED)
 find_package(spdlog REQUIRED)
 
 add_executable(tactmon
@@ -27,10 +27,10 @@ target_include_directories(tactmon
     ${Boost_INCLUDE_DIR}
 )
 
-target_compile_definitions(tactmon
-  PRIVATE
-    BOOST_BEAST_USE_STD_STRING_VIEW
-)
+# target_compile_definitions(tactmon
+#   PRIVATE
+#     BOOST_BEAST_USE_STD_STRING_VIEW
+# )
 
 set_target_properties(tactmon
   PROPERTIES
@@ -45,7 +45,7 @@ target_link_libraries(tactmon
     openssl
     dpp::dpp
     libtactmon
-    pqxx
+    libpqxx::pqxx
     spdlog::spdlog
     spdlog::spdlog_header_only
 )
