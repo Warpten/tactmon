@@ -1,8 +1,5 @@
-# Set projectname (must be done AFTER setting configurationtypes)
-project(Wownitor)
-
 # CMake policies (can not be handled elsewhere)
-cmake_minimum_required(VERSION 2.8.9)
+cmake_minimum_required(VERSION 3.25.0)
 cmake_policy(SET CMP0005 OLD)
 if(POLICY CMP0043)
   cmake_policy(SET CMP0043 OLD) # Disable 'Ignore COMPILE_DEFINITIONS_<Config> properties'
@@ -11,6 +8,18 @@ endif(POLICY CMP0043)
 # add this options before PROJECT keyword
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
+
+# set default buildoptions and print them
+include(cmake/options.cmake)
+include(cmake/showoptions.cmake)
+
+# Handle vcpkg features here, before project()
+if (TACTMON_BUILD)
+   list(APPEND VCPKG_MANIFEST_FEATURES "frontend")
+endif ()
+
+# Set projectname (must be done AFTER setting configurationtypes)
+project(libtactmon)
 
 # Set RPATH-handing (CMake parameters)
 set(CMAKE_SKIP_BUILD_RPATH 0)
@@ -28,19 +37,11 @@ endif()
 
 include(CheckCXXSourceRuns)
 include(CheckIncludeFiles)
-
-# set default buildoptions and print them
-include(cmake/options.cmake)
-
 include(CheckPlatform)
-
 include(AutoCollect)
 include(GroupSources)
 
 find_package(Threads REQUIRED)
-
-# print out the results before continuing
-include(cmake/showoptions.cmake)
 
 # add sources
 add_subdirectory(src)

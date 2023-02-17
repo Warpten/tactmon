@@ -1,11 +1,40 @@
 {
-  "name": "main",
-  "version-string": "latest",
-  "dependencies": [
-    "spdlog",
-    "boost",
-    "libpqxx",
-    "openssl",
-    "zlib"
-  ]
+    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+    "name": "tactmon",
+    "version-string": "latest",
+    "features": {
+        "libtactmon": {
+            "description": "libtactmon - a Blizzard CDN monitor library",
+            "dependencies": [
+                "spdlog",
+                "boost-algorithm",
+                "boost-asio",
+                "boost-beast",
+                "boost-container",
+                "boost-container-hash",
+                "boost-core",
+                "boost-iostreams",
+                "boost-program-options",
+                "boost-range",
+                {
+                    "name": "openssl:x64-windows-static",
+                    "platform": "windows"
+                },
+                {
+                    "name": "openssl",
+                    "platform": "!windows"
+                },
+                "zlib"
+            ]
+        },
+        "discord-client": {
+            "description": "A self-hosted tact monitor with an HTTP and a Discord frontend.",
+            "dependencies": [
+                "libpqxx",
+                "dpp"
+                "libtactmon"
+            ]
+        }
+    },
+    "default-features": [ "libtactmon" ]
 }
