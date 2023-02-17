@@ -65,7 +65,7 @@ namespace crypto {
         template <typename T>
         void UpdateData(std::span<T const> data) {
             if constexpr (std::is_same_v<T, std::byte>) {
-                EVP_DigestUpdate(_context, reinterpret_cast<uint8_t*>(data.data()), data.size());
+                EVP_DigestUpdate(_context, reinterpret_cast<const uint8_t*>(data.data()), data.size());
             } else {
                 UpdateData(std::as_bytes(data));
             }
@@ -78,7 +78,7 @@ namespace crypto {
         }
 
         void UpdateData(std::string_view data) {
-            EVP_DigestUpdate(_context, reinterpret_cast<uint8_t*>(data.data()), data.size());
+            EVP_DigestUpdate(_context, reinterpret_cast<const uint8_t*>(data.data()), data.size());
         }
 
         void UpdateData(std::string const& data) {
