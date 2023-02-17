@@ -24,7 +24,6 @@ add_dependencies(tactmon
 target_include_directories(tactmon
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/dep/zlib
 
     ${Boost_INCLUDE_DIR}
 )
@@ -45,7 +44,6 @@ target_link_libraries(tactmon
   PRIVATE
     boost
     openssl
-    ${ZLIB_LIBRARIES}
     dpp::dpp
     libtactmon
     pqxx
