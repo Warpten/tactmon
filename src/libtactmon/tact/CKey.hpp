@@ -36,8 +36,8 @@ namespace tact {
 
         template <typename T>
         requires requires (T instance) {
-            { std::begin(instance) }
-            { std::end(instance) }
+            { std::begin(instance) };
+            { std::end(instance) };
         }
         friend bool operator == (CKey const& left, T right) noexcept {
             return std::equal(left._data.get(), left._data.get() + left._size, std::begin(right), std::end(right));
