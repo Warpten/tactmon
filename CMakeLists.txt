@@ -13,9 +13,12 @@ set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 include(cmake/options.cmake)
 include(cmake/showoptions.cmake)
 
-# Handle vcpkg features here, before project()
-if (TACTMON_BUILD)
-   list(APPEND VCPKG_MANIFEST_FEATURES "frontend")
+if (CMAKE_TOOLCHAIN_FILE)
+  # If VCPKG, append feature if necessary
+
+  if (TACTMON_BUILD)
+    list(APPEND VCPKG_MANIFEST_FEATURES "frontend")
+  endif ()
 endif ()
 
 # Set projectname (must be done AFTER setting configurationtypes)

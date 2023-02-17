@@ -16,18 +16,11 @@
                 "boost-iostreams",
                 "boost-program-options",
                 "boost-range",
-                {
-                    "name": "openssl:x64-windows-static",
-                    "platform": "windows"
-                },
-                {
-                    "name": "openssl",
-                    "platform": "!windows"
-                },
+                "openssl",
                 "zlib"
             ]
         },
-        "discord-client": {
+        "frontend": {
             "description": "A self-hosted tact monitor with an HTTP and a Discord frontend.",
             "dependencies": [
                 "libpqxx",
