@@ -5,7 +5,7 @@
 #include <utility>
 
 namespace ext {
-    template <size_t N> struct Constant { constexpr static const auto value = N; };
+    template <std::size_t N> struct Constant { constexpr static const auto value = N; };
 
     /**
     * Forward declarations.
@@ -17,7 +17,7 @@ namespace ext {
         /**
         * Stores a value of type T.
         */
-        template <size_t I, typename T>
+        template <std::size_t I, typename T>
         struct tuple_base_item {
             tuple_base_item() : value_() { }
             explicit tuple_base_item(T&& value) : value_(value) { }
@@ -28,7 +28,7 @@ namespace ext {
             tuple_base_item& operator = (tuple_base_item const&) = default;
             tuple_base_item& operator = (tuple_base_item&&) = default;
 
-            constexpr static const size_t index = I;
+            constexpr static const std::size_t index = I;
             using value_type = T;
 
             T value_;
@@ -40,7 +40,7 @@ namespace ext {
         */
         template <typename, typename...> struct tuple_base;
 
-        template <size_t... Is, typename... Ts>
+        template <std::size_t... Is, typename... Ts>
         struct tuple_base<std::index_sequence<Is...>, Ts...> : tuple_base_item<Is, Ts>... {
             tuple_base() : tuple_base_item<Is, Ts>()... { }
             explicit tuple_base(Ts&&... args) : tuple_base_item<Is, Ts>(std::forward<Ts>(args))... { }
@@ -66,24 +66,24 @@ namespace ext {
         */
         class select_base_by_index final {
         public:
-            template <size_t I, typename T>
+            template <std::size_t I, typename T>
             static auto select_base_impl(tuple_base_item<I, T>) -> detail::tuple_base_item<I, T>;
-            template <size_t I, typename T>
+            template <std::size_t I, typename T>
             static auto select_impl(tuple_base_item<I, T>) -> T;
 
-            template <size_t I, typename... Ts>
+            template <std::size_t I, typename... Ts>
             static auto select_(tuple<Ts...> t) {
                 return select_impl<I>(t);
             };
-            template <size_t I, typename... Ts>
+            template <std::size_t I, typename... Ts>
             static auto select_base_(tuple<Ts...> t) {
                 return select_base_impl<I>(t);
             }
 
         public:
-            template <size_t I, typename Tuple>
+            template <std::size_t I, typename Tuple>
             using type = decltype(select_<I>(std::declval<std::decay_t<Tuple>>()));
-            template <size_t I, typename Tuple>
+            template <std::size_t I, typename Tuple>
             using base_type = decltype(select_base_<I>(std::declval<std::decay_t<Tuple>>()));
         };
 
@@ -92,10 +92,10 @@ namespace ext {
         */
         class select_base_by_type final {
         public:
-            template <typename T, size_t I>
+            template <typename T, std::size_t I>
             static auto select_base_impl(tuple_base_item<I, T>)
                 -> detail::tuple_base_item<I, T>;
-            template <typename T, size_t I>
+            template <typename T, std::size_t I>
             static auto select_impl(tuple_base_item<I, T>) -> T;
 
             template <typename T, typename... Ts>
@@ -115,15 +115,15 @@ namespace ext {
 
         template <typename> struct is_tuple_impl : std::false_type {};
 
-        template <size_t... Is, typename... Ts>
+        template <std::size_t... Is, typename... Ts>
         struct is_tuple_impl<tuple_base<std::index_sequence<Is...>, Ts...>> : std::true_type { };
 
         // tuple_cat
 
-        template <size_t... Inner, size_t... Outer, typename Tuples>
+        template <std::size_t... Inner, std::size_t... Outer, typename Tuples>
         constexpr static auto tuple_cat(std::index_sequence<Inner...>, std::index_sequence<Outer...>, Tuples&& ts);
 
-        template <typename... Ts, size_t... Is>
+        template <typename... Ts, std::size_t... Is>
         constexpr static auto tuple_cat(std::index_sequence<Is...>, Ts&&... tuples);
     }
 
@@ -143,15 +143,15 @@ namespace ext {
         friend class detail::select_base_by_type;
 
         template <typename T, typename Tuple> friend auto get(Tuple&& tuple) -> typename detail::select_base_by_type::type<T, Tuple>;
-        template <size_t I, typename Tuple> friend auto get(Tuple&& tuple) -> typename detail::select_base_by_index::type<I, Tuple>;
+        template <std::size_t I, typename Tuple> friend auto get(Tuple&& tuple) -> typename detail::select_base_by_index::type<I, Tuple>;
 
-        template <typename... Xs, size_t... Is>
+        template <typename... Xs, std::size_t... Is>
         friend constexpr auto detail::tuple_cat(std::index_sequence<Is...>, Xs&&... tuples);
 
     public:
         tuple(Ts&&... args) : base_t(std::forward<Ts>(args)...) { };
 
-        template <size_t I = sizeof...(Ts), typename = std::enable_if_t<(I > 0)>> tuple() { };
+        template <std::size_t I = sizeof...(Ts), typename = std::enable_if_t<(I > 0)>> tuple() { };
 
         tuple(tuple const&) = default;
         tuple(tuple&&) noexcept = default;
@@ -162,13 +162,13 @@ namespace ext {
         /**
         * Get type of element of tuple at index I.
         */
-        template <size_t I>
+        template <std::size_t I>
         using at_offset = typename detail::select_base_by_index::template type<I, base_t>;
 
         /**
         * Get type of tuple element storage at index I.
         */
-        template <size_t I>
+        template <std::size_t I>
         using base_at_offset = typename detail::select_base_by_index::template base_type<I, base_t>;
 
         /**
@@ -187,29 +187,29 @@ namespace ext {
     /**
     * Metafunction returning the type of the element of the tuple at index I.
     */
-    template <size_t I, typename Tuple> struct tuple_element {
+    template <std::size_t I, typename Tuple> struct tuple_element {
         using type = typename Tuple::template at_offset<I>;
     };
 
-    template <size_t I, typename Tuple>
+    template <std::size_t I, typename Tuple>
     using tuple_element_t = typename tuple_element<I, Tuple>::type;
 
     /**
     * Metafunction returning the size of a tuple.
     */
     template <typename... Ts> struct tuple_size<tuple<Ts...>> { enum { size = sizeof...(Ts) }; };
-    template <typename T> constexpr static const size_t tuple_size_v = tuple_size<T>::size;
+    template <typename T> constexpr static const std::size_t tuple_size_v = tuple_size<T>::size;
 
     /**
     * Metafunction returning the index of the given type in the tuple.
     */
     template <typename T, typename Tuple>
-    constexpr static const size_t tuple_index_v = Tuple::template base_of_type<T>::index;
+    constexpr static const std::size_t tuple_index_v = Tuple::template base_of_type<T>::index;
 
     /**
     * Function returning the I-th element of a tuple.
     */
-    template <size_t I, typename Tuple>
+    template <std::size_t I, typename Tuple>
     auto get(Tuple&& tuple) -> typename detail::select_base_by_index::type<I, Tuple> {
         return static_cast<
             typename detail::select_base_by_index::base_type<I, std::decay_t<Tuple>>&&
@@ -234,17 +234,17 @@ namespace ext {
     namespace detail {
         template <typename... Tuples>
         constexpr static auto tuple_cat_index_gen() {
-            constexpr const size_t elem_count = (tuple_size_v<Tuples> + ...);
-            constexpr const size_t tuple_count = sizeof...(Tuples);
+            constexpr const std::size_t elem_count = (tuple_size_v<Tuples> + ...);
+            constexpr const std::size_t tuple_count = sizeof...(Tuples);
 
-            constexpr const size_t tuple_sizes[] = { tuple_size_v<Tuples>... };
+            constexpr const std::size_t tuple_sizes[] = { tuple_size_v<Tuples>... };
 
-            std::array<size_t, elem_count> inner;
-            std::array<size_t, elem_count> outer;
+            std::array<std::size_t, elem_count> inner;
+            std::array<std::size_t, elem_count> outer;
 
-            size_t globalIndex = 0;
-            for (size_t i = 0; i < tuple_count; ++i) {
-                for (size_t j = 0; j < tuple_sizes[i]; ++j) {
+            std::size_t globalIndex = 0;
+            for (std::size_t i = 0; i < tuple_count; ++i) {
+                for (std::size_t j = 0; j < tuple_sizes[i]; ++j) {
                     inner[globalIndex] = i;
                     outer[globalIndex] = j;
                     ++globalIndex;
@@ -254,12 +254,12 @@ namespace ext {
             return std::pair { inner, outer };
         }
 
-        template <size_t... Inner, size_t... Outer, typename Tuples>
+        template <std::size_t... Inner, std::size_t... Outer, typename Tuples>
         constexpr auto tuple_cat(std::index_sequence<Inner...>, std::index_sequence<Outer...>, Tuples&& ts) {
             return tuple { get<Outer>(get<Inner>(ts))... };
         }
 
-        template <typename... Ts, size_t... Is>
+        template <typename... Ts, std::size_t... Is>
         constexpr auto tuple_cat(std::index_sequence<Is...>, Ts&&... tuples) {
             constexpr const auto index_pairs = tuple_cat_index_gen<Ts...>();
             return tuple_cat(std::index_sequence<index_pairs.first[Is]...> { },
@@ -270,7 +270,7 @@ namespace ext {
 
     template <typename... Ts>
     auto tuple_cat(Ts&&... tuples) {
-        constexpr static const size_t elem_count = (tuple_size_v<Ts> + ...);
+        constexpr static const std::size_t elem_count = (tuple_size_v<Ts> + ...);
         return detail::tuple_cat(std::make_index_sequence<elem_count> { }, std::forward<Ts&&>(tuples)...);
     }
 
