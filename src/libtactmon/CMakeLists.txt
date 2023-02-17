@@ -44,9 +44,8 @@ target_link_libraries(libtactmon
   PRIVATE
     boost
     openssl
-    # ${ZLIB_LIBRARIES}
   PUBLIC
-    zlib::zlib
+    ZLIB::ZLIB
     spdlog::spdlog
     spdlog::spdlog_header_only
 )
