@@ -106,3 +106,11 @@ jobs:
       - name: Build (Release configuration)
         run: |
           cmake --build --preset ninja-multiconfiguration-vcpkg --config Release
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifacts
+          path: |
+            ${{ github.workspace }}/CMakeFiles/impl-Release.ninja # For testing
+            ${{ github.workspace }}/Release
