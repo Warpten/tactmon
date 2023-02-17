@@ -34,12 +34,10 @@ target_compile_definitions(tactmon
     BOOST_BEAST_USE_STD_STRING_VIEW
 )
 
-set_property(TARGET tactmon
-  PROPERTY
+set_target_properties(tactmon
+  PROPERTIES
     CXX_STANDARD 20
-)
-set_property(TARGET tactmon
-  PROPERTY
+    CXX_EXTENSIONS OFF
     CXX_STANDARD_REQUIRED ON
 )
 
