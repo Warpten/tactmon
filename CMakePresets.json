@@ -30,12 +30,5 @@
       "displayName": "Build ninja-multiconfiguration-vcpkg",
       "description": "Build with Ninja the configuration specified with --config"
     }
-  ],
-  "testPresets": [
-    {
-      "name": "ninja-multiconfiguration-vcpkg",
-      "configurePreset": "ninja-multiconfiguration-vcpkg",
-      "description": "Test with Ninja the provided configuration with --config"
-    }
   ]
 }
