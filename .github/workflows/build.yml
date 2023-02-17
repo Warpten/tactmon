@@ -23,12 +23,21 @@ jobs:
       VCPKG_ROOT: ${{ github.workspace }}/vcpkg
       # Tells vcpkg where binary packages are stored.
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg/bincache
+      VCPKG_DISABLE_METRICS: 1
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: true
       - name: "Create directory '${{ env.VCPKG_DEFAULT_BINARY_CACHE }}'"
         run: mkdir -p $VCPKG_DEFAULT_BINARY_CACHE
+        shell: bash
+
+      - name: "Install Linux Developer Tools"
+        if: matrix.triplet == 'x64-linux'
+        run: |
+          sudo apt-get update
+          sudo apk add --update linux-headers
+          sudo apt-get install build-essential tar curl zip unzip
         shell: bash
 
       - name: "Select GCC"
