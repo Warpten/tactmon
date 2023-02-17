@@ -51,7 +51,9 @@ jobs:
         if: matrix.compiler == 'clang'
         run: |
          sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
-         sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-15 100 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-15
+         sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-15 100
+         # Done in a separate pass because the default install sets them up separately
+         sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-15 100
         shell: bash
 
       # Setup the build machine with the most recent versions of CMake and Ninja.
