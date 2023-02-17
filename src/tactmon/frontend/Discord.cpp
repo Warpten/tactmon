@@ -9,7 +9,6 @@
 #include <logging/Sinks.hpp>
 
 #include <cstdint>
-#include <format>
 #include <functional>
 #include <string>
 #include <string_view>
@@ -20,6 +19,8 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/range/adaptor/filtered.hpp>
+
+#include <fmt/format.h>
 
 namespace frontend {
     namespace db = backend::db;

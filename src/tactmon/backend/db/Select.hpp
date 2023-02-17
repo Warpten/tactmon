@@ -7,9 +7,10 @@
 #include <pqxx/transaction>
 
 #include <cstdint>
-#include <format>
 #include <sstream>
 #include <string>
+
+#include <fmt/format.h>
 
 namespace backend::db::select {
     namespace detail {
@@ -127,7 +128,7 @@ namespace backend::db::select {
         static auto Render(std::ostream& strm, Proxy<Criteria<FORMAT, COMPONENT>>, ext::Constant<PARAMETER> parameterOffset) {
             std::stringstream temp;
             auto nextParameterOffset = Render(temp, Proxy<COMPONENT> { }, parameterOffset);
-            strm << std::format(FORMAT.Value, temp.str(), PARAMETER);
+            strm << fmt::format(FORMAT.Value, temp.str(), PARAMETER);
             return ext::Constant<nextParameterOffset.value + 1> { };
         }
 
