@@ -20,6 +20,7 @@
         "boost-container",
         "boost-container-hash",
         "boost-core",
+        "boost-filesystem",
         "boost-iostreams",
         "boost-program-options",
         "boost-range",
