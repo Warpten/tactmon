@@ -1,15 +1,11 @@
 # set up output paths for executable binaries (.exe-files, and .dll-files on DLL-capable platforms)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-set(MSVC_EXPECTED_VERSION 18.0.30723) # MSVC Update 3
+set(MSVC_EXPECTED_VERSION 19.30)
 
 if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS MSVC_EXPECTED_VERSION)
-  message(FATAL_ERROR "MSVC: Whiff requires version ${MSVC_EXPECTED_VERSION} (MSVC 2013 Update 3) to build but found ${CMAKE_CXX_COMPILER_VERSION}")
+  message(FATAL_ERROR "MSVC: requires version ${MSVC_EXPECTED_VERSION} to build but found ${CMAKE_CXX_COMPILER_VERSION}")
 endif()
-
-# set up output paths ofr static libraries etc (commented out - shown here as an example only)
-#set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-#set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 if(PLATFORM EQUAL 64)
   # This definition is necessary to work around a bug with Intellisense described
