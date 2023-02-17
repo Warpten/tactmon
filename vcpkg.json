@@ -31,7 +31,7 @@
             "description": "A self-hosted tact monitor with an HTTP and a Discord frontend.",
             "dependencies": [
                 "libpqxx",
-                "dpp"
+                "dpp",
                 "libtactmon"
             ]
         }
