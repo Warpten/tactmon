@@ -111,10 +111,10 @@ Downloads to the local cache a given file, as specified by its location returned
 Returns the location of a given encoding key in the archives of the loaded configuration. This function is used in conjunction with one of the `FindFile` overloads:
 
 ```cpp
-std::optional<tact::data::FileLocation> location = product.FindArchive("Wow.exe");
+std::optional<tact::data::FileLocation> location = product.FindFile("Wow.exe");
 if (location.has_value()) {
     for (size_t i = 0; i < location->keyCount(); ++i) {
-        std::optional<tact::data::ArchiveFileLocation> archiveLocation = product.FindIndex((*location)[i]);
+        std::optional<tact::data::ArchiveFileLocation> archiveLocation = product.FindArchive((*location)[i]);
         if (archiveLocation.has_value()) {
             // Do things with the archive location; generate link or whatever, or just download it.
         }
