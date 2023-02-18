@@ -46,11 +46,11 @@ namespace backend::db {
         static auto ExecuteOne(pqxx::transaction_base& transaction, std::tuple<Args...> args)
             -> std::optional<typename QUERY::projection_type>
         {
-            pqxx::row resultSet = ExecuteOne_(transaction, args);
-            if (resultSet.empty())
+            pqxx::result resultSet = Execute_(transaction, args);
+            if (resultSet.size() != 1)
                 return std::nullopt;
 
-            return typename QUERY::projection_type { resultSet };
+            return typename QUERY::projection_type { resultSet[0] };
         }
 
         template <typename... Args>
