@@ -178,7 +178,7 @@ namespace backend::db::select {
             strm << ' ';
             auto criteriaOffset = Render(strm, Proxy<CRITERIA> { }, entityOffset);
             strm << ' ';
-            auto orderOffset = Render(strm, Proxy<ORDER> { }, entityOffset);
+            auto orderOffset = Render(strm, Proxy<ORDER> { }, criteriaOffset);
             strm << ' ';
             auto limitOffset = Render(strm, Proxy<LIMIT> { }, orderOffset);
             return limitOffset;

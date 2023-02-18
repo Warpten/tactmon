@@ -50,7 +50,8 @@ namespace backend::db {
             if (resultSet.size() != 1)
                 return std::nullopt;
 
-            return typename QUERY::projection_type { resultSet[0] };
+            pqxx::row record = resultSet[0];
+            return typename QUERY::projection_type { record };
         }
 
         template <typename... Args>

@@ -4,6 +4,9 @@
 #include "frontend/commands/ProductStatusCommand.hpp"
 #include "frontend/Discord.hpp"
 
+#include <fmt/chrono.h>
+#include <fmt/format.h>
+
 namespace db = backend::db;
 namespace entity = db::entity;
 namespace build = entity::build;
@@ -28,7 +31,7 @@ namespace frontend::commands {
 
         auto entity = cluster.db.builds.GetStatisticsForProduct(product);
         if (!entity.has_value()) {
-            evnt.edit_response(std::format("No version found for the **{}** product.", product));
+            evnt.edit_response(fmt::format("No version found for the **{}** product.", product));
 
             return;
         }
@@ -39,13 +42,13 @@ namespace frontend::commands {
         evnt.edit_response(dpp::message().add_embed(
             dpp::embed()
                 .set_color(0x0000FF00u)
-                .set_title(std::format("Most recent build: {}.", db::get<build::build_name>(*entity)))
-                .set_description(std::format("First seen on **{0:%D}** at **{0:%r}**.", timePoint))
-                .add_field("build_config", std::format("`{}`", db::get<build::build_config>(*entity)), true)
-                .add_field("cdn_config", std::format("`{}`", db::get<build::cdn_config>(*entity)), true)
+                .set_title(fmt::format("Most recent build: {}.", db::get<build::build_name>(*entity)))
+                .set_description(fmt::format("First seen on **{0:%D}** at **{0:%r}**.", timePoint))
+                .add_field("build_config", fmt::format("`{}`", db::get<build::build_config>(*entity)), true)
+                .add_field("cdn_config", fmt::format("`{}`", db::get<build::cdn_config>(*entity)), true)
                 .set_footer(dpp::embed_footer()
                     .set_text(
-                        std::format("{} known builds for product {}.", db::get<build::dto::columns::id_count>(*entity), product)
+                        fmt::format("{} known builds for product {}.", db::get<build::dto::columns::id_count>(*entity), product)
                     )
                 )
         ));

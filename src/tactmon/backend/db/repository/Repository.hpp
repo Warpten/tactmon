@@ -187,9 +187,9 @@ namespace backend::db::repository {
         }
 
     protected:
-        pqxx::connection& _connection;
         std::shared_ptr<spdlog::async_logger> _logger;
-
+        pqxx::connection& _connection;
+        
     private:
         boost::container::flat_map<typename PRIMARY_KEY::value_type, ENTITY> _storage;
     };

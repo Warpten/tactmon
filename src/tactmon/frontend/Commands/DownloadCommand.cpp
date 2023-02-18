@@ -9,6 +9,8 @@
 
 #include <string_view>
 
+#include <fmt/format.h>
+
 namespace db = backend::db;
 namespace entity = db::entity;
 namespace build = entity::build;
@@ -75,7 +77,7 @@ namespace frontend::commands {
                     dpp::embed()
                         .set_title(product)
                         .set_color(0x00FF0000u)
-                        .set_description(std::format("`{}` does not exist.", file))
+                        .set_description(fmt::format("`{}` does not exist.", file))
                         .set_footer(dpp::embed_footer()
                             .set_text(version))
                 ));
@@ -104,7 +106,7 @@ namespace frontend::commands {
                     dpp::embed()
                         .set_title("Download this file.")
                         .set_url(fileAddress)
-                        .set_description(std::format("Click here to download `{}`", file))
+                        .set_description(fmt::format("Click here to download `{}`", file))
                         .set_footer(dpp::embed_footer().set_text(version))
                 ));
 
@@ -120,7 +122,7 @@ namespace frontend::commands {
                     dpp::embed()
                         .set_title("Download this file.")
                         .set_url(fileAddress)
-                        .set_description(std::format("Click here to download `{}`.", file))
+                        .set_description(fmt::format("Click here to download `{}`.", file))
                         .set_footer(dpp::embed_footer().set_text(version))
                 ));
 

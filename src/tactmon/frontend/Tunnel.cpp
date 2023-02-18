@@ -12,6 +12,9 @@
 #include <boost/beast/http/write.hpp>
 #include <boost/beast/core/ostream.hpp>
 
+#include <fmt/chrono.h>
+#include <fmt/format.h>
+
 namespace asio = boost::asio;
 namespace ip = asio::ip;
 using tcp = ip::tcp;
@@ -34,14 +37,14 @@ namespace frontend {
         boost::algorithm::hex(location.data(), location.data() + location.size(), std::back_inserter(hexstr));
         boost::algorithm::to_lower(hexstr);
 
-        return std::format("{}/{}/{}/{}/{}/{}", _localRoot,
+        return fmt::format("{}/{}/{}/{}/{}/{}", _localRoot,
             db::get<build::cdn_config>(buildInfo),
             hexstr, 0, 0, decompressedSize,
             fileName);
     }
 
     std::string Tunnel::GenerateAdress(build::Entity const& buildInfo, tact::data::ArchiveFileLocation const& location, std::string_view fileName, size_t decompressedSize) const {
-        return std::format("{}/{}/{}/{}/{}/{}/{}", _localRoot,
+        return fmt::format("{}/{}/{}/{}/{}/{}/{}", _localRoot,
             db::get<build::cdn_config>(buildInfo),
             location.name(), location.offset(), location.fileSize(), decompressedSize,
             fileName);
