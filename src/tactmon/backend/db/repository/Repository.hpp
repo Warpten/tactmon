@@ -116,8 +116,8 @@ namespace backend::db::repository {
         Repository& operator = (Repository&& other) noexcept = delete;
 
     public:
-        std::optional<typename ENTITY> operator [] (typename PRIMARY_KEY::value_type id) const {
-            return repository_base::WithMutex_([&]() -> std::optional<typename ENTITY::as_projection> {
+        std::optional<ENTITY> operator [] (typename PRIMARY_KEY::value_type id) const {
+            return repository_base::WithMutex_([&]() -> std::optional<ENTITY> {
                 auto itr = _storage.find(id);
                 if (itr == _storage.end())
                     return std::nullopt;

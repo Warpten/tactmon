@@ -84,15 +84,12 @@ namespace tact::data::product {
          * @returns The parsed data file, or an empty optional if an error occured.
          */
         template <typename Task, typename R>
-        [[deprecated("Manually process IndexFileLocation and FileLocation!")]]
         std::optional<R> ResolveData(std::function<Task()> taskSupplier,
             std::function<std::optional<R>(typename Task::ResultType&)> resultSupplier) const
         {
             Task downloadTask = taskSupplier();
 
             for (net::ribbit::types::cdns::Record const& cdn : *_cdns) {
-                std::string_view queryPath = cdn.Path;
-
                 for (std::string_view host : cdn.Hosts) {
                     typename Task::ResultType taskResult = downloadTask.Run(_context, host, _logger);
                     if (taskResult.has_value())
