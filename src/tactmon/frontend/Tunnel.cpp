@@ -51,7 +51,7 @@ namespace frontend {
     }
 
     void Tunnel::ProcessRequest(boost::beast::http::request<boost::beast::http::dynamic_body> const& request, boost::beast::http::response<boost::beast::http::dynamic_body>& response) const {
-        std::string_view target = request.target();
+        std::string_view target { request.target() };
         std::vector<std::string_view> tokens = ext::Tokenize(target, '/');
 
         std::string_view cdnConfig = tokens[0];
@@ -92,6 +92,10 @@ namespace frontend {
 
         std::string_view fileName = tokens[5];
 
+        response.set("X-Tunnel-CDN-Config", cdnConfig);
+        response.set("X-Tunnel-Archive-Name", archiveName);
+        response.set("X-Tunnel-File-Name", fileName);
+
         // response.result(http::status::ok);
         // response.set(http::field::content_type, "application/octet-stream");
 
@@ -113,7 +117,7 @@ namespace frontend {
     }
 
     Tunnel::Connection::Connection(boost::asio::ip::tcp::socket socket, Tunnel* proxy)
-        : _socket(std::move(socket)), _readStrand(proxy->_context), _writeStrand(proxy->_context), _deadline(_socket.get_executor(), 60s), _proxy(proxy)
+        : _proxy(proxy), _socket(std::move(socket)), _readStrand(proxy->_context), _writeStrand(proxy->_context), _deadline(_socket.get_executor(), 60s)
     { }
 
     void Tunnel::Connection::Run() {
