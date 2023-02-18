@@ -18,9 +18,6 @@
           "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
         },
         "TACTMON_BUILD": "ON"
-      },
-      "environment": {
-        "VCPKG_ROOT": "./vcpkg"
       }
     }
   ],

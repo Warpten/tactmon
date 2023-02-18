@@ -31,9 +31,6 @@ else()
   message(STATUS "MSVC: Disabled Safe Exception Handlers for debug builds")
 endif()
 
-# Set build-directive (used to tell which buildtype we used)
-add_definitions(-D_BUILD_DIRECTIVE=\\"$(ConfigurationName)\\")
-
 # multithreaded compiling on VS
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 
