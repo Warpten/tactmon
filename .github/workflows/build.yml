@@ -106,11 +106,21 @@ jobs:
       - name: Build (Release configuration)
         run: |
           cmake --build --preset ninja-multiconfiguration-vcpkg --config Release
-
-      - name: Archive artifacts
+          
+      - name: Export dpp build log
+        if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v3
         with:
-          name: artifacts
+          name: DPP log
           path: |
-            ${{ github.workspace }}/CMakeFiles/impl-Release.ninja # For testing
-            ${{ github.workspace }}/Release
+            D:\a\tactmon\tactmon\vcpkg\buildtrees\dpp\install-x64-windows-rel-out.log
+        continue-on-error: true
+
+      - name: Archive release artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: Release
+          path: |
+            ${{ github.workspace }}/builds/ninja-multiconfiguration-vcpkg/src/libtactmon/Release
+            ${{ github.workspace }}/builds/ninja-multiconfiguration-vcpkg/src/tactmon/Release
+        continue-on-error: true
