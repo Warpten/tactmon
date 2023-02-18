@@ -10,7 +10,8 @@ namespace ext {
             std::copy_n(val, N, Value);
         }
 
-        constexpr std::string ToString() const { return Value; }
+        // TODO: Clang doesn't like this being constexpr ?!
+        std::string ToString() const { return Value; }
 
         constexpr static const size_t Size = N;
         char Value[N];
