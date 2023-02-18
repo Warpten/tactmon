@@ -21,6 +21,7 @@
 #include <boost/asio/streambuf.hpp>
 #include <boost/beast.hpp>
 #include <boost/beast/http.hpp>
+#include <boost/core/ignore_unused.hpp>
 #include <boost/tokenizer.hpp>
 
 #include <fmt/format.h>
@@ -237,6 +238,7 @@ namespace net::ribbit {
             { // Read Ribbit response
                 boost::asio::streambuf buf;
                 size_t bytesTransferred = boost::asio::read(_socket, buf, ec);
+                boost::ignore_unused(bytesTransferred);
                 if (ec && ec != boost::asio::error::eof) {
                     logger->error("An error occured: {}.", ec.message());
 

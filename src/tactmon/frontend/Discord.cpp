@@ -29,7 +29,7 @@ namespace frontend {
 
     Discord::Discord(boost::asio::io_context::strand strand, std::string_view token,
         backend::ProductCache& productManager, backend::Database& database, frontend::Tunnel& httpServer)
-        : bot(std::string{ token }), productManager(productManager), db(database), _strand(strand), httpServer(httpServer)
+        : httpServer(httpServer), productManager(productManager), db(database), bot(std::string{ token }), _strand(strand)
     {
         _logger = logging::GetLogger("discord");
 
