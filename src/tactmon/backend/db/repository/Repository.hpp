@@ -3,7 +3,6 @@
 #include "backend/db/DSL.hpp"
 
 #include <chrono>
-#include <format>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -22,6 +21,7 @@
 #include <logging/Sinks.hpp>
 #include <spdlog/stopwatch.h>
 #include <fmt/chrono.h>
+#include <fmt/format.h>
 
 namespace backend::db::repository {
     using namespace std::chrono_literals;
@@ -84,7 +84,7 @@ namespace backend::db::repository {
     protected:
         template <auto B = CACHING, std::enable_if_t<B, int> _ = 0> // Make dependant
         explicit Repository(boost::asio::io_context& context, pqxx::connection& connection, std::chrono::seconds interval = 60s)
-            : repository_base(context, interval), _logger(logging::GetAsyncLogger(std::format("db::{}", ENTITY::Name.Value))),
+            : repository_base(context, interval), _logger(logging::GetAsyncLogger(fmt::format("db::{}", ENTITY::Name.Value))),
                 _connection(connection)
         {
             LOAD_STATEMENT::Prepare(_connection, _logger);
@@ -94,7 +94,7 @@ namespace backend::db::repository {
 
         template <auto B = CACHING, std::enable_if_t<B, int> _ = 0> // Make dependant
         explicit Repository(boost::asio::io_context::strand strand, pqxx::connection& connection, std::chrono::seconds interval = 60s)
-            : repository_base(strand, interval), _logger(logging::GetAsyncLogger(std::format("db::{}", ENTITY::Name.Value))),
+            : repository_base(strand, interval), _logger(logging::GetAsyncLogger(fmt::format("db::{}", ENTITY::Name.Value))),
             _connection(connection)
         {
             LOAD_STATEMENT::Prepare(_connection, _logger);
@@ -104,7 +104,7 @@ namespace backend::db::repository {
 
         template <auto B = CACHING, std::enable_if_t<!B, int> _ = 0>
         explicit Repository(pqxx::connection& connection)
-            : repository_base(), _logger(logging::GetAsyncLogger(std::format("db::{}", ENTITY::Name.Value))),
+            : repository_base(), _logger(logging::GetAsyncLogger(fmt::format("db::{}", ENTITY::Name.Value))),
                 _connection(connection)
         {
             LOAD_STATEMENT::Prepare(_connection, _logger);
@@ -116,8 +116,8 @@ namespace backend::db::repository {
         Repository& operator = (Repository&& other) noexcept = delete;
 
     public:
-        std::optional<typename ENTITY> operator [] (typename PRIMARY_KEY::value_type id) const {
-            return repository_base::WithMutex_([&]() -> std::optional<typename ENTITY::as_projection> {
+        std::optional<ENTITY> operator [] (typename PRIMARY_KEY::value_type id) const {
+            return repository_base::WithMutex_([&]() -> std::optional<ENTITY> {
                 auto itr = _storage.find(id);
                 if (itr == _storage.end())
                     return std::nullopt;
@@ -187,9 +187,9 @@ namespace backend::db::repository {
         }
 
     protected:
-        pqxx::connection& _connection;
         std::shared_ptr<spdlog::async_logger> _logger;
-
+        pqxx::connection& _connection;
+        
     private:
         boost::container::flat_map<typename PRIMARY_KEY::value_type, ENTITY> _storage;
     };

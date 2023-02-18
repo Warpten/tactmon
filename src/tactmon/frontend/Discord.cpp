@@ -9,7 +9,6 @@
 #include <logging/Sinks.hpp>
 
 #include <cstdint>
-#include <format>
 #include <functional>
 #include <string>
 #include <string_view>
@@ -21,6 +20,8 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/range/adaptor/filtered.hpp>
 
+#include <fmt/format.h>
+
 namespace frontend {
     namespace db = backend::db;
     namespace entity = db::entity;
@@ -28,7 +29,7 @@ namespace frontend {
 
     Discord::Discord(boost::asio::io_context::strand strand, std::string_view token,
         backend::ProductCache& productManager, backend::Database& database, frontend::Tunnel& httpServer)
-        : bot(std::string{ token }), productManager(productManager), db(database), _strand(strand), httpServer(httpServer)
+        : httpServer(httpServer), productManager(productManager), db(database), bot(std::string{ token }), _strand(strand)
     {
         _logger = logging::GetLogger("discord");
 

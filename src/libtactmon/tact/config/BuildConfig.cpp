@@ -7,12 +7,7 @@
 #include <string_view>
 #include <vector>
 
-// #include <boost/spirit/include/qi.hpp>
-
 using namespace std::string_view_literals;
-
-// namespace qi = boost::spirit::qi;
-// namespace ascii = boost::spirit::ascii;
 
 namespace tact::config {
     struct ConfigHandler {

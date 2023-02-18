@@ -7,7 +7,6 @@
 #include "logging/Sinks.hpp"
 
 #include <cstdint>
-#include <format>
 #include <functional>
 #include <optional>
 #include <sstream>
@@ -22,7 +21,10 @@
 #include <boost/asio/streambuf.hpp>
 #include <boost/beast.hpp>
 #include <boost/beast/http.hpp>
+#include <boost/core/ignore_unused.hpp>
 #include <boost/tokenizer.hpp>
+
+#include <fmt/format.h>
 
 #include <spdlog/spdlog.h>
 
@@ -151,7 +153,7 @@ namespace net::ribbit {
 
             // Found a MIME boundary, split the body
             std::vector<std::string_view> messageParts;
-            boost::split_regex(messageParts, payload, boost::regex{ std::format("--{}\r\n", *mimeBoundary) });
+            boost::split_regex(messageParts, payload, boost::regex{ fmt::format("--{}\r\n", *mimeBoundary) });
 
             for (std::string_view elem : messageParts) {
                 auto elemParse = C::Parse(elem);
@@ -209,8 +211,8 @@ namespace net::ribbit {
 
             auto logger = logging::GetLogger("ribbit");
 
-            logger->info("Loading {}:{}/{}.", RegionTraits::Host, 1119, std::format(CommandTraits::Format, VersionTraits<V>::Value, std::forward<Args>(args)...));
-            logger->trace("Connecting to {}:{}/{}.", RegionTraits::Host, 1119, std::format(CommandTraits::Format, VersionTraits<V>::Value, std::forward<Args>(args)...));
+            logger->info("Loading {}:{}/{}.", RegionTraits::Host, 1119, fmt::format(CommandTraits::Format, VersionTraits<V>::Value, std::forward<Args>(args)...));
+            logger->trace("Connecting to {}:{}/{}.", RegionTraits::Host, 1119, fmt::format(CommandTraits::Format, VersionTraits<V>::Value, std::forward<Args>(args)...));
 
             tcp::resolver r { _ctx };
             boost::asio::connect(_socket, r.resolve(RegionTraits::Host, "1119"), ec);
@@ -222,7 +224,7 @@ namespace net::ribbit {
             }
 
             { // Write Ribbit request
-                auto command = std::format(CommandTraits::Format, VersionTraits<V>::Value, std::forward<Args>(args)...) + "\r\n";
+                auto command = fmt::format(CommandTraits::Format, VersionTraits<V>::Value, std::forward<Args>(args)...) + "\r\n";
 
                 auto buf = boost::asio::buffer(command);
                 boost::asio::write(_socket, buf, ec);
@@ -236,6 +238,7 @@ namespace net::ribbit {
             { // Read Ribbit response
                 boost::asio::streambuf buf;
                 size_t bytesTransferred = boost::asio::read(_socket, buf, ec);
+                boost::ignore_unused(bytesTransferred);
                 if (ec && ec != boost::asio::error::eof) {
                     logger->error("An error occured: {}.", ec.message());
 

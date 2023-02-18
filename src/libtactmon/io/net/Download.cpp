@@ -6,6 +6,8 @@
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/http.hpp>
 
+#include <fmt/format.h>
+
 namespace io {
     static auto logger_ = []() {
         auto logger = logging::GetLogger("download");
@@ -32,7 +34,7 @@ namespace io {
         if (ec.failed())
             return false;
 
-        http::request<http::string_body> req{ http::verb::get, std::format("/{}", query), 11 };
+        http::request<http::string_body> req{ http::verb::get, fmt::format("/{}", query), 11 };
         req.set(http::field::host, host);
 
         http::write(stream, req, ec);

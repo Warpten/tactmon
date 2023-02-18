@@ -18,6 +18,8 @@
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/http.hpp>
 
+#include <fmt/format.h>
+
 #include <spdlog/logger.h>
 
 namespace net {
@@ -69,7 +71,7 @@ namespace net {
             http::request<http::string_body> req { http::verb::get, _resourcePath, 11 };
             req.set(http::field::host, host);
             if (_offset != 0 && _size != 0)
-                req.set(http::field::range, std::format("{}-{}", _offset, _offset + _size - 1));
+                req.set(http::field::range, fmt::format("{}-{}", _offset, _offset + _size - 1));
 
             http::write(stream, req, ec);
             if (ec.failed()) {

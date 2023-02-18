@@ -1,14 +1,15 @@
 # output generic information
 if( UNIX )
   message("")
-  message("* Wownitor buildtype      : ${CMAKE_BUILD_TYPE}")
+  message("* Build type      : ${CMAKE_BUILD_TYPE}")
 endif()
 
 message("")
 
 # output information about installation-directories and locations
 
-message("* Install Wownitor to       : ${CMAKE_INSTALL_PREFIX}")
+message("* Install to       : ${CMAKE_INSTALL_PREFIX}")
+message("* Build tactmon    : ${TACTMON_BUILD}")
 message("")
 
 # Show infomation about the options selected during configuration

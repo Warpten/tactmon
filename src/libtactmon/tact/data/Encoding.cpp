@@ -117,7 +117,7 @@ namespace tact::data {
     // ^^^ EKeySpecPageTable / Encoding vvv
 
     Encoding::Encoding(io::IReadableStream& stream) : _header{ stream } {
-        if (_header.Signature != 'EN')
+        if (_header.Signature != 0x454E)
             return;
 
         stream.SkipRead(_header.ESpecBlockSize); // Skip ESpec strings

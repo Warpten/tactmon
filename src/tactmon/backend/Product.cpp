@@ -10,7 +10,7 @@ namespace backend {
     }
 
     Product::Product(Product&& other) noexcept
-        : _product(std::move(other._product)), _loading(false), _currentBuild(std::move(other._currentBuild)), _callbacks(std::move(other._callbacks))
+        : _currentBuild(std::move(other._currentBuild)), _product(std::move(other._product)), _callbacks(std::move(other._callbacks)), _loading(false)
     { }
 
     Product& Product::operator = (Product&& other) noexcept {

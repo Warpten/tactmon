@@ -18,28 +18,24 @@ add_dependencies(tactmon
   boost
   openssl
   libtactmon
-  libpqxx
 )
 
 target_include_directories(tactmon
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/dep/zlib
 
     ${Boost_INCLUDE_DIR}
 )
 
-target_compile_definitions(tactmon
-  PRIVATE
-    BOOST_BEAST_USE_STD_STRING_VIEW
-)
+# target_compile_definitions(tactmon
+#   PRIVATE
+#     BOOST_BEAST_USE_STD_STRING_VIEW
+# )
 
-set_property(TARGET tactmon
-  PROPERTY
+set_target_properties(tactmon
+  PROPERTIES
     CXX_STANDARD 20
-)
-set_property(TARGET tactmon
-  PROPERTY
+    CXX_EXTENSIONS OFF
     CXX_STANDARD_REQUIRED ON
 )
 
@@ -47,10 +43,9 @@ target_link_libraries(tactmon
   PRIVATE
     boost
     openssl
-    ${ZLIB_LIBRARIES}
     dpp::dpp
     libtactmon
-    pqxx
+    libpqxx::pqxx
     spdlog::spdlog
     spdlog::spdlog_header_only
 )

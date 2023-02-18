@@ -18,6 +18,8 @@
 
 #include <boost/asio/io_context.hpp>
 
+#include <fmt/format.h>
+
 #include <cstdint>
 #include <filesystem>
 #include <optional>
@@ -54,7 +56,7 @@ namespace tact::data::product {
         template <typename T>
         std::optional<T> ResolveCachedConfig(std::string_view key, std::function<std::optional<T>(io::FileStream&)> parser) const {
             for (net::ribbit::types::cdns::Record const& cdn : *_cdns) {
-                std::string relativePath { std::format("{}/config/{}/{}/{}", cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
+                std::string relativePath { fmt::format("{}/config/{}/{}/{}", cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
                 std::optional<T> cachedValue = _localCache.Resolve(relativePath, parser);
                 if (cachedValue.has_value())
                     return cachedValue;
@@ -82,15 +84,12 @@ namespace tact::data::product {
          * @returns The parsed data file, or an empty optional if an error occured.
          */
         template <typename Task, typename R>
-        [[deprecated("Manually process IndexFileLocation and FileLocation!")]]
         std::optional<R> ResolveData(std::function<Task()> taskSupplier,
             std::function<std::optional<R>(typename Task::ResultType&)> resultSupplier) const
         {
             Task downloadTask = taskSupplier();
 
             for (net::ribbit::types::cdns::Record const& cdn : *_cdns) {
-                std::string_view queryPath = cdn.Path;
-
                 for (std::string_view host : cdn.Hosts) {
                     typename Task::ResultType taskResult = downloadTask.Run(_context, host, _logger);
                     if (taskResult.has_value())
@@ -112,7 +111,7 @@ namespace tact::data::product {
         template <typename R>
         std::optional<R> ResolveCachedData(std::string_view key, std::function<std::optional<R>(io::FileStream&)> resultSupplier) const {
             for (net::ribbit::types::cdns::Record const& cdn : *_cdns) {
-                std::string relativePath { std::format("{}/data/{}/{}/{}", cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
+                std::string relativePath { fmt::format("{}/data/{}/{}/{}", cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
                 std::optional<R> cachedValue = _localCache.Resolve<R>(relativePath, resultSupplier);
                 if (cachedValue.has_value())
                     return cachedValue;

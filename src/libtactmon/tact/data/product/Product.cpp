@@ -84,7 +84,7 @@ namespace tact::data::product {
         _logger->info("{} entries found in install manifest.", _install->size());
 
         _cdnConfig->ForEachArchive([this](std::string_view archiveName, size_t i) {
-            auto dataStream = ResolveCachedData<io::FileStream>(std::format("{}.index", archiveName),
+            auto dataStream = ResolveCachedData<io::FileStream>(fmt::format("{}.index", archiveName),
                 [](io::FileStream& fstream) -> std::optional<io::FileStream> {
                     if (!fstream)
                         return std::nullopt;
