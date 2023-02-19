@@ -53,8 +53,4 @@ namespace frontend::commands {
                 )
         ));
     }
-
-    void ProductStatusCommand::HandleAutoCompleteEvent(dpp::autocomplete_t const& evnt, frontend::Discord& cluster) {
-        // This overload is technically not necessary for now (because the argument is declared as non-autocompletable).
-    }
 }

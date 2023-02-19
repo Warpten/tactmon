@@ -38,8 +38,4 @@ namespace frontend::commands {
 
         evnt.edit_response(dpp::message().add_embed(responseEmbed));
     }
-
-    void CacheStatusCommand::HandleAutoCompleteEvent(dpp::autocomplete_t const& evnt, frontend::Discord& cluster) {
-        // This overload is technically not necessary for now (because the argument is declared as non-autocompletable).
-    }
 }
