@@ -96,7 +96,7 @@ namespace frontend::commands {
                 if (!indexLocation.has_value())
                     continue;
 
-                std::string fileAddress = cluster.httpServer.GenerateAdress(*buildEntry, *indexLocation, fileNameComponent, fileLocation->fileSize());
+                std::string fileAddress = cluster.httpServer.GenerateAdress(product, *indexLocation, fileNameComponent, fileLocation->fileSize());
 
                 // 4. Generate download link
                 // Generate a link to the http server
@@ -116,7 +116,7 @@ namespace frontend::commands {
             // Otherwise, the ekey is literally a file on the CDN
             // TODO: If there are multiple ekeys, provide multiple links to the client?
             for (size_t i = 0; i < fileLocation->keyCount(); ++i) {
-                std::string fileAddress = cluster.httpServer.GenerateAdress(*buildEntry, (*fileLocation)[i], fileNameComponent, fileLocation->fileSize());
+                std::string fileAddress = cluster.httpServer.GenerateAdress(product, (*fileLocation)[i], fileNameComponent, fileLocation->fileSize());
 
                 evnt.edit_response(dpp::message().add_embed(
                     dpp::embed()

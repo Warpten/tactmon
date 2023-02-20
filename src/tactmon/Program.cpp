@@ -118,7 +118,7 @@ void Execute(boost::program_options::variables_map vm) {
     };
 
     // 7. Initialize HTTP proxy.
-    frontend::Tunnel proxy { ctx, vm["http-proxy-document-root"].as<std::string>(), vm["http-port"].as<uint16_t>() };
+    frontend::Tunnel proxy { localCache,  ctx, vm["http-proxy-document-root"].as<std::string>(), vm["http-port"].as<uint16_t>() };
 
     // 8. Initialize discord frontend
     frontend::Discord bot { discordStrand, vm["discord-token"].as<std::string>(), productCache, database, proxy };

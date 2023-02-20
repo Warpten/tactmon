@@ -45,9 +45,7 @@ namespace backend {
         explicit ProductCache(boost::asio::io_context::strand cacheStrand);
 
         bool LoadConfiguration(std::string productName, db::entity::build::Entity const& configuration, std::function<void(Product&)> handler);
-
         void RegisterFactory(std::string productName, std::function<Product()> factory);
-
         void ForEachProduct(std::function<void(Product&, std::chrono::high_resolution_clock::time_point)> handler);
 
         size_t size() const { return _products.size(); }

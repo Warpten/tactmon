@@ -146,6 +146,8 @@ namespace tact::data::product {
     }
 
     std::optional<tact::BLTE> Product::Open(tact::data::FileLocation const& location) const {
+        // NOTE: Broken.
+
         for (size_t i = 0; i < location.keyCount(); ++i) {
             tact::EKey encodingKey { location[i] };
 

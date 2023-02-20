@@ -1,16 +1,22 @@
 #include "frontend/Tunnel.hpp"
+#include "beast/blte_body.hpp"
 
 #include <tact/config/CDNConfig.hpp>
+#include <net/ribbit/Commands.hpp>
+#include <net/ribbit/types/CDNs.hpp>
 
 #include <ext/Tokenizer.hpp>
 
 #include <chrono>
+#include <optional>
 
 #include <boost/algorithm/hex.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
-#include <boost/beast/http/read.hpp>
-#include <boost/beast/http/write.hpp>
+#include <boost/beast/core/tcp_stream.hpp>
+#include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/core/ostream.hpp>
+#include <boost/beast/http.hpp>
+#include <boost/beast/http.hpp>
 
 #include <fmt/chrono.h>
 #include <fmt/format.h>
@@ -18,92 +24,149 @@
 namespace asio = boost::asio;
 namespace ip = asio::ip;
 using tcp = ip::tcp;
-namespace http = boost::beast::http;
+namespace beast = boost::beast;
+namespace http = beast::http;
 
 using namespace std::chrono_literals;
 
-namespace db = backend::db;
-namespace build = db::entity::build;
+namespace ribbit = net::ribbit;
 
 namespace frontend {
-    Tunnel::Tunnel(boost::asio::io_context& context, std::string_view localRoot, uint16_t listenPort)
-        : _context(context), _localRoot(localRoot), _acceptor(context, ip::tcp::endpoint { ip::tcp::v4(), listenPort })
+    Tunnel::Tunnel(tact::Cache& localCache, boost::asio::io_context& context, std::string_view localRoot, uint16_t listenPort)
+        : _dataCache(localCache), _context(context), _localRoot(localRoot), _acceptor(context, ip::tcp::endpoint { ip::tcp::v4(), listenPort })
     {
         Accept();
     }
 
-    std::string Tunnel::GenerateAdress(build::Entity const& buildInfo, std::span<const uint8_t> location, std::string_view fileName, size_t decompressedSize) const {
+    std::string Tunnel::GenerateAdress(std::string_view product, std::span<const uint8_t> location, std::string_view fileName, size_t decompressedSize) const {
         std::string hexstr;
         boost::algorithm::hex(location.data(), location.data() + location.size(), std::back_inserter(hexstr));
         boost::algorithm::to_lower(hexstr);
 
         return fmt::format("{}/{}/{}/{}/{}/{}", _localRoot,
-            db::get<build::cdn_config>(buildInfo),
+            product,
             hexstr, 0, 0, decompressedSize,
             fileName);
     }
 
-    std::string Tunnel::GenerateAdress(build::Entity const& buildInfo, tact::data::ArchiveFileLocation const& location, std::string_view fileName, size_t decompressedSize) const {
-        return fmt::format("{}/{}/{}/{}/{}/{}/{}", _localRoot,
-            db::get<build::cdn_config>(buildInfo),
+    std::string Tunnel::GenerateAdress(std::string_view product, tact::data::ArchiveFileLocation const& location, std::string_view fileName, size_t decompressedSize) const {
+        return fmt::format("{}/{}/{}/{}/{}/{}", _localRoot,
+            product,
             location.name(), location.offset(), location.fileSize(), decompressedSize,
             fileName);
     }
 
+    struct FileQueryParams {
+        std::string Product;
+        std::string CDN;
+        std::string ArchiveName;
+        std::size_t Offset; // In archive
+        std::size_t Length; // In archive
+        std::size_t DecompressedSize;
+        std::string FileName;
+    };
+
     void Tunnel::ProcessRequest(boost::beast::http::request<boost::beast::http::dynamic_body> const& request, boost::beast::http::response<boost::beast::http::dynamic_body>& response) const {
         std::string_view target { request.target() };
         std::vector<std::string_view> tokens = ext::Tokenize(target, '/');
+        if (!tokens.empty())
+            tokens.erase(tokens.begin());
 
-        std::string_view cdnConfig = tokens[0];
-        std::string_view archiveName = tokens[1];
+        auto writeError = [&response](http::status responseCode, std::string_view body) {
+            response.result(responseCode);
+            response.set(http::field::content_type, "text/plain");
 
-        uint64_t offset = 0; {
-            auto [ptr, ec] = std::from_chars(tokens[2].data(), tokens[2].data() + tokens[2].size(), offset);
-            if (ec != std::errc{ }) {
-                response.result(http::status::bad_request);
-                response.set(http::field::content_type, "text/plain");
+            boost::beast::ostream(response.body()) << body;
+        };
 
-                boost::beast::ostream(response.body()) << "Invalid range start value";
-                return;
-            }
+        if (tokens.size() != 6)
+            return writeError(http::status::not_found, "");
+
+        auto clientStream = boost::beast::ostream(response.body());
+
+        FileQueryParams params;
+        params.Product = tokens[0];
+        params.ArchiveName = tokens[1];
+        
+        {
+            auto [ptr, ec] = std::from_chars(tokens[2].data(), tokens[2].data() + tokens[2].size(), params.Offset);
+            if (ec != std::errc{ })
+                return writeError(http::status::bad_request, "Invalid range start value");
+        } {
+            auto [ptr, ec] = std::from_chars(tokens[3].data(), tokens[3].data() + tokens[3].size(), params.Length);
+            if (ec != std::errc{ })
+                return writeError(http::status::bad_request, "Invalid range length value");
+        } {
+            auto [ptr, ec] = std::from_chars(tokens[4].data(), tokens[4].data() + tokens[4].size(), params.DecompressedSize);
+            if (ec != std::errc{ } || params.DecompressedSize == 0)
+                return writeError(http::status::bad_request, "Invalid length");
         }
 
-        uint64_t length = 0; {
-            auto [ptr, ec] = std::from_chars(tokens[3].data(), tokens[3].data() + tokens[3].size(), length);
-            if (ec != std::errc{ }) {
-                response.result(http::status::bad_request);
-                response.set(http::field::content_type, "text/plain");
+        params.FileName = tokens[5];
 
-                boost::beast::ostream(response.body()) << "Invalid range length value";
-                return;
+        response.set("X-Tunnel-Product", params.Product);
+        response.set("X-Tunnel-CDN-Config", params.CDN);
+        response.set("X-Tunnel-Archive-Name", params.ArchiveName);
+        response.set("X-Tunnel-File-Name", params.FileName);
+
+        // 1. Read CDN data from Ribbit
+        std::optional<ribbit::types::CDNs> cdns = [](std::string_view product, boost::asio::io_context& ctx) {
+            ribbit::CDNs<ribbit::Region::EU, ribbit::Version::V1> query { ctx };
+            return query(std::move(product));
+        }(params.Product, _context);
+
+        if (!cdns.has_value())
+            return writeError(http::status::not_found,
+                "Unable to resolve CDN configuration.\r\n"
+                "This could be due to Ribbit being unavailable or this build not being cached.\r\n"
+                "Try again in a bit; if this error persists, you're out of luck.");
+
+        tcp::resolver resolver{ _context };
+        beast::tcp_stream remoteStream{ _context };
+
+        beast::error_code ec;
+
+        // 2. Now that we have a CDN, look for the first available one
+        for (ribbit::types::cdns::Record const& cdn : *cdns) {
+            std::string_view cdnConfigHash = params.CDN;
+            std::string remotePath = std::format("/{}/data/{}/{}/{}", cdn.Path, params.ArchiveName.substr(0, 2), params.ArchiveName.substr(2, 2), params.ArchiveName);
+
+            for (std::string_view host : cdn.Hosts) {
+                // Open a HTTP socket to the actual CDN.
+                remoteStream.connect(resolver.resolve(host, "80"), ec);
+                if (ec.failed())
+                    continue;
+
+                http::request<http::dynamic_body> remoteRequest { http::verb::get, remotePath, 11 };
+                remoteRequest.set(http::field::host, host);
+                if (params.Length != 0)
+                    remoteRequest.set(http::field::range, std::format("{}-{}", params.Offset, params.Offset + params.Length - 1));
+
+                http::write(remoteStream, remoteRequest, ec);
+                if (ec.failed())
+                    continue;
+
+                http::response_parser<boost::beast::user::blte_body> remoteResponse;
+                remoteResponse.get().body().open([&clientStream](uint8_t* data, size_t length) {
+                    clientStream.write((char*)data, length);
+                });
+
+                remoteResponse.body_limit({ });
+
+                beast::flat_buffer remoteBuffer;
+                http::read_header(remoteStream, remoteBuffer, remoteResponse, ec);
+                if (ec.failed())
+                    continue;
+
+                // Not found? Try again on another CDN
+                if (remoteResponse.get().result() == http::status::not_found)
+                    continue;
+
+                http::read(remoteStream, remoteBuffer, remoteResponse, ec);
+                if (!ec.failed())
+                    return;
             }
         }
-
-        uint64_t decompressedSize = 0; {
-            auto [ptr, ec] = std::from_chars(tokens[4].data(), tokens[4].data() + tokens[4].size(), decompressedSize);
-            if (ec != std::errc{ } || decompressedSize == 0) {
-                response.result(http::status::bad_request);
-                response.set(http::field::content_type, "text/plain");
-
-                boost::beast::ostream(response.body()) << "Invalid length";
-                return;
-            }
-        }
-
-        std::string_view fileName = tokens[5];
-
-        response.set("X-Tunnel-CDN-Config", cdnConfig);
-        response.set("X-Tunnel-Archive-Name", archiveName);
-        response.set("X-Tunnel-File-Name", fileName);
-
-        // response.result(http::status::ok);
-        // response.set(http::field::content_type, "application/octet-stream");
-
-        // TODO: Parse CDN config given its name, reead it (it should have been cached, it's a hard error if it hasn't)
-        //       Then open TCP socket to the first CDN that answers.
-        //       Parse data as it comes, as soon as a socket drops, failover to the next CDN and specify a content range to resume download.
-        //       If the last CDN fails, hard error (close the socket)
-        //       Stream content from the CDN, decoded, to the client.
     }
 
     void Tunnel::Accept() {
