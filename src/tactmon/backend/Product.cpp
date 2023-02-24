@@ -5,7 +5,7 @@
 namespace backend {
     using namespace std::chrono_literals;
 
-    Product::Product(std::shared_ptr<tact::data::product::Product> product) : _product(product), _loading(false) {
+    Product::Product(std::shared_ptr<libtactmon::tact::data::product::Product> product) : _product(product), _loading(false) {
 
     }
 

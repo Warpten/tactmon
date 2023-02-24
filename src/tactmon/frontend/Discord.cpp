@@ -4,9 +4,9 @@
 #include "frontend/Discord.hpp"
 #include "backend/db/entity/Build.hpp"
 #include "backend/db/repository/Build.hpp"
+#include "utility/Logging.hpp"
 
-#include <ext/Literal.hpp>
-#include <logging/Sinks.hpp>
+#include "utility/Literal.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -31,7 +31,7 @@ namespace frontend {
         backend::ProductCache& productManager, backend::Database& database, frontend::Tunnel& httpServer)
         : httpServer(httpServer), productManager(productManager), db(database), bot(std::string{ token }), _strand(strand)
     {
-        _logger = logging::GetLogger("discord");
+        _logger = utility::logging::GetLogger("discord");
 
         bot.on_ready(std::bind(&Discord::HandleReadyEvent, this, std::placeholders::_1));
         bot.on_slashcommand(std::bind(&Discord::HandleSlashCommand, this, std::placeholders::_1));

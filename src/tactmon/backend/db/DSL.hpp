@@ -1,7 +1,7 @@
 #pragma once
 
-#include <ext/Tuple.hpp>
-#include <ext/Literal.hpp>
+#include "utility/Tuple.hpp"
+#include "utility/Literal.hpp"
 
 #include <pqxx/row>
 
@@ -29,7 +29,7 @@ namespace backend::db {
             column_tuple(std::index_sequence<Is...>, pqxx::row& row) : _tuple(row[Is].as<typename STORAGES::value_type>()...) 
             { }
 
-            ext::tuple<STORAGES...> _tuple;
+            utility::tuple<STORAGES...> _tuple;
         };
     }
 
@@ -39,7 +39,7 @@ namespace backend::db {
      * @typeparam NAME The name of the column.
      * @typeparam TYPE The type of the column.
      */
-    template <ext::Literal NAME, typename TYPE>
+    template <utility::Literal NAME, typename TYPE>
     struct Column {
         using value_type = TYPE;
     };
@@ -50,7 +50,7 @@ namespace backend::db {
      * @typeparam ALIAS The name of this alias.
      * @typeparam COMPONENT The DSL element being aliased.
      */
-    template <ext::Literal ALIAS, typename COMPONENT>
+    template <utility::Literal ALIAS, typename COMPONENT>
     struct Alias {
         using value_type = typename COMPONENT::value_type;
     };
@@ -76,13 +76,13 @@ namespace backend::db {
     */
     template <typename COLUMN, typename PROJECTION>
     auto get(PROJECTION&& projection) -> typename COLUMN::value_type {
-        return ext::get<detail::column_storage<COLUMN>>(projection._store._tuple)._value;
+        return utility::get<detail::column_storage<COLUMN>>(projection._store._tuple)._value;
     }
 
     /**
      * Represents a SQL entity. A SQL entity encapsulates all of a table's columns.
      */
-    template <ext::Literal NAME, ext::Literal SCHEMA, typename... COMPONENTS>
+    template <utility::Literal NAME, utility::Literal SCHEMA, typename... COMPONENTS>
     struct Entity : Projection<COMPONENTS...> {
         using as_projection = Projection<COMPONENTS...>;
 
@@ -101,7 +101,7 @@ namespace backend::db {
      *                   is the component being compared, and the second one a named parameter index.
      * @typeparam COMPONENT The component for which the criteria happens.
      */
-    template <ext::Literal FORMAT, typename COMPONENT>
+    template <utility::Literal FORMAT, typename COMPONENT>
     struct Criteria {
         constexpr static const size_t criteria_count = 1;
     };
@@ -117,7 +117,7 @@ namespace backend::db {
      * 
      * @typeparam TOKEN The aggregation token.
      */
-    template <ext::Literal TOKEN, typename... CRITERIAS>
+    template <utility::Literal TOKEN, typename... CRITERIAS>
     struct ManyCriteria {
         constexpr static const size_t criteria_count = (CRITERIAS::criteria_count + ... + 0);
     };
@@ -132,7 +132,7 @@ namespace backend::db {
      * @typeparam T             The type of this function's return value.
      * @typeparam COMPONENTS... Components corresponding to arguments to the function.
      */
-    template <ext::Literal FORMAT, typename T, typename... COMPONENTS>
+    template <utility::Literal FORMAT, typename T, typename... COMPONENTS>
     struct Function {
         static_assert(sizeof...(COMPONENTS) > 0, "SQL functions neeed at least one argument (for now). Should you need to invoke a parameterless function, provide db::Ignore.");
 

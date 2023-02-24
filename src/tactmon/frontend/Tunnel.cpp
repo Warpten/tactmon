@@ -1,11 +1,11 @@
 #include "frontend/Tunnel.hpp"
 #include "beast/blte_body.hpp"
 
-#include <tact/config/CDNConfig.hpp>
-#include <net/ribbit/Commands.hpp>
-#include <net/ribbit/types/CDNs.hpp>
+#include <libtactmon/tact/config/CDNConfig.hpp>
+#include <libtactmon/ribbit/Commands.hpp>
+#include <libtactmon/ribbit/types/CDNs.hpp>
 
-#include <ext/Tokenizer.hpp>
+#include <libtactmon/detail/Tokenizer.hpp>
 
 #include <chrono>
 #include <optional>
@@ -29,10 +29,10 @@ namespace http = beast::http;
 
 using namespace std::chrono_literals;
 
-namespace ribbit = net::ribbit;
+namespace ribbit = libtactmon::ribbit;
 
 namespace frontend {
-    Tunnel::Tunnel(tact::Cache& localCache, boost::asio::io_context& context, std::string_view localRoot, uint16_t listenPort)
+    Tunnel::Tunnel(libtactmon::tact::Cache& localCache, boost::asio::io_context& context, std::string_view localRoot, uint16_t listenPort)
         : _dataCache(localCache), _context(context), _localRoot(localRoot), _acceptor(context, ip::tcp::endpoint { ip::tcp::v4(), listenPort })
     {
         Accept();
@@ -49,7 +49,7 @@ namespace frontend {
             fileName);
     }
 
-    std::string Tunnel::GenerateAdress(std::string_view product, tact::data::ArchiveFileLocation const& location, std::string_view fileName, size_t decompressedSize) const {
+    std::string Tunnel::GenerateAdress(std::string_view product, libtactmon::tact::data::ArchiveFileLocation const& location, std::string_view fileName, size_t decompressedSize) const {
         return fmt::format("{}/{}/{}/{}/{}/{}", _localRoot,
             product,
             location.name(), location.offset(), location.fileSize(), decompressedSize,
@@ -68,7 +68,7 @@ namespace frontend {
 
     void Tunnel::ProcessRequest(boost::beast::http::request<boost::beast::http::dynamic_body> const& request, boost::beast::http::response<boost::beast::http::dynamic_body>& response) const {
         std::string_view target { request.target() };
-        std::vector<std::string_view> tokens = ext::Tokenize(target, '/');
+        std::vector<std::string_view> tokens = libtactmon::detail::Tokenize(target, '/');
         if (!tokens.empty())
             tokens.erase(tokens.begin());
 
@@ -111,8 +111,8 @@ namespace frontend {
 
         // 1. Read CDN data from Ribbit
         std::optional<ribbit::types::CDNs> cdns = [](std::string_view product, boost::asio::io_context& ctx) {
-            ribbit::CDNs<ribbit::Region::EU, ribbit::Version::V1> query { ctx };
-            return query(std::move(product));
+            ribbit::CDNs<ribbit::Region::EU> query { ctx };
+            return query(nullptr, std::move(product));
         }(params.Product, _context);
 
         if (!cdns.has_value())

@@ -15,16 +15,17 @@
 #include "libtactmon/tact/data/Index.hpp"
 #include "libtactmon/tact/data/Install.hpp"
 
-#include <spdlog/logger.h>
+#include <cstdint>
+#include <filesystem>
+#include <memory>
+#include <optional>
+#include <string_view>
 
 #include <boost/asio/io_context.hpp>
 
 #include <fmt/format.h>
 
-#include <cstdint>
-#include <filesystem>
-#include <optional>
-#include <string_view>
+#include <spdlog/logger.h>
 
 namespace libtactmon::tact::data::product {
     /**
@@ -37,7 +38,7 @@ namespace libtactmon::tact::data::product {
          * @param[in] productName The name of the product, as seen on Ribbit.
          * @param[in] localCache  A local cache manager controlling where configuration and data files will be read from and written to.
          */
-        Product(std::string_view productName, Cache& localCache, boost::asio::io_context& context);
+        Product(std::string_view productName, Cache& localCache, boost::asio::io_context& context, std::shared_ptr<spdlog::logger> logger);
 
         /**
          * The name of this product.
@@ -142,7 +143,7 @@ namespace libtactmon::tact::data::product {
 
     public: // Front-facing API
         /**
-         * Returns the current version of this product that Ribbit exposes.
+         * Returns the version of this product that Ribbit exposes at the time this method is called.
          */
         std::optional<ribbit::types::Versions> Refresh() noexcept;
 

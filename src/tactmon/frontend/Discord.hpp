@@ -15,10 +15,6 @@
 #include <boost/asio/io_context_strand.hpp>
 #include <boost/asio/post.hpp>
 
-namespace tact::data::product {
-    struct Manager;
-}
-
 namespace frontend {
     struct Discord final {
         friend struct commands::ICommand;

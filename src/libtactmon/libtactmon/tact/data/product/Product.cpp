@@ -1,5 +1,4 @@
 #include "libtactmon/io/MemoryStream.hpp"
-#include "libtactmon/logging/Sinks.hpp"
 #include "libtactmon/net/DownloadTask.hpp"
 #include "libtactmon/net/MemoryDownloadTask.hpp"
 #include "libtactmon/ribbit/Commands.hpp"
@@ -12,8 +11,8 @@
 namespace libtactmon::tact::data::product {
     using namespace std::string_view_literals;
 
-    Product::Product(std::string_view productName, Cache& localCache, boost::asio::io_context& context)
-        : _context(context), _productName(productName), _localCache(localCache)
+    Product::Product(std::string_view productName, Cache& localCache, boost::asio::io_context& context, std::shared_ptr<spdlog::logger> logger)
+        : _context(context), _productName(productName), _localCache(localCache), _logger(logger)
     {
     }
 
@@ -38,11 +37,12 @@ namespace libtactmon::tact::data::product {
             return false;
         
         // Begin loading here.
-        _logger = logging::GetLogger(_buildConfig->BuildName);
 
-        _logger->info("Detected encoding manifest: {}.", _buildConfig->Encoding.Key.EncodingKey.ToString());
-        _logger->info("Detected install manifest: {}.", _buildConfig->Install.Key.EncodingKey.ToString());
-        _logger->info("Detected root manifest: {}.", _buildConfig->Root.ToString());
+        if (_logger != nullptr) {
+            _logger->info("Detected encoding manifest: {}.", _buildConfig->Encoding.Key.EncodingKey.ToString());
+            _logger->info("Detected install manifest: {}.", _buildConfig->Install.Key.EncodingKey.ToString());
+            _logger->info("Detected root manifest: {}.", _buildConfig->Root.ToString());
+        }
 
         _encoding = ResolveCachedData<tact::data::Encoding>(_buildConfig->Encoding.Key.EncodingKey.ToString(),
             [&key = _buildConfig->Encoding.Key](io::FileStream& fstream) -> std::optional<tact::data::Encoding>
@@ -58,11 +58,13 @@ namespace libtactmon::tact::data::product {
             });
 
         if (!_encoding.has_value()) {
-            _logger->error("An error occured while parsing encoding manifest.");
+            if (_logger != nullptr)
+                _logger->error("An error occured while parsing encoding manifest.");
             return false;
         }
 
-        _logger->info("{} entries found in encoding manifest.", _encoding->count());
+        if (_logger != nullptr)
+            _logger->info("{} entries found in encoding manifest.", _encoding->count());
 
         _install = ResolveCachedData<tact::data::Install>(_buildConfig->Install.Key.EncodingKey.ToString(),
             [&key = _buildConfig->Install.Key](io::FileStream& fstream) -> std::optional<tact::data::Install> {
@@ -77,11 +79,13 @@ namespace libtactmon::tact::data::product {
             });
 
         if (!_install.has_value()) {
-            _logger->error("An error occured while parsing install manifest.");
+            if (_logger != nullptr)
+                _logger->error("An error occured while parsing install manifest.");
             return false;
         }
 
-        _logger->info("{} entries found in install manifest.", _install->size());
+        if (_logger != nullptr)
+            _logger->info("{} entries found in install manifest.", _install->size());
 
         _cdnConfig->ForEachArchive([this](std::string_view archiveName, size_t i) {
             auto dataStream = ResolveCachedData<io::FileStream>(fmt::format("{}.index", archiveName),
@@ -100,8 +104,6 @@ namespace libtactmon::tact::data::product {
     }
 
     std::optional<ribbit::types::Versions> Product::Refresh() noexcept {
-        auto ribbitLogger = logging::GetLogger("ribbit");
-
         ribbit::Summary<ribbit::Region::EU, ribbit::Version::V1> summaryCommand { _context };
         std::optional<ribbit::types::Summary> summary = summaryCommand(_logger); // Call op
         if (!summary.has_value())
@@ -121,7 +123,8 @@ namespace libtactmon::tact::data::product {
 #if !_DEBUG
         // Validate seqn for stale version information
         if (versions->SequenceID != summaryItr->SequenceID) {
-            ribbitLogger->error("Received stale version (expected {}, got {})", summaryItr->SequenceID, versions->SequenceID);
+            if (_logger != nullptr)
+                _logger->error("Received stale version (expected {}, got {})", summaryItr->SequenceID, versions->SequenceID);
 
             return std::nullopt;
         }
@@ -155,9 +158,8 @@ namespace libtactmon::tact::data::product {
             std::optional<tact::data::ArchiveFileLocation> indexLocation = FindArchive(encodingKey);
             if (indexLocation.has_value()) {
                 auto dataStream = ResolveData<net::MemoryDownloadTask, tact::BLTE>([&indexLocation]() -> net::MemoryDownloadTask {
-                    return net::MemoryDownloadTask { indexLocation->name(), indexLocation->offset(), indexLocation->fileSize() };
-                },
-                [](net::MemoryDownloadTask::ResultType& result) -> std::optional<tact::BLTE> {
+                    return net::MemoryDownloadTask{ indexLocation->name(), indexLocation->offset(), indexLocation->fileSize() };
+                }, [](net::MemoryDownloadTask::ResultType& result) -> std::optional<tact::BLTE> {
                     if (result.has_value())
                         return tact::BLTE::Parse(*result);
                     return std::nullopt;

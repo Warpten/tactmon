@@ -5,9 +5,6 @@
 #include <string>
 #include <string_view>
 
-#include <tact/Cache.hpp>
-#include <tact/data/FileLocation.hpp>
-
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/io_context_strand.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -16,11 +13,14 @@
 #include <boost/beast/http/dynamic_body.hpp>
 #include <boost/beast/http/message.hpp>
 
+#include <libtactmon/tact/Cache.hpp>
+#include <libtactmon/tact/data/FileLocation.hpp>
+
 namespace frontend {
     struct Tunnel {
-        explicit Tunnel(tact::Cache& localCache, boost::asio::io_context& context, std::string_view localRoot, uint16_t listenPort);
+        explicit Tunnel(libtactmon::tact::Cache& localCache, boost::asio::io_context& context, std::string_view localRoot, uint16_t listenPort);
 
-        std::string GenerateAdress(std::string_view product, tact::data::ArchiveFileLocation const& location, std::string_view fileName, size_t decompressedSize) const;
+        std::string GenerateAdress(std::string_view product, libtactmon::tact::data::ArchiveFileLocation const& location, std::string_view fileName, size_t decompressedSize) const;
         std::string GenerateAdress(std::string_view product, std::span<const uint8_t> location, std::string_view fileName, size_t decompressedSize) const;
 
     private:
@@ -50,7 +50,7 @@ namespace frontend {
             boost::asio::steady_timer _deadline;
         };
 
-        tact::Cache& _dataCache;
+        libtactmon::tact::Cache& _dataCache;
 
         std::optional<boost::asio::ip::tcp::socket> _socket;
         boost::asio::io_context& _context;

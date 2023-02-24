@@ -9,11 +9,13 @@
 
 #include <pqxx/connection>
 
+#include <spdlog/async_logger.h>
+
 namespace backend::db::repository {
     struct Build : Repository<entity::build::Entity, entity::build::queries::Select, entity::build::id, true> {
         using Base = Repository<entity::build::Entity, entity::build::queries::Select, entity::build::id, true>;
 
-        Build(boost::asio::io_context::strand strand, pqxx::connection& connection);
+        Build(boost::asio::io_context::strand strand, pqxx::connection& connection, spdlog::async_logger& logger);
         
         /**
          * Returns the record for a build with the given name.

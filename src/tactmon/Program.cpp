@@ -2,10 +2,9 @@
 #include "backend/Product.hpp"
 #include "frontend/Discord.hpp"
 #include "frontend/Tunnel.hpp"
+#include "utility/Logging.hpp"
 
-#include <logging/Sinks.hpp>
-#include <net/ribbit/Commands.hpp>
-#include <tact/data/product/wow/Product.hpp>
+#include <libtactmon/tact/data/product/wow/Product.hpp>
 
 #include <boost/program_options.hpp>
 #include <boost/asio/executor_work_guard.hpp>
@@ -97,19 +96,20 @@ void Execute(boost::program_options::variables_map vm) {
     // 5. Initialize product manager.
     fs::path cacheRoot = std::filesystem::current_path() / "cache";
 
-    tact::Cache localCache { cacheRoot };
+    libtactmon::tact::Cache localCache { cacheRoot };
     backend::ProductCache productCache { productStrand };
 
     constexpr static const std::string_view WOW_PRODUCTS[] = { "wow", "wow_beta", "wow_classic", "wow_classic_beta", "wow_classic_ptr" };
     for (std::string_view gameProduct : WOW_PRODUCTS) {
         productCache.RegisterFactory(std::string { gameProduct }, [&localCache, gameProduct, &ctx]() -> backend::Product {
-            return backend::Product { std::make_shared<tact::data::product::wow::Product>(gameProduct, localCache, ctx) };
+            return backend::Product { std::make_shared<libtactmon::tact::data::product::wow::Product>(gameProduct, localCache, ctx) };
         });
     }
 
     // 6. Initialize database.
     backend::Database database{
         databaseStrand,
+        utility::logging::GetAsyncLogger("database"),
         vm["database-username"].as<std::string>(),
         vm["database-password"].as<std::string>(),
         vm["database-host"].as<std::string>(),

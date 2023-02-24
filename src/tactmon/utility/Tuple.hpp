@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace libtactmon::utility {
+namespace utility {
     template <std::size_t N> struct Constant { constexpr static const auto value = N; };
 
     /**

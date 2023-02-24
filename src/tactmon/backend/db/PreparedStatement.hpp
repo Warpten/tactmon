@@ -4,7 +4,7 @@
 #include <tuple>
 #include <vector>
 
-#include <ext/Literal.hpp>
+#include "utility/Literal.hpp"
 
 #include <pqxx/connection>
 #include <pqxx/result>
@@ -15,7 +15,7 @@
 #include <spdlog/logger.h>
 
 namespace backend::db {
-    template <ext::Literal ALIAS, typename QUERY>
+    template <utility::Literal ALIAS, typename QUERY>
     struct PreparedStatement final {
         using entity_type = typename QUERY::entity_type;
         using projection_type = typename QUERY::projection_type;
@@ -26,18 +26,16 @@ namespace backend::db {
             connection.prepare(pqxx::zview{ ALIAS.Value, ALIAS.Size - 1 }, rendererQuery);
         }
 
-        static void Prepare(pqxx::connection& connection, std::shared_ptr<spdlog::async_logger> logger) {
+        static void Prepare(pqxx::connection& connection, spdlog::async_logger& logger) {
             std::string rendererQuery = QUERY::Render();
-            if (logger != nullptr)
-                logger->debug("Preparing query {}: '{}'", ALIAS.Value, rendererQuery);
+            logger.debug("Preparing query {}: '{}'", ALIAS.Value, rendererQuery);
 
             connection.prepare(pqxx::zview{ ALIAS.Value, ALIAS.Size - 1 }, rendererQuery);
         }
 
-        static void Prepare(pqxx::connection& connection, std::shared_ptr<spdlog::logger> logger) {
+        static void Prepare(pqxx::connection& connection, spdlog::logger& logger) {
             std::string rendererQuery = QUERY::Render();
-            if (logger != nullptr)
-                logger->debug("Preparing query {}: '{}'", ALIAS.Value, rendererQuery);
+            logger.debug("Preparing query {}: '{}'", ALIAS.Value, rendererQuery);
 
             connection.prepare(pqxx::zview{ ALIAS.Value, ALIAS.Size - 1 }, rendererQuery);
         }

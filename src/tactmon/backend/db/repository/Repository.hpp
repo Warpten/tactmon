@@ -16,12 +16,13 @@
 #include <boost/container/flat_map.hpp>
 #include <boost/range/adaptor/map.hpp>
 
-#include <pqxx/connection>
-
-#include <logging/Sinks.hpp>
-#include <spdlog/stopwatch.h>
 #include <fmt/chrono.h>
 #include <fmt/format.h>
+
+#include <pqxx/connection>
+
+#include <spdlog/async_logger.h>
+#include <spdlog/stopwatch.h>
 
 namespace backend::db::repository {
     using namespace std::chrono_literals;
@@ -83,8 +84,8 @@ namespace backend::db::repository {
 
     protected:
         template <auto B = CACHING, std::enable_if_t<B, int> _ = 0> // Make dependant
-        explicit Repository(boost::asio::io_context& context, pqxx::connection& connection, std::chrono::seconds interval = 60s)
-            : repository_base(context, interval), _logger(logging::GetAsyncLogger(fmt::format("db::{}", ENTITY::Name.Value))),
+        explicit Repository(boost::asio::io_context& context, pqxx::connection& connection, spdlog::async_logger& logger, std::chrono::seconds interval = 60s)
+            : repository_base(context, interval), _logger(logger),
                 _connection(connection)
         {
             LOAD_STATEMENT::Prepare(_connection, _logger);
@@ -93,8 +94,8 @@ namespace backend::db::repository {
         }
 
         template <auto B = CACHING, std::enable_if_t<B, int> _ = 0> // Make dependant
-        explicit Repository(boost::asio::io_context::strand strand, pqxx::connection& connection, std::chrono::seconds interval = 60s)
-            : repository_base(strand, interval), _logger(logging::GetAsyncLogger(fmt::format("db::{}", ENTITY::Name.Value))),
+        explicit Repository(boost::asio::io_context::strand strand, pqxx::connection& connection, spdlog::async_logger& logger, std::chrono::seconds interval = 60s)
+            : repository_base(strand, interval), _logger(logger),
             _connection(connection)
         {
             LOAD_STATEMENT::Prepare(_connection, _logger);
@@ -103,8 +104,8 @@ namespace backend::db::repository {
         }
 
         template <auto B = CACHING, std::enable_if_t<!B, int> _ = 0>
-        explicit Repository(pqxx::connection& connection)
-            : repository_base(), _logger(logging::GetAsyncLogger(fmt::format("db::{}", ENTITY::Name.Value))),
+        Repository(pqxx::connection& connection, std::shared_ptr<spdlog::async_logger> logger)
+            : repository_base(), _logger(logger),
                 _connection(connection)
         {
             LOAD_STATEMENT::Prepare(_connection, _logger);
@@ -166,12 +167,13 @@ namespace backend::db::repository {
         void LoadFromDB_() {
             namespace chrono = std::chrono;
 
-            _logger->info("Refreshing cache entries for db::{}.", ENTITY::Name.Value);
+            _logger.info("Refreshing cache entries for db::{}.", ENTITY::Name.Value);
+
             spdlog::stopwatch sw { };
 
             std::vector<ENTITY> storage = Execute<LOAD_STATEMENT>();
 
-            _logger->debug("Loaded {} db::{} entries from database in {}.",
+            _logger.debug("Loaded {} db::{} entries from database in {}.",
                 storage.size(), ENTITY::Name.Value, chrono::duration_cast<chrono::milliseconds>(sw.elapsed()));
 
             sw.reset();
@@ -182,12 +184,12 @@ namespace backend::db::repository {
                     this->_storage.emplace(db::get<PRIMARY_KEY>(entity), entity);
             });
 
-            _logger->debug("Cache for db::{} filled in {}.",
+            _logger.debug("Cache for db::{} filled in {}.",
                 ENTITY::Name.Value, chrono::duration_cast<chrono::milliseconds>(sw.elapsed()));
         }
 
     protected:
-        std::shared_ptr<spdlog::async_logger> _logger;
+        spdlog::async_logger& _logger;
         pqxx::connection& _connection;
         
     private:

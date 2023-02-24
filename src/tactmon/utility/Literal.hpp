@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <string>
 
-namespace libtactmon::detail {
+namespace utility {
     template <size_t N>
     struct Literal {
         constexpr Literal(const char(&val)[N]) {

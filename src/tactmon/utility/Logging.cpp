@@ -1,4 +1,4 @@
-#include "Sinks.hpp"
+#include "utility/Logging.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -8,7 +8,7 @@
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-namespace logging {
+namespace utility::logging {
     struct transparent_hash {
         using hash_type = std::hash<std::string_view>;
         using is_transparent = void;

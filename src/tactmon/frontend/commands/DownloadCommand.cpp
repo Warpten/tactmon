@@ -1,15 +1,14 @@
-#include "frontend/commands/DownloadCommand.hpp"
-#include "frontend/Discord.hpp"
-
 #include "backend/db/DSL.hpp"
 #include "backend/db/entity/Build.hpp"
 #include "backend/db/repository/Build.hpp"
-
-#include <tact/data/FileLocation.hpp>
+#include "frontend/commands/DownloadCommand.hpp"
+#include "frontend/Discord.hpp"
 
 #include <string_view>
 
 #include <fmt/format.h>
+
+#include <libtactmon/tact/data/FileLocation.hpp>
 
 namespace db = backend::db;
 namespace entity = db::entity;
@@ -71,7 +70,7 @@ namespace frontend::commands {
         // 2. Obtain an instance of the product.
         cluster.productManager.LoadConfiguration(product, *buildEntry, [&](backend::Product& productHandler) {
             // 3. Locate the file
-            std::optional<tact::data::FileLocation> fileLocation = productHandler->FindFile(file);
+            std::optional<libtactmon::tact::data::FileLocation> fileLocation = productHandler->FindFile(file);
             if (!fileLocation.has_value()) {
                 evnt.edit_response(dpp::message().add_embed(
                     dpp::embed()
@@ -92,7 +91,7 @@ namespace frontend::commands {
             }();
 
             for (size_t i = 0; i < fileLocation->keyCount(); ++i) {
-                std::optional<tact::data::ArchiveFileLocation> indexLocation = productHandler->FindArchive((*fileLocation)[i]);
+                std::optional<libtactmon::tact::data::ArchiveFileLocation> indexLocation = productHandler->FindArchive((*fileLocation)[i]);
                 if (!indexLocation.has_value())
                     continue;
 
