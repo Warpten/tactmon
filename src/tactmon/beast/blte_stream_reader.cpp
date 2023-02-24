@@ -7,7 +7,7 @@
 namespace boost::beast::user {
     blte_stream_reader::blte_stream_reader() : _ms(std::endian::little) { }
 
-    std::size_t blte_stream_reader::write_some(uint8_t* data, size_t size, std::function<void(uint8_t*, size_t)> acceptor, boost::beast::error_code& ec) {
+    std::size_t blte_stream_reader::write_some(uint8_t* data, size_t size, std::function<void(std::span<uint8_t const>)> acceptor, boost::beast::error_code& ec) {
         _ms.Write(std::span<uint8_t> { data, size }, std::endian::little);
 
         while (true) {
@@ -69,7 +69,7 @@ namespace boost::beast::user {
                         case 'N':
                         {
                             // Using C style cast because cba const_cast(reinterpret_cast())
-                            acceptor((uint8_t*) (_ms.Data()), chunkInfo.compressedSize - 1);
+                            acceptor(std::span<uint8_t const> { reinterpret_cast<uint8_t const*>(_ms.Data()), chunkInfo.compressedSize - 1 });
                             _ms.SkipRead(chunkInfo.compressedSize - 1);
                             break;
                         }
@@ -104,7 +104,7 @@ namespace boost::beast::user {
                                     return size;
                                 }
 
-                                acceptor(decompressedBuffer.data(), decompressedBuffer.size() - strm.avail_out);
+                                acceptor(std::span<uint8_t const> { decompressedBuffer.data(), decompressedBuffer.size() - strm.avail_out });
                             }
 
                             ret = inflateEnd(&strm);

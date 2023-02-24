@@ -18,19 +18,24 @@ namespace net {
         void Run();
 
     private:
+        void BeginAccept();
+
         void BeginRead();
-        void HandleRead(boost::beast::http::request_parser<boost::beast::http::empty_body> const& request, boost::beast::error_code ec, std::size_t bytesTransferred);
+        void HandleRead(boost::beast::error_code ec, std::size_t bytesTransferred);
 
         bool ProcessRequest(boost::beast::http::request_parser<boost::beast::http::empty_body> const& request);
 
         bool UpdateOutgoing();
 
-        void BeginWrite(boost::beast::http::response_parser<boost::beast::http::dynamic_body>&& response);
+        void BeginWrite(boost::beast::http::message_generator&& response);
+        void HandleWrite(bool keepAlive, boost::beast::error_code ec, std::size_t bytesTransferred);
 
     private:
         boost::beast::tcp_stream _stream;
         boost::beast::flat_buffer _buffer;
         std::vector<boost::beast::http::message_generator> _outgoingQueue;
 
+        // Overriden on each subsequent read
+        std::optional<boost::beast::http::request_parser<boost::beast::http::empty_body>> _request;
     };
 }

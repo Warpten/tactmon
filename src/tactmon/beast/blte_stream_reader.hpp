@@ -19,7 +19,7 @@ namespace boost::beast::user {
 
         explicit blte_stream_reader();
 
-        std::size_t write_some(uint8_t* data, size_t size, std::function<void(uint8_t*, size_t)> acceptor, boost::beast::error_code& ec);
+        std::size_t write_some(uint8_t* data, size_t size, std::function<void(std::span<const uint8_t>)> acceptor, boost::beast::error_code& ec);
 
     private:
         enum step : uint32_t {

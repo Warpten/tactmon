@@ -48,11 +48,11 @@ namespace net {
         } _cancellationSignals;
 
     public:
-        Server(boost::asio::ip::tcp::endpoint endpoint, size_t acceptorThreads) noexcept;
+        Server(boost::asio::io_context& context, boost::asio::ip::tcp::endpoint endpoint, size_t acceptorThreads) noexcept;
         void Run();
 
     private:
-        void Accept();
+        void BeginAccept();
         void HandleAccept(boost::beast::error_code ec, boost::asio::ip::tcp::socket socket);
 
     };

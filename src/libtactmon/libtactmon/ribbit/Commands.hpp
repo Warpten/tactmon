@@ -151,23 +151,98 @@ namespace libtactmon::ribbit {
         private:
             static std::vector<std::string_view> ParseCore(std::string_view input, std::shared_ptr<spdlog::logger> logger);
         };
+
+        template <Command C, Region R, Version V, typename Args> class command_executor_impl;
+        template <Command C, Region R, Version V, typename... Args>
+        class command_executor_impl<C, R, V, std::tuple<Args...>> {
+            using CommandTraits = detail::CommandTraits<C>;
+            using RegionTraits = detail::RegionTraits<R>;
+            using VersionTraits = detail::VersionTraits<V>;
+
+        public:
+            static auto Execute(boost::asio::any_io_executor executor, Args&&... args) {
+                return Execute(executor, nullptr, std::forward<Args&&>(args)...);
+            }
+
+            static auto Execute(boost::asio::any_io_executor executor, std::shared_ptr<spdlog::logger> logger, Args&&... args)
+                -> std::optional<typename CommandTraits::ValueType>
+            {
+                namespace ip = boost::asio::ip;
+                using tcp = ip::tcp;
+
+                boost::asio::ip::tcp::socket socket{ executor };
+
+                boost::system::error_code ec;
+
+                auto command = fmt::format(CommandTraits::Format, VersionTraits::Value, std::forward<Args>(args)...) + "\r\n";
+
+                if (logger != nullptr) {
+                    logger->info("Loading {}:{}/{}.", RegionTraits::Host, 1119, command);
+                    logger->trace("Connecting to {}:{}/{}.", RegionTraits::Host, 1119, command);
+                }
+
+                tcp::resolver r{ executor };
+                boost::asio::connect(socket, r.resolve(RegionTraits::Host, "1119"), ec);
+
+                if (ec) {
+                    if (logger != nullptr)
+                        logger->error("An error occured: {}.", ec.message());
+
+                    return std::nullopt;
+                }
+
+                { // Write Ribbit request
+                    auto buf = boost::asio::buffer(command);
+                    boost::asio::write(socket, buf, ec);
+                    if (ec) {
+                        if (logger != nullptr)
+                            logger->error("An error occured: {}.", ec.message());
+
+                        return std::nullopt;
+                    }
+                }
+
+                { // Read Ribbit response
+                    boost::asio::streambuf buf;
+                    size_t bytesTransferred = boost::asio::read(socket, buf, ec);
+                    boost::ignore_unused(bytesTransferred);
+                    if (ec && ec != boost::asio::error::eof) {
+                        if (logger != nullptr)
+                            logger->error("An error occured: {}.", ec.message());
+
+                        return std::nullopt;
+                    }
+
+                    auto bufs = buf.data();
+                    std::string response{ boost::asio::buffers_begin(bufs), boost::asio::buffers_begin(bufs) + buf.size() };
+
+                    return VersionTraits::template Parse<CommandTraits>(response, logger);
+                }
+            }
+        };
     }
 
-    template <Command C, Region R, Version V>
-    struct CommandExecutor {
-        using CommandTraits = detail::CommandTraits<C>;
-        using RegionTraits  = detail::RegionTraits<R>;
-        using VersionTraits = detail::VersionTraits<V>;
+    template <Command C, Region R, Version V, typename Args = typename detail::CommandTraits<C>::Args>
+    struct CommandExecutor final : detail::command_executor_impl<C, R, V, Args> {
+        // using detail::command_executor_impl<C, R, V, Args>:::Execute;
+    };
 
-        explicit CommandExecutor(boost::asio::io_context& ctx) : _socket(ctx), _ctx(ctx) { }
+    /*template <Command C, Region R, Version V>
+    struct CommandExecutor {
+        template <typename... Args>
+        static auto Execute(boost::asio::any_io_executor executor, Args&&... args) {
+            return Execute(executor, nullptr, std::forward<Args>(args)...);
+        }
 
         template <typename... Args>
         requires std::is_same_v<std::tuple<Args...>, typename CommandTraits::Args>
-        auto operator() (std::shared_ptr<spdlog::logger> logger, Args&&... args)
+        static auto Execute(boost::asio::any_io_executor executor, std::shared_ptr<spdlog::logger> logger, Args&&... args)
             -> std::optional<typename CommandTraits::ValueType>
         {
             namespace ip = boost::asio::ip;
             using tcp = ip::tcp;
+
+            boost::asio::ip::tcp::socket socket { executor };
 
             boost::system::error_code ec;
 
@@ -178,8 +253,8 @@ namespace libtactmon::ribbit {
                 logger->trace("Connecting to {}:{}/{}.", RegionTraits::Host, 1119, command);
             }
 
-            tcp::resolver r { _ctx };
-            boost::asio::connect(_socket, r.resolve(RegionTraits::Host, "1119"), ec);
+            tcp::resolver r { executor };
+            boost::asio::connect(socket, r.resolve(RegionTraits::Host, "1119"), ec);
 
             if (ec) {
                 if (logger != nullptr)
@@ -190,7 +265,7 @@ namespace libtactmon::ribbit {
 
             { // Write Ribbit request
                 auto buf = boost::asio::buffer(command);
-                boost::asio::write(_socket, buf, ec);
+                boost::asio::write(socket, buf, ec);
                 if (ec) {
                     if (logger != nullptr)
                         logger->error("An error occured: {}.", ec.message());
@@ -201,7 +276,7 @@ namespace libtactmon::ribbit {
 
             { // Read Ribbit response
                 boost::asio::streambuf buf;
-                size_t bytesTransferred = boost::asio::read(_socket, buf, ec);
+                size_t bytesTransferred = boost::asio::read(socket, buf, ec);
                 boost::ignore_unused(bytesTransferred);
                 if (ec && ec != boost::asio::error::eof) {
                     if (logger != nullptr)
@@ -216,11 +291,7 @@ namespace libtactmon::ribbit {
                 return VersionTraits::template Parse<CommandTraits>(response, logger);
             }
         }
-
-    private:
-        boost::asio::io_context& _ctx;
-        boost::asio::ip::tcp::socket _socket;
-    };
+    };*/
 
     template <Region R, Version V = Version::V1>
     using CDNs = CommandExecutor<Command::ProductCDNs, R, V>;

@@ -102,14 +102,16 @@ void Execute(boost::program_options::variables_map vm) {
     constexpr static const std::string_view WOW_PRODUCTS[] = { "wow", "wow_beta", "wow_classic", "wow_classic_beta", "wow_classic_ptr" };
     for (std::string_view gameProduct : WOW_PRODUCTS) {
         productCache.RegisterFactory(std::string { gameProduct }, [&localCache, gameProduct, &ctx]() -> backend::Product {
-            return backend::Product { std::make_shared<libtactmon::tact::data::product::wow::Product>(gameProduct, localCache, ctx) };
+            return backend::Product {
+                std::make_shared<libtactmon::tact::data::product::wow::Product>(gameProduct, localCache, ctx, nullptr)
+            };
         });
     }
 
     // 6. Initialize database.
     backend::Database database{
         databaseStrand,
-        utility::logging::GetAsyncLogger("database"),
+        *utility::logging::GetAsyncLogger("database").get(),
         vm["database-username"].as<std::string>(),
         vm["database-password"].as<std::string>(),
         vm["database-host"].as<std::string>(),
@@ -118,7 +120,7 @@ void Execute(boost::program_options::variables_map vm) {
     };
 
     // 7. Initialize HTTP proxy.
-    frontend::Tunnel proxy { localCache,  ctx, vm["http-proxy-document-root"].as<std::string>(), vm["http-port"].as<uint16_t>() };
+    frontend::Tunnel proxy { localCache, ctx, vm["http-proxy-document-root"].as<std::string>(), vm["http-port"].as<uint16_t>() };
 
     // 8. Initialize discord frontend
     frontend::Discord bot { discordStrand, vm["discord-token"].as<std::string>(), productCache, database, proxy };

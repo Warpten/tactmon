@@ -110,10 +110,7 @@ namespace frontend {
         response.set("X-Tunnel-File-Name", params.FileName);
 
         // 1. Read CDN data from Ribbit
-        std::optional<ribbit::types::CDNs> cdns = [](std::string_view product, boost::asio::io_context& ctx) {
-            ribbit::CDNs<ribbit::Region::EU> query { ctx };
-            return query(nullptr, std::move(product));
-        }(params.Product, _context);
+        std::optional<ribbit::types::CDNs> cdns = ribbit::CDNs<ribbit::Region::EU>::Execute(_context.get_executor(), params.Product);
 
         if (!cdns.has_value())
             return writeError(http::status::not_found,
@@ -147,9 +144,9 @@ namespace frontend {
                     continue;
 
                 http::response_parser<boost::beast::user::blte_body> remoteResponse;
-                remoteResponse.get().body().open([&clientStream](uint8_t* data, size_t length) {
+                /*remoteResponse.get().body() = [&clientStream](uint8_t* data, size_t length) {
                     clientStream.write((char*)data, length);
-                });
+                });*/
 
                 remoteResponse.body_limit({ });
 

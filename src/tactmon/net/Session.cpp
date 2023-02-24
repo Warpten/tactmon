@@ -1,3 +1,4 @@
+#include "beast/blte_body.hpp"
 #include "net/Session.hpp"
 
 #include <chrono>
@@ -15,9 +16,11 @@
 
 using namespace std::chrono_literals;
 
+namespace ribbit = libtactmon::ribbit;
 namespace http = boost::beast::http;
 
 namespace net {
+    // Maximum number of messages in queue
     constexpr static const size_t QueueLimit = 8;
 
     Session::Session(boost::asio::ip::tcp::socket&& socket) noexcept : _stream(std::move(socket)) {
@@ -29,23 +32,26 @@ namespace net {
     }
 
     void Session::BeginRead() {
-        http::request_parser<http::empty_body> request;
+        _request.emplace();
+        _request->body_limit(4092); // Arbitrary limitation to avoid abusers
+
         _stream.expires_after(60s);
 
-        http::async_read(_stream, _buffer, request, std::bind(&Session::HandleRead, this->shared_from_this(), request, std::placeholders::_1, std::placeholders::_2));
+        http::async_read(_stream, _buffer, *_request, std::bind_front(&Session::HandleRead, this->shared_from_this()));
     }
 
-    void Session::HandleRead(http::request_parser<http::empty_body> const& request, boost::beast::error_code ec, std::size_t bytesTransferred) {
+    void Session::HandleRead(boost::beast::error_code ec, std::size_t bytesTransferred) {
         boost::ignore_unused(bytesTransferred);
 
         if (ec == http::error::end_of_stream) {
+            // Client closed the connection, shut down and emit. Our lifecycle will end and our memory will be reclaimed by the OS.
             _stream.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-            // Ignore errors now.
 
             return;
         }
 
-        if (!ProcessRequest(request)) {
+        if (ProcessRequest(*_request)) {
+            // Begin another read operation if and only if we aren't at the queue limit.
             if (_outgoingQueue.size() < QueueLimit)
                 BeginRead();
         }
@@ -73,7 +79,7 @@ namespace net {
 
             boost::beast::ostream(response.body()) << body;
 
-            this->BeginWrite(std::move(response));
+            this->BeginWrite(http::message_generator { std::move(response) });
             return false;
         };
 
@@ -106,16 +112,15 @@ namespace net {
         response.set("X-Tunnel-Archive-Name", params.ArchiveName);
         response.set("X-Tunnel-File-Name", params.FileName);
 
-        http::async_write_header(_stream, response, 
+        http::response_serializer<http::dynamic_body> responseSerializer { response };
+
+        http::async_write_header(_stream, responseSerializer, 
             [=](boost::system::error_code ec, std::size_t bytesTransferred) {
                 boost::ignore_unused(bytesTransferred);
                 if (ec.failed())
                     return;
                 
-                std::optional<ribbit::types::CDNs> cdns = [](std::string_view product, boost::asio::io_context& ctx) {
-                    ribbit::CDNs<ribbit::Region::EU> query { ctx };
-                    return query(nullptr, std::move(product));
-                }(params.Product, _stream.get_executor());
+                std::optional<ribbit::types::CDNs> cdns = ribbit::CDNs<ribbit::Region::EU>::Execute(_stream.get_executor(), params.Product);
                 
                 if (!cdns.has_value()) {
                     // TODO: Does this send headers twice? It shouldn't!
@@ -130,7 +135,7 @@ namespace net {
                 boost::beast::tcp_stream remoteStream{ _stream.get_executor() };
 
                 // 2. Now that we have a CDN, look for the first available one
-                for (libtactmon::ribbit::types::cdns::Record const& cdn : *cdns) {
+                for (ribbit::types::cdns::Record const& cdn : *cdns) {
                     std::string remotePath = std::format("/{}/data/{}/{}/{}", cdn.Path, params.ArchiveName.substr(0, 2), params.ArchiveName.substr(2, 2), params.ArchiveName);
 
                     for (std::string_view host : cdn.Hosts) {
@@ -170,12 +175,16 @@ namespace net {
                     }
                 }
             }
-        )
+        );
+        
+        return false;
     }
 
-    void Session::BeginWrite(http::response_parser<http::dynamic_body>&& response) {
+    void Session::BeginWrite(http::message_generator&& response) {
         _outgoingQueue.emplace_back(std::move(response));
 
+        // If there was no previous work, start the write operation.
+        // If there already was work, it'll be picked up in UpdateOutgoing.
         if (_outgoingQueue.size() == 1)
             UpdateOutgoing();
     }
