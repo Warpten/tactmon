@@ -115,7 +115,7 @@ namespace boost::beast::user {
                         {
                             // Nested BLTE stream
                             blte_stream_reader nestedReader { };
-                            nestedReader.write_some(_ms.Data(), chunkInfo.compressedSize, acceptor, ec);
+                            nestedReader.write_some((uint8_t*) _ms.Data(), chunkInfo.compressedSize, acceptor, ec);
                             _ms.SkipRead(chunkInfo.compressedSize);
                             break;
                         }

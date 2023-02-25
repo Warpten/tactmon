@@ -95,7 +95,7 @@ namespace backend::db::repository {
         }
 
         template <auto B = CACHING, std::enable_if_t<!B, int> _ = 0>
-        Repository(pqxx::connection& connection, std::shared_ptr<spdlog::async_logger> logger)
+        Repository(pqxx::connection& connection, spdlog::async_logger& logger)
             : repository_base(), _logger(logger),
                 _connection(connection)
         {
