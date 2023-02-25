@@ -10,7 +10,13 @@
 
 namespace boost::beast::user {
     struct blte_body {
-        using value_type = std::function<void(std::span<uint8_t const>)>;
+        struct value_type_handle {
+            using Handler = std::function<void(std::span<uint8_t const>)>;
+
+            Handler handler;
+            blte_stream_reader reader;
+        };
+        using value_type = std::shared_ptr<value_type_handle>;
 
         struct writer {
             using const_buffer_type = boost::asio::const_buffer;
@@ -42,14 +48,13 @@ namespace boost::beast::user {
 
             template <typename ConstBufferSequence>
             std::size_t put(ConstBufferSequence const& buffers, boost::system::error_code& ec) {
-                return _reader.write_some((uint8_t*) buffers.data(), buffers.size(), _body, ec);
+                return _body->reader.write_some((uint8_t*) buffers.data(), buffers.size(), _body->handler, ec);
             }
 
             void finish(boost::system::error_code& ec) { }
 
         private:
             value_type& _body;
-            blte_stream_reader _reader;
         };
     };
 }

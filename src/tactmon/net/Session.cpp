@@ -1,4 +1,5 @@
 #include "beast/blte_body.hpp"
+#include "beast/Hacks.hpp"
 #include "net/Session.hpp"
 
 #include <chrono>
@@ -17,7 +18,8 @@
 using namespace std::chrono_literals;
 
 namespace ribbit = libtactmon::ribbit;
-namespace http = boost::beast::http;
+namespace beast = boost::beast;
+namespace http = beast::http;
 
 namespace net {
     // Maximum number of messages in queue
@@ -40,7 +42,7 @@ namespace net {
         http::async_read(_stream, _buffer, *_request, std::bind_front(&Session::HandleRead, this->shared_from_this()));
     }
 
-    void Session::HandleRead(boost::beast::error_code ec, std::size_t bytesTransferred) {
+    void Session::HandleRead(beast::error_code ec, std::size_t bytesTransferred) {
         boost::ignore_unused(bytesTransferred);
 
         if (ec == http::error::end_of_stream) {
@@ -80,7 +82,7 @@ namespace net {
             response.set(http::field::content_type, "text/plain");
             response.keep_alive(false);
 
-            boost::beast::ostream(response.body()) << body;
+            beast::ostream(response.body()) << body;
 
             this->BeginWrite(http::message_generator { std::move(response) });
             return true;
@@ -125,7 +127,6 @@ namespace net {
         }
 
         boost::asio::ip::tcp::resolver resolver { _stream.get_executor() };
-        boost::beast::tcp_stream remoteStream { _stream.get_executor() };
 
         // 1. Collect eligible CDNs.
         std::unordered_map<std::string_view, std::string> availableRemoteArchives;
@@ -133,12 +134,13 @@ namespace net {
             std::string remotePath = std::format("/{}/data/{}/{}/{}", cdn.Path, params.ArchiveName.substr(0, 2), params.ArchiveName.substr(2, 2), params.ArchiveName);
 
             for (std::string_view host : cdn.Hosts) {
+                beast::tcp_stream remoteStream { _stream.get_executor() };
                 remoteStream.connect(resolver.resolve(host, "80"), ec);
                 if (ec.failed())
                     continue;
 
                 auto checkExistence = [&params, &remotePath, host, &remoteStream](http::verb method) -> bool {
-                    boost::beast::error_code ec;
+                    beast::error_code ec;
 
                     http::request<http::dynamic_body> remoteRequest { method, remotePath, 11 };
                     remoteRequest.set(http::field::host, host);
@@ -149,8 +151,9 @@ namespace net {
                     if (ec.failed())
                         return false;
 
-                    boost::beast::flat_buffer buffer{ 8192 };
+                    beast::flat_buffer buffer{ 8192 };
                     http::response_parser<http::dynamic_body> remoteResponse;
+                    remoteResponse.body_limit({ });
                     http::read_header(remoteStream, buffer, remoteResponse, ec);
                     if (ec.failed()
                         || remoteResponse.get().result() == http::status::not_found
@@ -175,8 +178,10 @@ namespace net {
         if (ec.failed())
             return true;
 
-        http::response_parser<boost::beast::user::blte_body> remoteResponse; //< This needs to live across different CDN replies
-        remoteResponse.get().body() = [&](std::span<uint8_t const> data) {
+        // Note: we need to persist the reader implementation except that it's response_parser::_rd, which is 
+        // private and not publicly exposed. Therefore, we store parser state in the value_type itself so we can move it around.
+        std::shared_ptr<beast::user::blte_body::value_type_handle> parserState = std::make_shared<beast::user::blte_body::value_type_handle>();
+        parserState->handler = [&](std::span<uint8_t const> data) {
             // Update range values for next case if need be
             params.Offset += data.size();
             params.Length -= data.size();
@@ -186,6 +191,7 @@ namespace net {
         };
 
         for (auto [cdn, remotePath] : availableRemoteArchives) {
+            beast::tcp_stream remoteStream { _stream.get_executor() };
             remoteStream.connect(resolver.resolve(cdn, "80"), ec);
             if (ec.failed())
                 continue;
@@ -199,10 +205,12 @@ namespace net {
             if (ec.failed())
                 continue;
 
+            http::response_parser<beast::user::blte_body> remoteResponse;
             remoteResponse.body_limit({ });
+            remoteResponse.get().body() = parserState;
 
             // Read header from Blizzard CDN now.
-            boost::beast::flat_buffer remoteBuffer;
+            beast::flat_buffer remoteBuffer;
             http::read_header(remoteStream, remoteBuffer, remoteResponse, ec);
             if (ec.failed())
                 continue;
@@ -244,13 +252,13 @@ namespace net {
             _outgoingQueue.erase(_outgoingQueue.begin());
 
             bool keepAlive = msg.keep_alive();
-            boost::beast::async_write(_stream, std::move(msg), std::bind(&Session::HandleWrite, this->shared_from_this(), keepAlive, std::placeholders::_1, std::placeholders::_2));
+            beast::async_write(_stream, std::move(msg), std::bind(&Session::HandleWrite, this->shared_from_this(), keepAlive, std::placeholders::_1, std::placeholders::_2));
         }
 
         return wasFull;
     }
 
-    void Session::HandleWrite(bool keepAlive, boost::beast::error_code ec, std::size_t bytesTransferred) {
+    void Session::HandleWrite(bool keepAlive, beast::error_code ec, std::size_t bytesTransferred) {
         boost::ignore_unused(bytesTransferred);
 
         if (ec.failed())
