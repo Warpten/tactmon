@@ -45,7 +45,7 @@ namespace boost::beast::user {
                     _chunks.resize(chunkCount);
 
                     for (size_t i = 0; i < chunkCount; ++i) {
-                        _chunks[i].compressedSize = _ms.Read<uint32_t>(std::endian::big);
+                        _chunks[i].compressedSize = _ms.Read<uint32_t>(std::endian::big) - 1;
                         _chunks[i].decompressedSize = _ms.Read<uint32_t>(std::endian::big);
                         _ms.Read(_chunks[i].checksum, std::endian::little);
                     }
@@ -70,7 +70,7 @@ namespace boost::beast::user {
                         {
                             // Using C style cast because cba const_cast(reinterpret_cast())
                             acceptor(std::span<uint8_t const> { reinterpret_cast<uint8_t const*>(_ms.Data()), chunkInfo.compressedSize - 1 });
-                            _ms.SkipRead(chunkInfo.compressedSize - 1);
+                            _ms.SkipRead(chunkInfo.compressedSize);
                             break;
                         }
                         case 'Z':
@@ -88,7 +88,7 @@ namespace boost::beast::user {
                                 return size;
                             }
 
-                            strm.avail_in = chunkInfo.compressedSize - 1;
+                            strm.avail_in = chunkInfo.compressedSize;
                             strm.next_in = (uint8_t*) (_ms.Data());
 
                             std::array<uint8_t, 8192> decompressedBuffer;
@@ -108,7 +108,15 @@ namespace boost::beast::user {
                             }
 
                             ret = inflateEnd(&strm);
-                            _ms.SkipRead(chunkInfo.compressedSize - 1);
+                            _ms.SkipRead(chunkInfo.compressedSize);
+                            break;
+                        }
+                        case 'F':
+                        {
+                            // Nested BLTE stream
+                            blte_stream_reader nestedReader { };
+                            nestedReader.write_some(_ms.Data(), chunkInfo.compressedSize, acceptor, ec);
+                            _ms.SkipRead(chunkInfo.compressedSize);
                             break;
                         }
                         default:
