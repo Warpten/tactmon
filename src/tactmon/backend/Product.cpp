@@ -5,7 +5,7 @@
 namespace backend {
     using namespace std::chrono_literals;
 
-    Product::Product(std::shared_ptr<tact::data::product::Product> product) : _product(product), _loading(false) {
+    Product::Product(std::shared_ptr<libtactmon::tact::data::product::Product> product) : _product(product), _loading(false) {
 
     }
 
@@ -22,8 +22,8 @@ namespace backend {
         return *this;
     }
 
-    ProductCache::ProductCache(boost::asio::io_context::strand cacheStrand)
-        : _cacheStrand(cacheStrand), _expirationTimer(cacheStrand.context())
+    ProductCache::ProductCache(boost::asio::any_io_executor executor)
+        : _expirationTimer(executor)
     {
         RemoveExpiredEntries();
     }

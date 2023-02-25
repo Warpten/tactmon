@@ -10,13 +10,7 @@
 
 namespace boost::beast::user {
     struct blte_body {
-        struct value_type {
-            void open(std::function<void(uint8_t*, size_t)> acceptor) {
-                _acceptor = acceptor;
-            }
-
-            std::function<void(uint8_t*, size_t)> _acceptor;
-        };
+        using value_type = std::function<void(std::span<uint8_t const>)>;
 
         struct writer {
             using const_buffer_type = boost::asio::const_buffer;
@@ -37,7 +31,7 @@ namespace boost::beast::user {
         struct reader {
             template <bool IsRequest, typename Fields>
             reader(boost::beast::http::header<IsRequest, Fields>& header, value_type& body)
-                : _body(body), _reader()
+                : _body(body)
             {
 
             }
@@ -48,7 +42,7 @@ namespace boost::beast::user {
 
             template <typename ConstBufferSequence>
             std::size_t put(ConstBufferSequence const& buffers, boost::system::error_code& ec) {
-                return _reader.write_some((uint8_t*) buffers.data(), buffers.size(), _body._acceptor, ec);
+                return _reader.write_some((uint8_t*) buffers.data(), buffers.size(), _body, ec);
             }
 
             void finish(boost::system::error_code& ec) { }

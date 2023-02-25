@@ -6,9 +6,9 @@
 #include <system_error>
 #include <vector>
 
-#include <io/mem/MemoryStream.hpp>
-
 #include <boost/beast/core/error.hpp>
+
+#include <libtactmon/io/MemoryStream.hpp>
 
 namespace boost::beast::user {
     struct blte_stream_reader final {
@@ -19,7 +19,7 @@ namespace boost::beast::user {
 
         explicit blte_stream_reader();
 
-        std::size_t write_some(uint8_t* data, size_t size, std::function<void(uint8_t*, size_t)> acceptor, boost::beast::error_code& ec);
+        std::size_t write_some(uint8_t* data, size_t size, std::function<void(std::span<const uint8_t>)> acceptor, boost::beast::error_code& ec);
 
     private:
         enum step : uint32_t {
@@ -39,7 +39,7 @@ namespace boost::beast::user {
         std::vector<chunk_info_t> _chunks;
 
         step _step = step::header;
-        ::io::mem::GrowableMemoryStream _ms;
+        libtactmon::io::GrowableMemoryStream _ms;
 
         uint32_t _headerSize = 0;
     };

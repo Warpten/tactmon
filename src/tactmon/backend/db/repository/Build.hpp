@@ -2,6 +2,7 @@
 
 #include "backend/db/repository/Repository.hpp"
 #include "backend/db/entity/Build.hpp"
+#include "utility/ThreadPool.hpp"
 
 #include <optional>
 #include <string>
@@ -9,11 +10,13 @@
 
 #include <pqxx/connection>
 
+#include <spdlog/async_logger.h>
+
 namespace backend::db::repository {
     struct Build : Repository<entity::build::Entity, entity::build::queries::Select, entity::build::id, true> {
         using Base = Repository<entity::build::Entity, entity::build::queries::Select, entity::build::id, true>;
 
-        Build(boost::asio::io_context::strand strand, pqxx::connection& connection);
+        Build(utility::ThreadPool& threadPool, pqxx::connection& connection, spdlog::async_logger& logger);
         
         /**
          * Returns the record for a build with the given name.
