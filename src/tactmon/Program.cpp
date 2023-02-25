@@ -2,6 +2,7 @@
 #include "backend/Product.hpp"
 #include "frontend/Discord.hpp"
 #include "frontend/Tunnel.hpp"
+#include "net/Server.hpp"
 #include "utility/Logging.hpp"
 
 #include <libtactmon/tact/data/product/wow/Product.hpp>
@@ -9,6 +10,7 @@
 #include <boost/program_options.hpp>
 #include <boost/asio/executor_work_guard.hpp>
 #include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/asio/thread_pool.hpp>
 
@@ -37,15 +39,21 @@ int main(int argc, char** argv) {
     po::options_description desc("Options");
     desc.add_options()
         ("help,h", "This help prompt.")
-        ("discord-token", po::value<std::string>()->required(), "The Discord bot's token.")
-        ("database-username", po::value<std::string>()->required(), "Username used to connect to the PostgreSQL database.")
-        ("database-password", po::value<std::string>()->required(), "Password used to connect to the PostgreSQL database.")
-        ("database-host", po::value<std::string>()->required(), "Host of the PostgreSQL database.")
-        ("database-port", po::value<uint64_t>()->default_value(5432), "Port on which the database is listening. Defaults to 5432.")
-        ("database-name", po::value<std::string>()->required(), "Name of the database to use.")
-        ("http-port", po::value<uint16_t>()->required(), "Port on which the http proxy server is active.")
-        ("http-proxy-document-root", po::value<std::string>()->required(), "The base of the URL used to generate download links to files.")
-        ("thread-count", po::value<uint32_t>()->default_value(std::thread::hardware_concurrency() * 2), "The amount of threads to use.")
+
+        ("discord-thread-count", po::value<uint16_t>()->default_value(8),    "The amount of threads dedicated to the Discord bot.")
+        ("discord-token",        po::value<std::string>()->required(),       "The Discord bot's token.")
+
+        ("db-thread-count",      po::value<uint16_t>()->default_value(1),    "The amount of threads dedicated to the database caching mechanisms.")
+        ("db-username",          po::value<std::string>()->required(),       "Username used to connect to the PostgreSQL database.")
+        ("db-password",          po::value<std::string>()->required(),       "Password used to connect to the PostgreSQL database.")
+        ("db-name",              po::value<std::string>()->required(),       "Name of the database to use.")
+        ("db-host",              po::value<std::string>()->required(),       "Host of the PostgreSQL database.")
+        ("db-port",              po::value<uint64_t>()->default_value(5432), "Port on which the application should connect to a PostgreSQL database.")
+
+        ("http-port",            po::value<uint16_t>()->required(),          "Port on which the http proxy server is active.")
+        ("http-thread-count",    po::value<uint16_t>()->required(),          "The amount of threads dedicated to the HTTP proxy server. "
+                                                                             "If zero, the server is disabled.")
+        ("http-document-root",   po::value<std::string>()->required(),       "A document root that will be used when generating download links to files.")
         ;
 
     try {
@@ -66,67 +74,69 @@ int main(int argc, char** argv) {
 
 void Execute(boost::program_options::variables_map vm) {
     // 1. General application context.
-    asio::io_context ctx;
+    asio::io_context service;
 
-    // 2. Setup interrupts handler, enqueue infinite work. Unfortunately, this causes a thread to be hogged down...
-    asio::executor_work_guard<asio::io_context::executor_type> guard = asio::make_work_guard(ctx);
+    // 2. Setup interrupts handler, enqueue infinite work.
+    asio::executor_work_guard<asio::io_context::executor_type> guard = asio::make_work_guard(service);
 #if defined(_WIN32)
-    asio::signal_set signals(ctx, SIGINT, SIGTERM, SIGBREAK);
+    asio::signal_set signals(service, SIGINT, SIGTERM, SIGBREAK);
 #else
-    asio::signal_set signals(ctx, SIGINT, SIGTERM);
+    asio::signal_set signals(service, SIGINT, SIGTERM);
 #endif
-    signals.async_wait([&guard, &ctx](boost::system::error_code const& ec, int signum) {
+    signals.async_wait([&guard, &service](boost::system::error_code const& ec, int signum) {
         guard.reset();
-        ctx.stop();
+        service.stop();
     });
-
-    // 3. Create specific strands.
-    asio::io_context::strand databaseStrand { ctx }; // Serializes database cache updates.
-    asio::io_context::strand discordStrand  { ctx }; // Single-shot strand for the discord bot instance.
-    asio::io_context::strand productStrand  { ctx };
-
-    // 4. Create thread pool, initialize threads.
-    size_t threadCount = vm["thread-count"].as<uint32_t>();
-    asio::thread_pool threadPool{ threadCount };
-    for (size_t i = 0; i < threadCount; ++i)
-        asio::post(threadPool, [&ctx]() { 
-            ctx.run();
-        });
 
     // 5. Initialize product manager.
     fs::path cacheRoot = std::filesystem::current_path() / "cache";
 
     libtactmon::tact::Cache localCache { cacheRoot };
-    backend::ProductCache productCache { productStrand };
+    backend::ProductCache productCache { service };
 
     constexpr static const std::string_view WOW_PRODUCTS[] = { "wow", "wow_beta", "wow_classic", "wow_classic_beta", "wow_classic_ptr" };
     for (std::string_view gameProduct : WOW_PRODUCTS) {
-        productCache.RegisterFactory(std::string { gameProduct }, [&localCache, gameProduct, &ctx]() -> backend::Product {
+        productCache.RegisterFactory(std::string { gameProduct }, [&localCache, gameProduct, &service]() -> backend::Product {
             return backend::Product {
-                std::make_shared<libtactmon::tact::data::product::wow::Product>(gameProduct, localCache, ctx, nullptr)
+                std::make_shared<libtactmon::tact::data::product::wow::Product>(gameProduct, localCache, service, nullptr)
             };
         });
     }
 
     // 6. Initialize database.
     backend::Database database{
-        databaseStrand,
+        vm["db-thread-count"].as<uint16_t>(),
         *utility::logging::GetAsyncLogger("database").get(),
-        vm["database-username"].as<std::string>(),
-        vm["database-password"].as<std::string>(),
-        vm["database-host"].as<std::string>(),
-        vm["database-port"].as<uint64_t>(),
-        vm["database-name"].as<std::string>()
+        vm["db-username"].as<std::string>(),
+        vm["db-password"].as<std::string>(),
+        vm["db-host"].as<std::string>(),
+        vm["db-port"].as<uint64_t>(),
+        vm["db-name"].as<std::string>()
     };
 
     // 7. Initialize HTTP proxy.
-    frontend::Tunnel proxy { localCache, ctx, vm["http-proxy-document-root"].as<std::string>(), vm["http-port"].as<uint16_t>() };
+    std::shared_ptr<net::Server> proxyServer = [&]() -> std::shared_ptr<net::Server> {
+        size_t threadCount = vm["http-thread-count"].as<uint16_t>();
+        if (threadCount == 0)
+            return nullptr;
+
+        std::shared_ptr<net::Server> server = std::make_shared<net::Server>(boost::asio::ip::tcp::endpoint {
+            boost::asio::ip::tcp::v4(),
+            vm["http-port"].as<uint16_t>()
+        }, threadCount, vm["http-document-root"].as<std::string>());
+
+        server->Run();
+        return server;
+    }();
 
     // 8. Initialize discord frontend
-    frontend::Discord bot { discordStrand, vm["discord-token"].as<std::string>(), productCache, database, proxy };
+    frontend::Discord bot { vm["discord-thread-count"].as<uint16_t>(), vm["discord-token"].as<std::string>(), productCache, database, proxyServer};
     bot.Run();
 
-    // 9. Wait for interrupts or end.
-    threadPool.join();
-    ctx.stop();
+    // 9. Run until Ctrl+C.
+    service.run();
+
+    // 10. Cleanup
+    if (proxyServer != nullptr)
+        proxyServer->Stop();
 }

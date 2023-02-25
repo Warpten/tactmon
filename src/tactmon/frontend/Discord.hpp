@@ -19,20 +19,20 @@ namespace frontend {
     struct Discord final {
         friend struct commands::ICommand;
 
-        Discord(boost::asio::io_context::strand strand, std::string_view token,
-            backend::ProductCache& manager, backend::Database& database, frontend::Tunnel& httpServer);
+        Discord(size_t threadCount, std::string const& token,
+            backend::ProductCache& manager, backend::Database& database, std::shared_ptr<net::Server> proxyServer);
         ~Discord();
 
         void Run();
 
     private:
         template <typename T>
-        void RegisterCommand() {
+        void RegisterCommand(dpp::snowflake const& guildID) {
             auto command = _commands.emplace_back(std::make_shared<T>());
-            bot.guild_command_create_sync(command->GetRegistrationInfo(bot), 377185808719020033);
+            bot.guild_command_create_sync(command->GetRegistrationInfo(bot), guildID);
         }
 
-        void HandleReadyEvent(dpp::ready_t const& event);
+        void HandleGuildCreate(dpp::guild_create_t const& event);
         void HandleSlashCommand(dpp::slashcommand_t const& event);
         void HandleFormSubmitEvent(dpp::form_submit_t const& event);
         void HandleLogEvent(dpp::log_t const& event);
@@ -42,19 +42,17 @@ namespace frontend {
     private:
         template <typename T>
         void RunAsync(T&& value) {
-            boost::asio::post(_strand, value);
+            boost::asio::post(_threadPool, value);
         }
 
+        utility::ThreadPool _threadPool;
+        std::shared_ptr<spdlog::logger> _logger;
+        std::vector<std::shared_ptr<frontend::commands::ICommand>> _commands;
+
     public:
-        frontend::Tunnel& httpServer;
+        std::shared_ptr<net::Server> httpServer;
         backend::ProductCache& productManager;
         backend::Database& db;
         dpp::cluster bot;
-
-    private:
-        boost::asio::io_context::strand _strand;
-        std::shared_ptr<spdlog::logger> _logger;
-
-        std::vector<std::shared_ptr<frontend::commands::ICommand>> _commands;
     };
 }

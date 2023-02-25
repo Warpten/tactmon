@@ -76,11 +76,12 @@ namespace net {
         auto writeError = [this, &response](http::status responseCode, std::string_view body) {
             response.result(responseCode);
             response.set(http::field::content_type, "text/plain");
+            response.keep_alive(false);
 
             boost::beast::ostream(response.body()) << body;
 
             this->BeginWrite(http::message_generator { std::move(response) });
-            return false;
+            return true;
         };
 
         if (tokens.size() != 6)
@@ -112,70 +113,76 @@ namespace net {
         response.set("X-Tunnel-Archive-Name", params.ArchiveName);
         response.set("X-Tunnel-File-Name", params.FileName);
 
+        std::optional<ribbit::types::CDNs> cdns = ribbit::CDNs<ribbit::Region::EU>::Execute(_stream.get_executor(), params.Product);
+        if (!cdns.has_value()) {
+            return writeError(http::status::not_found,
+                "Unable to resolve CDN configuration.\r\n"
+                "This could be due to Ribbit being unavailable or this build not being cached.\r\n"
+                "Try again in a bit; if this error persists, you're out of luck.");
+        }
+
+        boost::beast::error_code ec;
         http::response_serializer<http::dynamic_body> responseSerializer { response };
+        http::write_header(_stream, responseSerializer, ec);
+        if (ec.failed())
+            return true;
+      
+        // TODO: This probably needs to happen on a separate executor ?
+        boost::asio::ip::tcp::resolver resolver{ _stream.get_executor() };
+        boost::beast::tcp_stream remoteStream{ _stream.get_executor() };
 
-        http::async_write_header(_stream, responseSerializer, 
-            [=](boost::system::error_code ec, std::size_t bytesTransferred) {
-                boost::ignore_unused(bytesTransferred);
+        // 2. Now that we have a CDN, look for the first available one
+        for (ribbit::types::cdns::Record const& cdn : *cdns) {
+            std::string remotePath = std::format("/{}/data/{}/{}/{}", cdn.Path, params.ArchiveName.substr(0, 2), params.ArchiveName.substr(2, 2), params.ArchiveName);
+
+            for (std::string_view host : cdn.Hosts) {
+                // Open a HTTP socket to the actual CDN.
+                remoteStream.connect(resolver.resolve(host, "80"), ec);
                 if (ec.failed())
-                    return;
+                    continue;
+
+                http::request<http::dynamic_body> remoteRequest{ http::verb::get, remotePath, 11 };
+                remoteRequest.set(http::field::host, host);
+                if (params.Length != 0)
+                    remoteRequest.set(http::field::range, std::format("{}-{}", params.Offset, params.Offset + params.Length - 1));
+
+                http::write(remoteStream, remoteRequest, ec);
+                if (ec.failed())
+                    continue;
+
+                http::response_parser<boost::beast::user::blte_body> remoteResponse;
+                remoteResponse.get().body() = [&](std::span<uint8_t const> data) {
+                    // Update range values for next case if need be
+                    params.Offset += data.size();
+                    params.Length -= data.size();
+
+                    // Calling Asio write instead of Beast write, because I want the data to send out instantly, not buffer in memory
+                    boost::asio::write(_stream.socket(), boost::asio::buffer(data.data(), data.size()));
+                };
+
+                remoteResponse.body_limit({ });
+
+                boost::beast::flat_buffer remoteBuffer;
+                http::read_header(remoteStream, remoteBuffer, remoteResponse, ec);
+                if (ec.failed())
+                    continue;
+
+                // Not found? Try again on another CDN.
+                if (remoteResponse.get().result() == http::status::not_found)
+                    continue;
                 
-                std::optional<ribbit::types::CDNs> cdns = ribbit::CDNs<ribbit::Region::EU>::Execute(_stream.get_executor(), params.Product);
+                // Read the payload
+                http::read(remoteStream, remoteBuffer, remoteResponse, ec);
                 
-                if (!cdns.has_value()) {
-                    // TODO: Does this send headers twice? It shouldn't!
-                    writeError(http::status::not_found,
-                        "Unable to resolve CDN configuration.\r\n"
-                        "This could be due to Ribbit being unavailable or this build not being cached.\r\n"
-                        "Try again in a bit; if this error persists, you're out of luck.");
-                }
+                // Failed? Try again on another CDN.
+                if (ec.failed())
+                    continue;
 
-                // TODO: This probably needs to happen on a separate executor
-                boost::asio::ip::tcp::resolver resolver{ _stream.get_executor() };
-                boost::beast::tcp_stream remoteStream{ _stream.get_executor() };
-
-                // 2. Now that we have a CDN, look for the first available one
-                for (ribbit::types::cdns::Record const& cdn : *cdns) {
-                    std::string remotePath = std::format("/{}/data/{}/{}/{}", cdn.Path, params.ArchiveName.substr(0, 2), params.ArchiveName.substr(2, 2), params.ArchiveName);
-
-                    for (std::string_view host : cdn.Hosts) {
-                        // Open a HTTP socket to the actual CDN.
-                        remoteStream.connect(resolver.resolve(host, "80"), ec);
-                        if (ec.failed())
-                            continue;
-
-                        http::request<http::dynamic_body> remoteRequest{ http::verb::get, remotePath, 11 };
-                        remoteRequest.set(http::field::host, host);
-                        if (params.Length != 0)
-                            remoteRequest.set(http::field::range, std::format("{}-{}", params.Offset, params.Offset + params.Length - 1));
-
-                        http::write(remoteStream, remoteRequest, ec);
-                        if (ec.failed())
-                            continue;
-
-                        http::response_parser<boost::beast::user::blte_body> remoteResponse;
-                        remoteResponse.get().body() = [&](std::span<uint8_t const> data) {
-                            boost::asio::write(_stream.socket(), boost::asio::buffer(data.data(), data.size()));
-                        };
-
-                        remoteResponse.body_limit({ });
-
-                        boost::beast::flat_buffer remoteBuffer;
-                        http::read_header(remoteStream, remoteBuffer, remoteResponse, ec);
-                        if (ec.failed())
-                            continue;
-
-                        // Not found? Try again on another CDN
-                        if (remoteResponse.get().result() == http::status::not_found)
-                            continue;
-
-                        http::read(remoteStream, remoteBuffer, remoteResponse, ec);
-                        if (!ec.failed())
-                            return;
-                    }
-                }
+                // Nothing left to read? Exit.
+                if (params.Length == 0)
+                    return false;
             }
-        );
+        }
         
         return false;
     }

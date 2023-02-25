@@ -27,12 +27,13 @@ namespace frontend {
     namespace entity = db::entity;
     namespace build = entity::build;
 
-    Discord::Discord(boost::asio::io_context::strand strand, std::string_view token,
-        backend::ProductCache& productManager, backend::Database& database, frontend::Tunnel& httpServer)
-        : httpServer(httpServer), productManager(productManager), db(database), bot(std::string{ token }), _strand(strand)
+    Discord::Discord(size_t threadCount, std::string const& token,
+        backend::ProductCache& productManager, backend::Database& database, std::shared_ptr<net::Server> proxyServer)
+        : _threadPool(threadCount), httpServer(proxyServer), productManager(productManager), db(database), bot(token)
     {
         _logger = utility::logging::GetLogger("discord");
 
+        bot.on_guild_create(std::bind(&Discord::HandleGuildCreate, this, std::placeholders::_1));
         bot.on_ready(std::bind(&Discord::HandleReadyEvent, this, std::placeholders::_1));
         bot.on_slashcommand(std::bind(&Discord::HandleSlashCommand, this, std::placeholders::_1));
         bot.on_form_submit(std::bind(&Discord::HandleFormSubmitEvent, this, std::placeholders::_1));
@@ -49,6 +50,17 @@ namespace frontend {
         bot.start(dpp::start_type::st_return);
     }
 
+    void Discord::HandleGuildCreate(dpp::guild_create_t const& evnt) {
+        if (evnt.created == nullptr)
+            return;
+
+        if (httpServer != nullptr)
+            RegisterCommand<frontend::commands::DownloadCommand>(evnt.created->id);
+
+        RegisterCommand<frontend::commands::ProductStatusCommand>(evnt.created->id);
+        RegisterCommand<frontend::commands::CacheStatusCommand>(evnt.created->id);
+    }
+
     void Discord::HandleLogEvent(dpp::log_t const& event) {
         switch (event.severity) {
             case dpp::ll_trace:   _logger->trace("{}", event.message); break;
@@ -58,15 +70,6 @@ namespace frontend {
             case dpp::ll_error:   _logger->error("{}", event.message); break;
             default:              _logger->critical("{}", event.message); break;
         }
-    }
-
-    void Discord::HandleReadyEvent(dpp::ready_t const& event) {
-        if (!dpp::run_once<struct command_registration_handler>())
-            return;
-
-        RegisterCommand<frontend::commands::DownloadCommand>();
-        RegisterCommand<frontend::commands::ProductStatusCommand>();
-        RegisterCommand<frontend::commands::CacheStatusCommand>();
     }
 
     void Discord::HandleSlashCommand(dpp::slashcommand_t const& evnt) {

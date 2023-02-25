@@ -36,13 +36,20 @@ namespace frontend::commands {
         std::string version = std::get<std::string>(evnt.get_parameter("version"));
         std::string file = std::get<std::string>(evnt.get_parameter("file"));
 
+        if (cluster.httpServer == nullptr)
+            evnt.edit_response(dpp::message().add_embed(
+                dpp::embed().set_title(product)
+                    .set_color(0x00FF0000u)
+                    .set_description("The HTTP server for this command is disabled. How did you even manage to execute this command?")
+            ));
+
         auto buildEntry = cluster.db.builds.GetByBuildName(version);
         if (!buildEntry.has_value()) {
             evnt.edit_response(dpp::message().add_embed(
                 dpp::embed()
-                .set_title(product)
-                .set_color(0x00FF0000u)
-                .set_description("Build configuration cannot be found.")
+                    .set_title(product)
+                    .set_color(0x00FF0000u)
+                    .set_description("Build configuration cannot be found.")
             ));
 
             return;
@@ -95,7 +102,7 @@ namespace frontend::commands {
                 if (!indexLocation.has_value())
                     continue;
 
-                std::string fileAddress = cluster.httpServer.GenerateAdress(product, *indexLocation, fileNameComponent, fileLocation->fileSize());
+                std::string fileAddress = cluster.httpServer->GenerateAdress(product, *indexLocation, fileNameComponent, fileLocation->fileSize());
 
                 // 4. Generate download link
                 // Generate a link to the http server
@@ -115,7 +122,7 @@ namespace frontend::commands {
             // Otherwise, the ekey is literally a file on the CDN
             // TODO: If there are multiple ekeys, provide multiple links to the client?
             for (size_t i = 0; i < fileLocation->keyCount(); ++i) {
-                std::string fileAddress = cluster.httpServer.GenerateAdress(product, (*fileLocation)[i], fileNameComponent, fileLocation->fileSize());
+                std::string fileAddress = cluster.httpServer->GenerateAdress(product, (*fileLocation)[i], fileNameComponent, fileLocation->fileSize());
 
                 evnt.edit_response(dpp::message().add_embed(
                     dpp::embed()

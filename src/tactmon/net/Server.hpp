@@ -31,30 +31,27 @@
 #include <vector>
 
 namespace net {
-    class Server : std::enable_shared_from_this<Server> {
+    class Server : public std::enable_shared_from_this<Server> {
         boost::asio::io_context _service;
         boost::asio::ip::tcp::acceptor _acceptor;
 
         boost::asio::thread_pool _threadPool;
         std::size_t _threadCount;
 
-        struct CancellationSignals {
-            std::list<boost::asio::cancellation_signal> _signals;
-            std::mutex _mutex;
-
-            void Emit(boost::asio::cancellation_type type = boost::asio::cancellation_type::all);
-
-            boost::asio::cancellation_slot Slot();
-        } _cancellationSignals;
-
     public:
-        Server(boost::asio::io_context& context, boost::asio::ip::tcp::endpoint endpoint, size_t acceptorThreads) noexcept;
+        Server(boost::asio::ip::tcp::endpoint endpoint, size_t acceptorThreads, std::string const& documentRoot) noexcept;
         void Run();
 
+        void Stop();
+
     private:
+        void RunThread();
+
         void BeginAccept();
         void HandleAccept(boost::beast::error_code ec, boost::asio::ip::tcp::socket socket);
 
+        boost::asio::executor_work_guard<boost::asio::io_context::executor_type> _guard;
+        std::string _documentRoot;
     };
 
 }

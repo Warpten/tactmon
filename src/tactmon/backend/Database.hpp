@@ -2,6 +2,7 @@
 
 #include "backend/db/entity/Build.hpp"
 #include "backend/db/repository/Build.hpp"
+#include "utility/ThreadPool.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -10,12 +11,14 @@
 #include <vector>
 
 #include <boost/asio/io_context.hpp>
+
 #include <pqxx/connection>
+
 #include <spdlog/async_logger.h>
 
 namespace backend {
     struct Database final {
-        Database(boost::asio::io_context::strand strand, spdlog::async_logger& logger,
+        Database(size_t threadCount, spdlog::async_logger& logger,
             std::string_view username, std::string_view password, std::string_view host, uint64_t port, std::string_view name);
         
     private:

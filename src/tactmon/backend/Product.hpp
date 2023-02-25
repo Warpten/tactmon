@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <boost/asio/io_context_strand.hpp>
+#include <boost/asio/execution_context.hpp>
 #include <boost/asio/high_resolution_timer.hpp>
 #include <boost/container/stable_vector.hpp>
 
@@ -42,7 +42,7 @@ namespace backend {
     };
 
     struct ProductCache final {
-        explicit ProductCache(boost::asio::io_context::strand cacheStrand);
+        explicit ProductCache(boost::asio::execution_context& context);
 
         bool LoadConfiguration(std::string productName, db::entity::build::Entity const& configuration, std::function<void(Product&)> handler);
         void RegisterFactory(std::string productName, std::function<Product()> factory);
@@ -60,7 +60,6 @@ namespace backend {
             std::chrono::high_resolution_clock::time_point expirationTimer;
         };
 
-        boost::asio::io_context::strand _cacheStrand;
         boost::asio::high_resolution_timer _expirationTimer;
         // We **want** iterator stability above all else
 #if 0
