@@ -18,6 +18,10 @@ namespace utility {
             });
         }
 
+        void PostWork(std::function<void()> work) {
+            boost::asio::post(_pool, work);
+        }
+
         ~ThreadPool() {
             _guard.reset();
 

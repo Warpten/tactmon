@@ -42,7 +42,7 @@ namespace frontend {
     private:
         template <typename T>
         void RunAsync(T&& value) {
-            boost::asio::post(_threadPool.service(), value);
+            _threadPool.PostWork(value);
         }
 
         utility::ThreadPool _threadPool;
