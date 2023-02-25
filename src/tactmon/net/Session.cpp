@@ -109,6 +109,7 @@ namespace net {
 
         response.content_length(params.DecompressedSize);
         response.set(http::field::content_disposition, "attachment");
+        response.keep_alive(false);
         response.set("X-Tunnel-Product", params.Product);
         response.set("X-Tunnel-Archive-Name", params.ArchiveName);
         response.set("X-Tunnel-File-Name", params.FileName);
@@ -121,69 +122,110 @@ namespace net {
                 "Try again in a bit; if this error persists, you're out of luck.");
         }
 
-        boost::beast::error_code ec;
-        http::response_serializer<http::dynamic_body> responseSerializer { response };
-        http::write_header(_stream, responseSerializer, ec);
-        if (ec.failed())
-            return true;
-      
-        // TODO: This probably needs to happen on a separate executor ?
-        boost::asio::ip::tcp::resolver resolver{ _stream.get_executor() };
-        boost::beast::tcp_stream remoteStream{ _stream.get_executor() };
+        boost::asio::ip::tcp::resolver resolver { _stream.get_executor() };
+        boost::beast::tcp_stream remoteStream { _stream.get_executor() };
 
-        // 2. Now that we have a CDN, look for the first available one
+        // 1. Collect eligible CDNs.
+        std::unordered_map<std::string_view, std::string> availableRemoteArchives;
         for (ribbit::types::cdns::Record const& cdn : *cdns) {
             std::string remotePath = std::format("/{}/data/{}/{}/{}", cdn.Path, params.ArchiveName.substr(0, 2), params.ArchiveName.substr(2, 2), params.ArchiveName);
 
             for (std::string_view host : cdn.Hosts) {
-                // Open a HTTP socket to the actual CDN.
+                remoteStream.shutdown(boost::asio::socket_base::shutdown_both, ec);
                 remoteStream.connect(resolver.resolve(host, "80"), ec);
                 if (ec.failed())
                     continue;
 
-                http::request<http::dynamic_body> remoteRequest{ http::verb::get, remotePath, 11 };
-                remoteRequest.set(http::field::host, host);
-                if (params.Length != 0)
-                    remoteRequest.set(http::field::range, std::format("{}-{}", params.Offset, params.Offset + params.Length - 1));
+                auto checkExistence = [&params](http::verb method) -> bool {
+                    boost::beast::error_code ec;
 
-                http::write(remoteStream, remoteRequest, ec);
-                if (ec.failed())
-                    continue;
+                    http::request<http::dynamic_body> remoteRequest { method, remotePath, 11 };
+                    remoteRequest.set(http::field::host, host);
+                    if (params.Length != 0)
+                        remoteRequest.set(http::field::range, std::format("{}-{}", params.Offset, params.Offset + params.Length - 1));
 
-                http::response_parser<boost::beast::user::blte_body> remoteResponse;
-                remoteResponse.get().body() = [&](std::span<uint8_t const> data) {
-                    // Update range values for next case if need be
-                    params.Offset += data.size();
-                    params.Length -= data.size();
+                    http::write(remoteStream, remoteRequest, ec);
+                    if (ec.failed())
+                        return false;
 
-                    // Calling Asio write instead of Beast write, because I want the data to send out instantly, not buffer in memory
-                    boost::asio::write(_stream.socket(), boost::asio::buffer(data.data(), data.size()));
-                };
+                    boost::beast::flat_buffer buffer{ 8192 };
+                    http::response<http::dynamic_body> remoteResponse;
+                    http::read_header(remoteStream, buffer, remoteResponse, ec);
+                    if (ec.failed()
+                        || remoteResponse.status() == http::status::not_found
+                        || remoteResponse.status() == http::status::range_not_satisfiable
+                        || remoteResponse.status() == http::status::method_not_allowed)
+                        return false;
 
-                remoteResponse.body_limit({ });
+                    return true;
+                }();
 
-                boost::beast::flat_buffer remoteBuffer;
-                http::read_header(remoteStream, remoteBuffer, remoteResponse, ec);
-                if (ec.failed())
-                    continue;
-
-                // Not found? Try again on another CDN.
-                if (remoteResponse.get().result() == http::status::not_found)
-                    continue;
-                
-                // Read the payload
-                http::read(remoteStream, remoteBuffer, remoteResponse, ec);
-                
-                // Failed? Try again on another CDN.
-                if (ec.failed())
-                    continue;
-
-                // Nothing left to read? Exit.
-                if (params.Length == 0)
-                    return false;
+                if (checkExistence(http::verb::head) || checkExistence(http::verb::get))
+                    availableRemoteArchives.emplace(host, remotePath);
             }
         }
-        
+
+        // No CDN can serve that file? Return an error.
+        if (availableRemoteArchives.empty())
+            return writeError(http::status::not_found, "No CDN could fulfill this request.");
+
+        boost::beast::error_code ec;
+        http::response_serializer<http::dynamic_body> responseSerializer{ response };
+        http::write_header(_stream, responseSerializer, ec);
+        if (ec.failed())
+            return true;
+
+        boost::beast::user::blte_body remoteBody; //< This needs to live across HTTP requests to each CDN.
+        for (auto [cdn, remotePath] : availableRemoteArchives) {
+            remoteStream.reset();
+            remoteStream.connect(resolver.resolve(cdn, "80"), ec);
+            if (ec.failed())
+                continue;
+
+            http::request<http::dynamic_body> remoteRequest{ http::verb::get, remotePath, 11 };
+            remoteRequest.set(http::field::host, host);
+            if (params.Length != 0)
+                remoteRequest.set(http::field::range, std::format("{}-{}", params.Offset, params.Offset + params.Length - 1));
+
+            http::write(remoteStream, remoteRequest, ec);
+            if (ec.failed())
+                continue;
+
+            http::response_parser<boost::beast::user::blte_body> remoteResponse { remoteBody };
+            remoteResponse.get().body() = [&](std::span<uint8_t const> data) {
+                // Update range values for next case if need be
+                params.Offset += data.size();
+                params.Length -= data.size();
+
+                // Calling Asio write instead of Beast write, because I want the data to send out instantly, not buffer in memory
+                boost::asio::write(_stream.socket(), boost::asio::buffer(data.data(), data.size()));
+            };
+
+            remoteResponse.body_limit({ });
+
+            // Read header from Blizzard CDN now.
+            boost::beast::flat_buffer remoteBuffer;
+            http::read_header(remoteStream, remoteBuffer, remoteResponse, ec);
+            if (ec.failed())
+                continue;
+
+            // Somehow, file went 404? Try another CDN.
+            if (remoteResponse.get().result() == http::status::not_found)
+                continue;
+
+            // Read the payload
+            http::read(remoteStream, remoteBuffer, remoteResponse, ec);
+
+            // Failed? Try again on another CDN.
+            if (ec.failed())
+                continue;
+
+            // Nothing left to read? Exit.
+            if (params.Length == 0)
+                return false;
+        }
+
+        // If we got here, bail out.
         return false;
     }
 
