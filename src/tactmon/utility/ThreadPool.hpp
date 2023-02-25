@@ -2,17 +2,17 @@
 
 #include <type_traits>
 
-#include <boost/asio/thread_pool.hpp>
 #include <boost/asio/executor_work_guard.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/asio/thread_pool.hpp>
 
 namespace utility {
-    template <typename Executor>
     struct ThreadPool final {
-        template <typename... Args>
-        requires std::is_constructible_v<Executor, Args...>
-        explicit ThreadPool(Args&&... args) noexcept : _service(std::forward<Args>(args)...) { }
+        explicit ThreadPool(size_t threadCount) noexcept : _service(threadCount), _pool(threadCount), _guard(boost::asio::make_work_guard(_service)) {
+        }
 
-        void PostWork(std::function<void(Executor&, boost::asio::executor_work_guard<Executor> const&)> work) {
+        void PostWork(std::function<void(boost::asio::io_context&, boost::asio::executor_work_guard<boost::asio::io_context::executor_type> const&)> work) {
             boost::asio::post(_pool, [&]() {
                 work(_service, _guard);
             });
@@ -24,9 +24,12 @@ namespace utility {
             _pool.join();
         }
 
+        boost::asio::io_context& service() { return _service; }
+        boost::asio::io_context::executor_type executor() { return _service.get_executor(); }
+
     private:
-        Executor _service;
+        boost::asio::io_context _service;
         boost::asio::thread_pool _pool;
-        boost::asio::executor_work_guard<Executor> _guard;
+        boost::asio::executor_work_guard<boost::asio::io_context::executor_type> _guard;
     };
 }

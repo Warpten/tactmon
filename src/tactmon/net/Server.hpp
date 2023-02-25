@@ -1,34 +1,23 @@
 #pragma once
 
-#include <boost/beast/core.hpp>
-#include <boost/beast/http.hpp>
-#include <boost/beast/http/message_generator.hpp>
-#include <boost/beast/ssl.hpp>
-#include <boost/beast/websocket.hpp>
-#include <boost/beast/version.hpp>
-#include <boost/asio/as_tuple.hpp>
-#include <boost/asio/awaitable.hpp>
-#include <boost/asio/bind_executor.hpp>
-#include <boost/asio/bind_cancellation_slot.hpp>
-#include <boost/asio/co_spawn.hpp>
-#include <boost/asio/deferred.hpp>
-#include <boost/asio/detached.hpp>
-#include <boost/asio/dispatch.hpp>
-#include <boost/asio/experimental/parallel_group.hpp>
-#include <boost/asio/signal_set.hpp>
-#include <boost/asio/strand.hpp>
-#include <boost/asio/this_coro.hpp>
-#include <boost/asio/thread_pool.hpp>
-#include <boost/asio/use_awaitable.hpp>
-
 #include <algorithm>
 #include <cstdlib>
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <span>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
+
+#include <boost/beast/core/error.hpp>
+#include <boost/asio/executor_work_guard.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/thread_pool.hpp>
+
+#include <libtactmon/tact/data/FileLocation.hpp>
 
 namespace net {
     class Server : public std::enable_shared_from_this<Server> {
@@ -43,6 +32,9 @@ namespace net {
         void Run();
 
         void Stop();
+
+        std::string GenerateAdress(std::string_view product, std::span<const uint8_t> location, std::string_view fileName, size_t decompressedSize) const;
+        std::string GenerateAdress(std::string_view product, libtactmon::tact::data::ArchiveFileLocation const& location, std::string_view fileName, size_t decompressedSize) const;
 
     private:
         void RunThread();

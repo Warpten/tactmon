@@ -22,8 +22,8 @@ namespace backend {
         return *this;
     }
 
-    ProductCache::ProductCache(boost::asio::execution_context& context)
-        : _expirationTimer(context)
+    ProductCache::ProductCache(boost::asio::any_io_executor executor)
+        : _expirationTimer(executor)
     {
         RemoveExpiredEntries();
     }

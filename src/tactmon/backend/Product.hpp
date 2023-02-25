@@ -42,7 +42,7 @@ namespace backend {
     };
 
     struct ProductCache final {
-        explicit ProductCache(boost::asio::execution_context& context);
+        explicit ProductCache(boost::asio::any_io_executor executor);
 
         bool LoadConfiguration(std::string productName, db::entity::build::Entity const& configuration, std::function<void(Product&)> handler);
         void RegisterFactory(std::string productName, std::function<Product()> factory);

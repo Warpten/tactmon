@@ -34,7 +34,6 @@ namespace frontend {
         _logger = utility::logging::GetLogger("discord");
 
         bot.on_guild_create(std::bind(&Discord::HandleGuildCreate, this, std::placeholders::_1));
-        bot.on_ready(std::bind(&Discord::HandleReadyEvent, this, std::placeholders::_1));
         bot.on_slashcommand(std::bind(&Discord::HandleSlashCommand, this, std::placeholders::_1));
         bot.on_form_submit(std::bind(&Discord::HandleFormSubmitEvent, this, std::placeholders::_1));
         bot.on_select_click(std::bind(&Discord::HandleSelectClickEvent, this, std::placeholders::_1));

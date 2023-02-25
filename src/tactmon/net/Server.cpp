@@ -5,6 +5,8 @@
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/asio/strand.hpp>
 
+#include <fmt/format.h>
+
 // Note: most of the code here is inspired by
 //  https://www.boost.org/doc/libs/1_81_0/libs/beast/example/advanced/server-flex-awaitable/advanced_server_flex_awaitable.cpp.
 // Why do I need a PhD in fusion energy to understand any of this?

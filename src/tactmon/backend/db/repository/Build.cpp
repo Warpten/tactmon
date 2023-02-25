@@ -1,8 +1,8 @@
 #include "backend/db/repository/Build.hpp"
 
 namespace backend::db::repository {
-    Build::Build(boost::asio::io_context::strand context, pqxx::connection& connection, spdlog::async_logger& logger)
-        : Base(context, connection, logger)
+    Build::Build(utility::ThreadPool& threadPool, pqxx::connection& connection, spdlog::async_logger& logger)
+        : Base(threadPool, connection, logger)
     {
         entity::build::queries::SelById::Prepare(_connection, _logger);
         entity::build::queries::SelByName::Prepare(_connection, _logger);

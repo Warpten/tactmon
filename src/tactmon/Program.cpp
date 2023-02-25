@@ -1,7 +1,6 @@
 #include "backend/Database.hpp"
 #include "backend/Product.hpp"
 #include "frontend/Discord.hpp"
-#include "frontend/Tunnel.hpp"
 #include "net/Server.hpp"
 #include "utility/Logging.hpp"
 
@@ -92,7 +91,7 @@ void Execute(boost::program_options::variables_map vm) {
     fs::path cacheRoot = std::filesystem::current_path() / "cache";
 
     libtactmon::tact::Cache localCache { cacheRoot };
-    backend::ProductCache productCache { service };
+    backend::ProductCache productCache { service.get_executor() };
 
     constexpr static const std::string_view WOW_PRODUCTS[] = { "wow", "wow_beta", "wow_classic", "wow_classic_beta", "wow_classic_ptr" };
     for (std::string_view gameProduct : WOW_PRODUCTS) {

@@ -23,6 +23,7 @@ namespace backend {
         
     private:
         pqxx::connection _connection;
+        utility::ThreadPool _threadPool;
 
     public:
         db::repository::Build builds;

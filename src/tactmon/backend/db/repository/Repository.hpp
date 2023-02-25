@@ -1,6 +1,7 @@
 #pragma once
 
 #include "backend/db/DSL.hpp"
+#include "utility/ThreadPool.hpp"
 
 #include <chrono>
 #include <functional>
@@ -33,8 +34,8 @@ namespace backend::db::repository {
         template <bool CACHING> struct repository_base;
 
         template <> struct repository_base<true> {
-            repository_base(boost::asio::io_context::strand strand, std::chrono::seconds refreshInterval)
-                : _strand(strand), _refreshTimer(strand.context()), _refreshInterval(refreshInterval)
+            repository_base(utility::ThreadPool& threadPool, std::chrono::seconds refreshInterval)
+                : _threadPool(threadPool), _refreshTimer(threadPool.executor()), _refreshInterval(refreshInterval)
             { }
 
             // io_context::strand is immovable?
@@ -49,9 +50,9 @@ namespace backend::db::repository {
                 self->LoadFromDB_();
 
                 _refreshTimer.expires_at(std::chrono::high_resolution_clock::now() + _refreshInterval);
-                _refreshTimer.async_wait(asio::bind_executor(_strand, [this, self](boost::system::error_code const& ec) {
+                _refreshTimer.async_wait([this, self](boost::system::error_code const& ec) {
                     this->Refresh_(ec, self);
-                }));
+                });
             }
 
             template <typename Callback>
@@ -60,7 +61,7 @@ namespace backend::db::repository {
                 return callback();
             }
 
-            boost::asio::io_context::strand _strand;
+            utility::ThreadPool& _threadPool;
             boost::asio::high_resolution_timer _refreshTimer;
             std::chrono::seconds _refreshInterval;
             mutable std::mutex _storageMutex;
@@ -84,19 +85,9 @@ namespace backend::db::repository {
 
     protected:
         template <auto B = CACHING, std::enable_if_t<B, int> _ = 0> // Make dependant
-        explicit Repository(boost::asio::io_context& context, pqxx::connection& connection, spdlog::async_logger& logger, std::chrono::seconds interval = 60s)
-            : repository_base(context, interval), _logger(logger),
+        explicit Repository(utility::ThreadPool& threadPool, pqxx::connection& connection, spdlog::async_logger& logger, std::chrono::seconds interval = 60s)
+            : repository_base(threadPool, interval), _logger(logger),
                 _connection(connection)
-        {
-            LOAD_STATEMENT::Prepare(_connection, _logger);
-
-            repository_base::Refresh_({ }, this);
-        }
-
-        template <auto B = CACHING, std::enable_if_t<B, int> _ = 0> // Make dependant
-        explicit Repository(boost::asio::io_context::strand strand, pqxx::connection& connection, spdlog::async_logger& logger, std::chrono::seconds interval = 60s)
-            : repository_base(strand, interval), _logger(logger),
-            _connection(connection)
         {
             LOAD_STATEMENT::Prepare(_connection, _logger);
 

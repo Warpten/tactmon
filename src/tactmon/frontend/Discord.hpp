@@ -3,7 +3,7 @@
 #include "backend/Database.hpp"
 #include "backend/Product.hpp"
 #include "frontend/commands/ICommand.hpp"
-#include "frontend/Tunnel.hpp"
+#include "net/Server.hpp"
 
 #include <memory>
 #include <string>
@@ -42,7 +42,7 @@ namespace frontend {
     private:
         template <typename T>
         void RunAsync(T&& value) {
-            boost::asio::post(_threadPool, value);
+            boost::asio::post(_threadPool.service(), value);
         }
 
         utility::ThreadPool _threadPool;
