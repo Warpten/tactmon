@@ -183,19 +183,6 @@ namespace libtactmon::tact::data::product {
         std::optional<tact::data::FileLocation> FindFile(tact::CKey const& contentKey) const;
 
         /**
-         * Opens a file given its location.
-         * 
-         * @remarks This effectively downloads the file from the network, unless it just so happens to
-         * have been cached in the case where it's not contained in an archive but is available as-is on
-         * the CDN.
-         * 
-         * @param[in] location The file's location.
-         * 
-         * @returns A BLTE stream backed in memory, or an empty optional if the file could not be found.
-         */
-        std::optional<tact::BLTE> Open(tact::data::FileLocation const& location) const;
-
-        /**
          * Locates the archive that encodes a given encoding key.
          * 
          * @param[in] ekey The encoding key.

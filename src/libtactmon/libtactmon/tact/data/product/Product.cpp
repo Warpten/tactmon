@@ -145,43 +145,6 @@ namespace libtactmon::tact::data::product {
         return _encoding->FindFile(contentKey);
     }
 
-    std::optional<tact::BLTE> Product::Open(tact::data::FileLocation const& location) const {
-        // NOTE: Broken.
-
-        for (size_t i = 0; i < location.keyCount(); ++i) {
-            tact::EKey encodingKey { location[i] };
-
-            // Try via indexes
-            std::optional<tact::data::ArchiveFileLocation> indexLocation = FindArchive(encodingKey);
-            if (indexLocation.has_value()) {
-                auto dataStream = ResolveData<net::MemoryDownloadTask, tact::BLTE>([&indexLocation]() -> net::MemoryDownloadTask {
-                    return net::MemoryDownloadTask{ indexLocation->name(), indexLocation->offset(), indexLocation->fileSize() };
-                }, [](net::MemoryDownloadTask::ResultType& result) -> std::optional<tact::BLTE> {
-                    if (result.has_value())
-                        return tact::BLTE::Parse(*result);
-                    return std::nullopt;
-                });
-
-                if (dataStream.has_value())
-                    return dataStream;
-            }
-
-            // Otherwise try to load the ekey as a file from CDN directly
-            auto dataStream = ResolveData<net::MemoryDownloadTask, tact::BLTE>([&encodingKey]() {
-                return net::MemoryDownloadTask { encodingKey.ToString() };
-            }, [](net::MemoryDownloadTask::ResultType& result) -> std::optional<tact::BLTE> {
-                if (result.has_value())
-                    return tact::BLTE::Parse(*result);
-                return std::nullopt;
-            });
-
-            if (dataStream.has_value())
-                return dataStream;
-        }
-
-        return std::nullopt;
-    }
-
     std::optional<tact::data::ArchiveFileLocation> Product::FindArchive(tact::EKey const& ekey) const {
         for (tact::data::Index const& index : _indices) {
             tact::data::Index::Entry const* entry = index[ekey];
