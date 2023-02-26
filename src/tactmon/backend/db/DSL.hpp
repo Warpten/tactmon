@@ -72,8 +72,12 @@ namespace backend::db {
     };
 
     /**
-    * Returns the value of a given column in a projection.
-    */
+     * Returns the value of a given column in a projection.
+     * 
+     * @typeparam COLUMN     The type of the column to extract out of the entity or projection supplied.
+     *                       This **has** to be a specialization of @pre Column.
+     * @param[in] projection The entity or projection from which a column is to be extracted.
+     */
     template <typename COLUMN, typename PROJECTION>
     auto get(PROJECTION&& projection) -> typename COLUMN::value_type {
         return utility::get<detail::column_storage<COLUMN>>(projection._store._tuple)._value;
@@ -81,6 +85,10 @@ namespace backend::db {
 
     /**
      * Represents a SQL entity. A SQL entity encapsulates all of a table's columns.
+     * 
+     * @typeparam NAME          The name of the table described by this entity.
+     * @typeparam SCHEMA        The schema containing the table associated with this entity.
+     * @typeparam COMPONENTS... Column components.
      */
     template <utility::Literal NAME, utility::Literal SCHEMA, typename... COMPONENTS>
     struct Entity : Projection<COMPONENTS...> {
@@ -91,7 +99,6 @@ namespace backend::db {
         explicit Entity(pqxx::row& row) : as_projection(row) { }
 
         constexpr static const auto Name = NAME;
-
     };
 
     /**
@@ -138,18 +145,45 @@ namespace backend::db {
 
         using value_type = T;
     };
+    
+    /**
+     * Represents the SQL COUNT function.
+     * 
+     * @typeparam COMPONENT The expression that is being counted.
+     */
+    template <typename COMPONENT> using Count = Function<"COUNT", uint32_t, COMPONENT>;
 
-    template <typename... COMPONENTS> using Count = Function<"COUNT", uint32_t, COMPONENTS...>;
-
+    /**
+     * Represents the OVER windowing function.
+     * 
+     * @typeparam LEFT An expression that is the subject of the windowing function.
+     * @typeparam RIGHT An expression describing the window function.
+     */
     template <typename LEFT, typename RIGHT> struct Over {
         using value_type = typename LEFT::value_type;
     };
 
+    /**
+     * Represents the PARTITION BY window function.
+     * 
+     * @typeparam COMPONENT A component that will be used for partitioning rows.
+     */
     template <typename COMPONENT> struct PartitionBy { };
 
+    /**
+     * Represents a compound result set ordering clause.
+     * 
+     * @typeparam COMPONENT... A sequence of @pre OrderBy components.
+     */
     template <bool ASCENDING, typename... COMPONENT> struct OrderByClause { };
     template <typename... ORDERS> struct OrderBy { };
 
+    /**
+     * Represents a fixed result set windowing range.
+     * 
+     * @typeparam COUNT  The maximum amount of rows that will be returned.
+     * @typeparam OFFSET The offset of the first row that will be returned across all rows that matched.
+     */
     template <size_t COUNT, size_t OFFSET> struct Limit { };
 
     template <typename COMPONENT> struct From { 
