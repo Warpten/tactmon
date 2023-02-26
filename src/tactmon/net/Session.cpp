@@ -130,7 +130,7 @@ namespace net {
         // 1. Collect eligible CDNs.
         std::unordered_map<std::string_view, std::string> availableRemoteArchives;
         for (ribbit::types::cdns::Record const& cdn : *cdns) {
-            std::string remotePath = std::format("/{}/data/{}/{}/{}", cdn.Path, params.ArchiveName.substr(0, 2), params.ArchiveName.substr(2, 2), params.ArchiveName);
+            std::string remotePath = fmt::format("/{}/data/{}/{}/{}", cdn.Path, params.ArchiveName.substr(0, 2), params.ArchiveName.substr(2, 2), params.ArchiveName);
 
             for (std::string_view host : cdn.Hosts) {
                 beast::tcp_stream remoteStream { _stream.get_executor() };
@@ -144,7 +144,7 @@ namespace net {
                     http::request<http::dynamic_body> remoteRequest { method, remotePath, 11 };
                     remoteRequest.set(http::field::host, host);
                     if (params.Length != 0)
-                        remoteRequest.set(http::field::range, std::format("{}-{}", params.Offset, params.Offset + params.Length - 1));
+                        remoteRequest.set(http::field::range, fmt::format("{}-{}", params.Offset, params.Offset + params.Length - 1));
 
                     http::write(remoteStream, remoteRequest, ec);
                     if (ec.failed())
@@ -198,7 +198,7 @@ namespace net {
             http::request<http::dynamic_body> remoteRequest{ http::verb::get, remotePath, 11 };
             remoteRequest.set(http::field::host, cdn);
             if (params.Length != 0)
-                remoteRequest.set(http::field::range, std::format("{}-{}", params.Offset, params.Offset + params.Length - 1));
+                remoteRequest.set(http::field::range, fmt::format("{}-{}", params.Offset, params.Offset + params.Length - 1));
 
             http::write(remoteStream, remoteRequest, ec);
             if (ec.failed())
