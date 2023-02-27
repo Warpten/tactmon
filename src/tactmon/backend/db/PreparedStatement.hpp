@@ -1,10 +1,11 @@
 #pragma once
 
+#include "backend/db/Queries.hpp"
+#include "utility/Literal.hpp"
+
 #include <optional>
 #include <tuple>
 #include <vector>
-
-#include "utility/Literal.hpp"
 
 #include <pqxx/connection>
 #include <pqxx/result>
@@ -15,6 +16,15 @@
 #include <spdlog/logger.h>
 
 namespace backend::db {
+    namespace detail {
+        template <typename T>
+        concept IsLogger = requires (T instance) {
+            { instance.error("") } -> std::same_as<void>;
+            { instance.info("") } -> std::same_as<void>;
+            { instance.debug("") } -> std::same_as<void>;
+        };
+    }
+
     template <utility::Literal ALIAS, typename QUERY>
     struct PreparedStatement final {
         using entity_type = typename QUERY::entity_type;
@@ -26,25 +36,19 @@ namespace backend::db {
             connection.prepare(pqxx::zview{ ALIAS.Value, ALIAS.Size - 1 }, rendererQuery);
         }
 
-        static void Prepare(pqxx::connection& connection, spdlog::async_logger& logger) {
+        template <detail::IsLogger Logger>
+        static void Prepare(pqxx::connection& connection, Logger& logger) {
             std::string rendererQuery = QUERY::Render();
             logger.debug("Preparing query {}: '{}'", ALIAS.Value, rendererQuery);
 
             connection.prepare(pqxx::zview{ ALIAS.Value, ALIAS.Size - 1 }, rendererQuery);
         }
 
-        static void Prepare(pqxx::connection& connection, spdlog::logger& logger) {
-            std::string rendererQuery = QUERY::Render();
-            logger.debug("Preparing query {}: '{}'", ALIAS.Value, rendererQuery);
-
-            connection.prepare(pqxx::zview{ ALIAS.Value, ALIAS.Size - 1 }, rendererQuery);
-        }
-
-        template <typename... Args>
-        static auto ExecuteOne(pqxx::transaction_base& transaction, std::tuple<Args...> args)
+        template <detail::IsLogger Logger, typename... Args>
+        static auto ExecuteOne(pqxx::transaction_base& transaction, Logger& logger, std::tuple<Args...> args)
             -> std::optional<typename QUERY::projection_type>
         {
-            pqxx::result resultSet = Execute_(transaction, args);
+            pqxx::result resultSet = Execute_(transaction, logger, args);
             if (resultSet.size() != 1)
                 return std::nullopt;
 
@@ -52,11 +56,11 @@ namespace backend::db {
             return typename QUERY::projection_type { record };
         }
 
-        template <typename... Args>
-        static auto Execute(pqxx::transaction_base& transaction, std::tuple<Args...> args)
+        template <detail::IsLogger Logger, typename... Args>
+        static auto Execute(pqxx::transaction_base& transaction, Logger& logger, std::tuple<Args...> args)
             -> std::vector<typename QUERY::projection_type>
         {
-            pqxx::result resultSet = Execute_(transaction, args);
+            pqxx::result resultSet = Execute_(transaction, logger, args);
 
             std::vector<typename QUERY::projection_type> entities;
             entities.reserve(resultSet.size());
@@ -66,18 +70,39 @@ namespace backend::db {
         }
 
     private:
+        template <typename Logger, typename... Args>
+        static auto Execute_(pqxx::transaction_base& transaction, Logger& logger, std::tuple<Args...> args) {
+            return std::apply(
+                [&](auto... arg) mutable {
+                    try {
+                        auto result = transaction.exec_prepared(pqxx::zview{ ALIAS.Value, ALIAS.Size - 1 }, arg...);
+                        transaction.commit();
+                        return result;
+                    } catch (std::exception const& ex) {
+                        transaction.abort();
 
-        template <typename... Args>
-        static auto Execute_(pqxx::transaction_base& transaction, std::tuple<Args...> args) {
-            return std::apply([&](auto... arg) mutable {
-                return transaction.exec_prepared(pqxx::zview { ALIAS.Value, ALIAS.Size - 1 }, arg...);
-            }, args);
+                        logger.error(ex.what());
+
+                        return pqxx::result { };
+                    }
+                }, args);
         }
 
-        template <typename... Args>
-        static auto ExecuteOne_(pqxx::transaction_base& transaction, std::tuple<Args...> args) {
-            return std::apply([&](auto... arg) mutable {
-                return transaction.exec_prepared1(pqxx::zview { ALIAS.Value, ALIAS.Size - 1 }, arg...);
+        template <typename Logger, typename... Args>
+        static auto ExecuteOne_(pqxx::transaction_base& transaction, Logger& logger, std::tuple<Args...> args) {
+            return std::apply(
+                [&](auto... arg) mutable {
+                    try {
+                    auto result = transaction.exec_prepared1(pqxx::zview{ ALIAS.Value, ALIAS.Size - 1 }, arg...);
+                    transaction.commit();
+                    return result;
+                } catch (std::exception const& ex) {
+                    transaction.abort();
+
+                    logger.error(ex.what());
+
+                    return pqxx::row { };
+                }
             }, args);
         }
     };

@@ -122,26 +122,26 @@ namespace backend::db::repository {
          * Executes a given prepared statement.
          */
         template <typename PREPARED_STATEMENT, typename... Args>
-        auto ExecuteOne(Args&&... args) const
+        auto ExecuteOne(Args... args) const
             -> std::optional<typename PREPARED_STATEMENT::projection_type> 
         {
             using transaction_type = typename PREPARED_STATEMENT::transaction_type;
 
             transaction_type transaction { _connection };
-            return PREPARED_STATEMENT::ExecuteOne(transaction, std::forward_as_tuple<Args...>(args...));
+            return PREPARED_STATEMENT::ExecuteOne(transaction, _logger, std::tuple<Args...> { args... });
         }
 
         /**
          * Executes a given prepared statement
          */
         template <typename PREPARED_STATEMENT, typename... Args>
-        auto Execute(Args&&... args) const
+        auto Execute(Args... args) const
             -> std::vector<typename PREPARED_STATEMENT::projection_type>
         {
             using transaction_type = typename PREPARED_STATEMENT::transaction_type;
 
             transaction_type transaction { _connection };
-            return PREPARED_STATEMENT::Execute(transaction, std::forward_as_tuple<Args...>(args...));
+            return PREPARED_STATEMENT::Execute(transaction, _logger, std::tuple<Args...> { args... });
         }
 
         template <typename Callback>

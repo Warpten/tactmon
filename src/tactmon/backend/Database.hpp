@@ -2,6 +2,7 @@
 
 #include "backend/db/entity/Build.hpp"
 #include "backend/db/repository/Build.hpp"
+#include "backend/db/repository/Product.hpp"
 #include "utility/ThreadPool.hpp"
 
 #include <cstdint>
@@ -27,5 +28,6 @@ namespace backend {
 
     public:
         db::repository::Build builds;
+        db::repository::Product products;
     };
 }

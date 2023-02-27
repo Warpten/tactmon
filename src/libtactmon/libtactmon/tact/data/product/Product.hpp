@@ -14,6 +14,7 @@
 #include "libtactmon/tact/data/FileLocation.hpp"
 #include "libtactmon/tact/data/Index.hpp"
 #include "libtactmon/tact/data/Install.hpp"
+#include "libtactmon/tact/data/product/Utility.hpp"
 
 #include <cstdint>
 #include <filesystem>
@@ -31,7 +32,7 @@ namespace libtactmon::tact::data::product {
     /**
      * An implementation of a game product.
      */
-    struct Product {
+    struct Product : private ResourceResolver {
         /**
          * Creates a new abstraction around a game product.
          * 
@@ -57,49 +58,7 @@ namespace libtactmon::tact::data::product {
          */
         template <typename T>
         std::optional<T> ResolveCachedConfig(std::string_view key, std::function<std::optional<T>(io::FileStream&)> parser) const {
-            for (ribbit::types::cdns::Record const& cdn : *_cdns) {
-                std::string relativePath { fmt::format("{}/config/{}/{}/{}", cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
-                std::optional<T> cachedValue = _localCache.Resolve(relativePath, parser);
-                if (cachedValue.has_value())
-                    return cachedValue;
-
-                for (std::string_view host : cdn.Hosts) {
-                    net::FileDownloadTask downloadTask { relativePath, _localCache };
-                    auto taskResult = downloadTask.Run(_context, host, _logger);
-                    if (taskResult.has_value()) {
-                        std::optional<T> parsedValue = parser(*taskResult);
-                        if (parsedValue.has_value())
-                            return parsedValue;
-                    }
-                }
-            }
-
-            return std::nullopt;
-        }
-
-        /**
-         * Resolves a data file.
-         * 
-         * @param[in] taskSupplier   A function returning the task used to download said file.
-         * @param[in] resultSupplier A function that parses the data file.
-         * 
-         * @returns The parsed data file, or an empty optional if an error occured.
-         */
-        template <typename Task, typename R>
-        std::optional<R> ResolveData(std::function<Task()> taskSupplier,
-            std::function<std::optional<R>(typename Task::ResultType&)> resultSupplier) const
-        {
-            Task downloadTask = taskSupplier();
-
-            for (ribbit::types::cdns::Record const& cdn : *_cdns) {
-                for (std::string_view host : cdn.Hosts) {
-                    typename Task::ResultType taskResult = downloadTask.Run(_context, host, _logger);
-                    if (taskResult.has_value())
-                        return resultSupplier(taskResult);
-                }
-            }
-
-            return std::nullopt;
+            return ResourceResolver::ResolveConfiguration(*_cdns, key, parser, _logger);
         }
 
         /**
@@ -112,33 +71,7 @@ namespace libtactmon::tact::data::product {
          */
         template <typename R>
         std::optional<R> ResolveCachedData(std::string_view key, std::function<std::optional<R>(io::FileStream&)> resultSupplier) const {
-            for (ribbit::types::cdns::Record const& cdn : *_cdns) {
-                std::string relativePath { fmt::format("{}/data/{}/{}/{}", cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
-                std::optional<R> cachedValue = _localCache.Resolve<R>(relativePath, resultSupplier);
-                if (cachedValue.has_value())
-                    return cachedValue;
-
-                net::FileDownloadTask fileTask { relativePath, _localCache };
-
-                for (std::string_view host : cdn.Hosts) {
-                    std::optional<io::FileStream> taskResult = fileTask.Run(_context, host, _logger);
-
-                    if (taskResult.has_value())
-                        return resultSupplier(*taskResult);
-                }
-            }
-
-            return std::nullopt;
-        }
-
-        template <typename Task>
-        std::optional<tact::BLTE> ResolveBLTE(std::function<Task()> taskSupplier) {
-            return ResolveData(taskSupplier, [](typename Task::ValueType& result) {
-                if (result.has_value())
-                    return tact::BLTE::Parse(*result);
-
-                return std::nullopt;
-            });
+            return ResourceResolver::ResolveData(*_cdns, key, resultSupplier, _logger);
         }
 
     public: // Front-facing API

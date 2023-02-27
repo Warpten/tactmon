@@ -41,32 +41,5 @@ namespace backend {
         std::atomic_bool _loading;
     };
 
-    struct ProductCache final {
-        explicit ProductCache(boost::asio::any_io_executor executor);
 
-        bool LoadConfiguration(std::string productName, db::entity::build::Entity const& configuration, std::function<void(Product&)> handler);
-        void RegisterFactory(std::string productName, std::function<Product()> factory);
-        void ForEachProduct(std::function<void(Product&, std::chrono::high_resolution_clock::time_point)> handler);
-
-        size_t size() const { return _products.size(); }
-
-    private:
-        void RemoveExpiredEntries();
-
-        struct Record {
-            Record(Product product, std::chrono::high_resolution_clock::time_point expirationTimer);
-
-            Product product;
-            std::chrono::high_resolution_clock::time_point expirationTimer;
-        };
-
-        boost::asio::high_resolution_timer _expirationTimer;
-        // We **want** iterator stability above all else
-#if 0
-        boost::container::stable_vector<Record> _products;
-#else
-        std::list<std::shared_ptr<Record>> _products;
-#endif
-        std::unordered_map<std::string, std::function<Product()>> _productFactories;
-    };
 }

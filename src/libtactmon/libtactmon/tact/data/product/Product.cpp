@@ -12,7 +12,7 @@ namespace libtactmon::tact::data::product {
     using namespace std::string_view_literals;
 
     Product::Product(std::string_view productName, Cache& localCache, boost::asio::io_context& context, std::shared_ptr<spdlog::logger> logger)
-        : _context(context), _productName(productName), _localCache(localCache), _logger(logger)
+        : ResourceResolver(context.get_executor(), localCache), _context(context), _productName(productName), _localCache(localCache), _logger(logger)
     {
     }
 

@@ -2,18 +2,21 @@
 
 #include "backend/Database.hpp"
 #include "backend/Product.hpp"
+#include "backend/ProductCache.hpp"
 #include "frontend/commands/ICommand.hpp"
 #include "net/Server.hpp"
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
 
-#include <dpp/dpp.h>
-#include <spdlog/logger.h>
-
 #include <boost/asio/io_context_strand.hpp>
 #include <boost/asio/post.hpp>
+
+#include <dpp/dpp.h>
+
+#include <spdlog/logger.h>
 
 namespace frontend {
     struct Discord final {
@@ -24,6 +27,8 @@ namespace frontend {
         ~Discord();
 
         void Run();
+
+        void Broadcast(std::function<dpp::message(dpp::snowflake)> handler);
 
     private:
         template <typename T>

@@ -38,5 +38,7 @@ namespace backend::db::repository {
          * @param[in] productName The name of the product.
          */
         std::optional<entity::build::dto::BuildStatistics> GetStatisticsForProduct(std::string const& productName) const;
+
+        void Insert(std::string const& region, std::string const& productName, std::string const& buildName, std::string const& buildConfig, std::string const& cdnConfig);
     };
 }

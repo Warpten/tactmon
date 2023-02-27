@@ -1,5 +1,7 @@
 #include "backend/db/repository/Build.hpp"
 
+#include <chrono>
+
 namespace backend::db::repository {
     Build::Build(utility::ThreadPool& threadPool, pqxx::connection& connection, spdlog::async_logger& logger)
         : Base(threadPool, connection, logger)
@@ -8,6 +10,8 @@ namespace backend::db::repository {
         entity::build::queries::SelByName::Prepare(_connection, _logger);
         entity::build::queries::SelByProduct::Prepare(_connection, _logger);
         entity::build::queries::SelStatistics::Prepare(_connection, _logger);
+
+        entity::build::queries::Insert::Prepare(_connection, _logger);
     }
 
     std::optional<entity::build::Entity> Build::GetByBuildName(std::string const& buildName) const {
@@ -20,5 +24,13 @@ namespace backend::db::repository {
 
     std::optional<entity::build::dto::BuildStatistics> Build::GetStatisticsForProduct(std::string const& productName) const {
         return ExecuteOne<entity::build::queries::SelStatistics>(productName);
+    }
+
+    void Build::Insert(std::string const& region, std::string const& productName, std::string const& buildName, std::string const& buildConfig, std::string const& cdnConfig) {
+        using namespace std::chrono;
+
+        ExecuteOne<entity::build::queries::Insert>(region, productName, buildName, buildConfig, cdnConfig,
+            static_cast<uint64_t>(duration_cast<seconds>(time_point_cast<seconds>(high_resolution_clock::now()).time_since_epoch()).count())
+        );
     }
 }

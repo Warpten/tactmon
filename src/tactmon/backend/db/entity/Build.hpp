@@ -3,7 +3,7 @@
 
 #include "backend/db/DSL.hpp"
 #include "backend/db/PreparedStatement.hpp"
-#include "backend/db/Select.hpp"
+#include "backend/db/Queries.hpp"
 
 #include <cstdint>
 #include <string>
@@ -15,8 +15,9 @@ namespace backend::db::entity::build {
     using build_config = db::Column<"build_config", std::string>;
     using cdn_config = db::Column<"cdn_config", std::string>;
     using detected_at = db::Column<"detected_at", uint64_t>;
+    using region = db::Column<"region", std::string>;
 
-    using Entity = db::Entity<"builds", "public", id, product_name, build_name, build_config, cdn_config, detected_at>;
+    using Entity = db::Entity<"builds", "public", id, product_name, build_name, build_config, cdn_config, detected_at, region>;
 
     namespace dto {
         namespace columns {
@@ -85,6 +86,11 @@ namespace backend::db::entity::build {
                 db::OrderByClause<false, id>
             >,
             db::Limit<1, 0>
+        >>;
+        
+        using Insert = db::PreparedStatement<"Builds.Insert", db::insert::Query<
+            Entity,
+            region, product_name, build_name, build_config, cdn_config, detected_at
         >>;
     }
 }

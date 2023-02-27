@@ -29,12 +29,15 @@ namespace libtactmon::tact::data {
             std::string name;
             stream.ReadCString(name);
 
-            std::string& nameItr = instance._entryNames.emplace_back(std::move(name));
+            instance._entries.emplace_back(instance, stream, hashSize, name);
+        }
 
-            instance._entries.emplace(std::piecewise_construct,
-                std::forward_as_tuple(std::string_view { nameItr }),
-                std::forward_as_tuple(instance, stream, hashSize, std::string_view { nameItr })
-            );
+        for (auto&& [name, tag] : instance._tags) {
+            auto itr = instance._entries.begin();
+            for (size_t i = 0; i < instance._entries.size(); ++i, ++itr) {
+                if (tag.Matches(i))
+                    itr->_tags.push_back(std::addressof(tag));
+            }
         }
 
         return instance;
@@ -42,7 +45,7 @@ namespace libtactmon::tact::data {
 
     Install::Install() { }
 
-    Install::Entry::Entry(Install const& install, io::IReadableStream& stream, size_t hashSize, std::string_view name)
+    Install::Entry::Entry(Install const& install, io::IReadableStream& stream, size_t hashSize, std::string const& name)
         : _install(install), _hash((uint8_t*) stream.Data(), hashSize)
     {
         // This is the hash, but we read it "in-place" in the initialization list.
@@ -77,10 +80,20 @@ namespace libtactmon::tact::data {
     }
 
     std::optional<tact::CKey> Install::FindFile(std::string_view fileName) const {
-        auto itr = _entries.find(fileName);
+        auto itr = std::find_if(_entries.begin(), _entries.end(), [&](Entry const& entry) {
+            return entry.name() == fileName;
+        });
+
         if (itr != _entries.end())
-            return itr->second.ckey();
+            return itr->ckey();
 
         return std::nullopt;
+    }
+
+    bool Install::Tag::Matches(size_t fileIndex) const {
+        size_t byteIndex = fileIndex / sizeof(uint8_t);
+        size_t bitIndex = fileIndex % sizeof(uint8_t);
+
+        return (_bitmask[byteIndex] & (1 << bitIndex)) != 0;
     }
 }

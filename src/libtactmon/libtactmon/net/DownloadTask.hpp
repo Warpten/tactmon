@@ -41,7 +41,7 @@ namespace libtactmon::net {
         virtual boost::system::error_code Initialize(ValueType& body) = 0;
         virtual std::optional<R> TransformMessage(MessageType& body) = 0;
 
-        std::optional<R> Run(boost::asio::io_context& context,
+        std::optional<R> Run(boost::asio::any_io_executor executor,
             std::string_view host,
             std::shared_ptr<spdlog::logger> logger)
         {
@@ -57,8 +57,8 @@ namespace libtactmon::net {
             if (logger != nullptr)
                 logger->trace("Downloading '{}' from {}.", _resourcePath, host);
 
-            beast::tcp_stream stream { context };
-            tcp::resolver r { context };
+            beast::tcp_stream stream { executor };
+            tcp::resolver r { executor };
 
             stream.connect(r.resolve(host, "80"), ec);
             if (ec.failed()) {

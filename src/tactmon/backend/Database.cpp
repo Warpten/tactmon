@@ -17,6 +17,7 @@ namespace backend {
         : _connection(fmt::format("user={} password={} host={} port={} dbname={} target_session_attrs=read-write", username, password, host, port, name))
         , _threadPool(threadCount)
         , builds(_threadPool, _connection, logger)
+        , products(_threadPool, _connection, logger)
     {
     }
 }

@@ -49,6 +49,35 @@ namespace frontend {
         bot.start(dpp::start_type::st_return);
     }
 
+    void Discord::Broadcast(std::function<dpp::message(dpp::snowflake)> handler) {
+        bot.current_user_get_guilds([=](dpp::confirmation_callback_t const& guildsEvent)
+        {
+            if (!std::holds_alternative<dpp::guild_map>(guildsEvent.value))
+                return;
+
+            dpp::guild_map guilds = std::get<dpp::guild_map>(guildsEvent.value);
+
+            for (auto [guildID, guild] : guilds) {
+                bot.channels_get(guildID, [=](dpp::confirmation_callback_t const& channelsEvent) {
+                    if (!std::holds_alternative<dpp::channel_map>(channelsEvent.value))
+                        return;
+
+                    dpp::channel_map channels = std::get<dpp::channel_map>(channelsEvent.value);
+
+                    for (auto [channelID, channel] : channels) {
+                        if (!channel.is_text_channel())
+                            continue;
+
+                        // TODO: I may have barfed something when setting up the bot on my server but this doesn't appear to suffice?
+                        dpp::permission perms = channel.get_user_permissions(&bot.me);
+                        if (perms.has(dpp::permissions::p_send_messages))
+                            bot.message_create(handler(channelID));
+                    }
+                });
+            }
+        });
+    }
+
     void Discord::HandleGuildCreate(dpp::guild_create_t const& evnt) {
         if (evnt.created == nullptr)
             return;

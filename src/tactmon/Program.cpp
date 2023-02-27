@@ -1,9 +1,13 @@
 #include "backend/Database.hpp"
 #include "backend/Product.hpp"
+#include "backend/ProductCache.hpp"
+#include "backend/RibbitMonitor.hpp"
 #include "frontend/Discord.hpp"
 #include "net/Server.hpp"
 #include "utility/Logging.hpp"
 
+#include <libtactmon/ribbit/Commands.hpp>
+#include <libtactmon/ribbit/types/Versions.hpp>
 #include <libtactmon/tact/data/product/wow/Product.hpp>
 
 #include <boost/program_options.hpp>
@@ -73,11 +77,11 @@ int main(int argc, char** argv) {
 
 void Execute(boost::program_options::variables_map vm) {
     // 1. General application context.
-    asio::io_context service;
+    asio::io_context service { 4 };
 
     // 2. Setup interrupts handler, enqueue infinite work.
     asio::executor_work_guard<asio::io_context::executor_type> guard = asio::make_work_guard(service);
-#if defined(_WIN32)
+#if defined(WIN32)
     asio::signal_set signals(service, SIGINT, SIGTERM, SIGBREAK);
 #else
     asio::signal_set signals(service, SIGINT, SIGTERM);
@@ -87,7 +91,7 @@ void Execute(boost::program_options::variables_map vm) {
         service.stop();
     });
 
-    // 5. Initialize product manager.
+    // 3. Initialize product manager.
     fs::path cacheRoot = std::filesystem::current_path() / "cache";
 
     libtactmon::tact::Cache localCache { cacheRoot };
@@ -102,8 +106,8 @@ void Execute(boost::program_options::variables_map vm) {
         });
     }
 
-    // 6. Initialize database.
-    backend::Database database{
+    // 4. Initialize database.
+    backend::Database database {
         vm["db-thread-count"].as<uint16_t>(),
         *utility::logging::GetAsyncLogger("database").get(),
         vm["db-username"].as<std::string>(),
@@ -113,7 +117,7 @@ void Execute(boost::program_options::variables_map vm) {
         vm["db-name"].as<std::string>()
     };
 
-    // 7. Initialize HTTP proxy.
+    // 5. Initialize HTTP proxy.
     std::shared_ptr<net::Server> proxyServer = [&]() -> std::shared_ptr<net::Server> {
         size_t threadCount = vm["http-thread-count"].as<uint16_t>();
         if (threadCount == 0)
@@ -128,12 +132,69 @@ void Execute(boost::program_options::variables_map vm) {
         return server;
     }();
 
-    // 8. Initialize discord frontend
-    frontend::Discord bot { vm["discord-thread-count"].as<uint16_t>(), vm["discord-token"].as<std::string>(), productCache, database, proxyServer};
+    // 6. Initialize Ribbit monitor.
+    backend::RibbitMonitor monitor { service, database };
+
+    // 7. Initialize discord frontend
+    frontend::Discord bot { vm["discord-thread-count"].as<uint16_t>(), vm["discord-token"].as<std::string>(), productCache, database, proxyServer };
     bot.Run();
 
+    // 8. Create listener for ribbit
+    monitor.RegisterListener([&](std::string const& productName, uint64_t sequenceID, backend::RibbitMonitor::ProductState state)
+    {
+        if (!productCache.IsAwareOf(productName))
+            return;
+
+        namespace tact = libtactmon::tact;
+        namespace ribbit = libtactmon::ribbit;
+
+        std::optional<ribbit::types::Versions> versions = ribbit::Versions<ribbit::Region::EU>::Execute(service.get_executor(), productName);
+        std::optional<ribbit::types::CDNs>     cdns = ribbit::CDNs<ribbit::Region::EU>::Execute(service.get_executor(), productName);
+        if (!versions.has_value() || !cdns.has_value())
+            return;
+
+        std::stringstream ss;
+        ss << fmt::format("One or more builds have been pushed for the product `{}`.", productName) << '\n';
+        ss << "```";
+        ss << fmt::format("{:<8} | {:<25} | {:<34} | {:<34}\n", "Region", "Build name", "Build config", "CDN Config");
+
+        for (ribbit::types::versions::Record const& version : versions->Records) {
+            tact::data::product::ResourceResolver resolver(service.get_executor(), localCache);
+
+            std::optional<tact::config::BuildConfig> buildConfig = resolver.ResolveConfiguration<tact::config::BuildConfig>(*cdns, version.BuildConfig,
+                [&](libtactmon::io::FileStream& fstream) {
+                    return tact::config::BuildConfig { fstream };
+                });
+
+            if (!buildConfig.has_value())
+                continue;
+
+            database.builds.Insert(version.Region, productName, buildConfig->BuildName, version.BuildConfig, version.CDNConfig);
+            ss << fmt::format("{:<8} | {:<25} | {:<34} | {:<34}\n", version.Region, buildConfig->BuildName, version.BuildConfig, version.CDNConfig);
+        }
+        ss << "```";
+
+        std::string embedBody = ss.str();
+
+        bot.Broadcast([=](dpp::snowflake channelID)
+        {
+            return dpp::message(channelID, dpp::embed()
+                .set_title(fmt::format("New build(s) for `{}`", productName))
+                .set_description(embedBody)
+            );
+        });
+    });
+
+    // Start updating ribbit state
+    monitor.BeginUpdate();
+
     // 9. Run until Ctrl+C.
+    boost::asio::thread_pool pool { 4 };
+    for (size_t i = 0; i < 3; ++i)
+        boost::asio::post(pool, [&]() { service.run(); });
     service.run();
+
+    pool.join();
 
     // 10. Cleanup
     if (proxyServer != nullptr)
