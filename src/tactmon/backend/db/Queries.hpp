@@ -279,6 +279,7 @@ namespace backend::db {
         static auto Render(std::ostream& strm, Proxy<del::Query<ENTITY, CRITERIA>>, utility::Constant<PARAMETER> p) {
             strm << "DELETE FROM ";
             auto entityOfs = Render(strm, Proxy<ENTITY> { }, p);
+            strm << ' ';
             return Render(strm, Proxy<CRITERIA> { }, entityOfs);
         }
 

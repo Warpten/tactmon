@@ -25,14 +25,14 @@ namespace frontend::commands {
         if (std::holds_alternative<dpp::autocomplete_interaction>(evnt.data))
             return evnt.get_autocomplete_interaction().name == "bind";
 
-        return evnt.get_command_name() == "status";
+        return evnt.get_command_name() == "bind";
     }
 
     void BindCommand::HandleSlashCommand(dpp::slashcommand_t const& evnt, frontend::Discord& cluster) {
         std::string product = std::get<std::string>(evnt.get_parameter("product"));
         bool bind = std::get<bool>(evnt.get_parameter("bind"));
 
-        if (bind) {
+        if (!bind) {
             cluster.db.boundChannels.Delete(static_cast<uint64_t>(evnt.command.channel_id), product);
             
             evnt.edit_response(fmt::format("I will no longer announce pushes to `{}` on this channel."
