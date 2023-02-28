@@ -14,8 +14,8 @@ namespace backend::db::repository {
         entity::build::queries::Insert::Prepare(_connection, _logger);
     }
 
-    std::optional<entity::build::Entity> Build::GetByBuildName(std::string const& buildName) const {
-        return ExecuteOne<entity::build::queries::SelByName>(buildName);
+    std::optional<entity::build::Entity> Build::GetByBuildName(std::string const& buildName, std::string const& region) const {
+        return ExecuteOne<entity::build::queries::SelByName>(buildName, region);
     }
 
     std::vector<entity::build::dto::BuildName> Build::GetByProductName(std::string const& productName) const {

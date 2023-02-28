@@ -47,7 +47,10 @@ namespace backend::db::entity::build {
             Entity,
             db::From<Entity>,
             db::Where<
-                db::Equals<build_name>
+                db::And<
+                    db::Equals<build_name>,
+                    db::Equals<region>
+                >
             >
         >>;
 

@@ -54,7 +54,7 @@ namespace backend::db::entity::product {
         using Update = db::PreparedStatement<"Products.Update", db::update::Query<
             Entity,
             db::Where<
-                db::Equals<id>
+                db::Equals<name>
             >,
             sequence_id
         >>;

@@ -22,8 +22,9 @@ namespace backend::db::repository {
          * Returns the record for a build with the given name.
          * 
          * @param[in] buildName The name of the build to retrieve information for.
+         * @param[in] region    The name of the region.
          */
-        std::optional<entity::build::Entity> GetByBuildName(std::string const& buildName) const;
+        std::optional<entity::build::Entity> GetByBuildName(std::string const& buildName, std::string const& region) const;
 
         /**
          * Returns the name and the ID of all builds matching a specific product name.
