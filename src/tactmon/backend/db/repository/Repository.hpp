@@ -118,6 +118,9 @@ namespace backend::db::repository {
             });
         }
 
+        size_t size() const { return _storage.size(); }
+        auto values() const { return boost::adaptors::values(_storage); }
+
         /**
          * Executes a given prepared statement.
          */

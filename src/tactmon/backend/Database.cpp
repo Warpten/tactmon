@@ -18,6 +18,7 @@ namespace backend {
         , _threadPool(threadCount)
         , builds(_threadPool, _connection, logger)
         , products(_threadPool, _connection, logger)
+        , boundChannels(_threadPool, _connection, logger)
     {
     }
 }

@@ -1,3 +1,4 @@
+#include "frontend/commands/BindCommand.hpp"
 #include "frontend/commands/CacheStatusCommand.hpp"
 #include "frontend/commands/DownloadCommand.hpp"
 #include "frontend/commands/ProductStatusCommand.hpp"
@@ -87,6 +88,7 @@ namespace frontend {
 
         RegisterCommand<frontend::commands::ProductStatusCommand>(evnt.created->id);
         RegisterCommand<frontend::commands::CacheStatusCommand>(evnt.created->id);
+        RegisterCommand<frontend::commands::BindCommand>(evnt.created->id);
     }
 
     void Discord::HandleLogEvent(dpp::log_t const& event) {

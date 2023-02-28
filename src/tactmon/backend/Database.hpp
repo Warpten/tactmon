@@ -1,6 +1,7 @@
 #pragma once
 
 #include "backend/db/entity/Build.hpp"
+#include "backend/db/repository/BoundChannel.hpp"
 #include "backend/db/repository/Build.hpp"
 #include "backend/db/repository/Product.hpp"
 #include "utility/ThreadPool.hpp"
@@ -29,5 +30,6 @@ namespace backend {
     public:
         db::repository::Build builds;
         db::repository::Product products;
+        db::repository::BoundChannel boundChannels;
     };
 }

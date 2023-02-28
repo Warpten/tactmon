@@ -38,6 +38,8 @@ namespace fs = std::filesystem;
 namespace po = boost::program_options;
 namespace asio = boost::asio;
 
+namespace db = backend::db;
+
 int main(int argc, char** argv) {
     po::options_description desc("Options");
     desc.add_options()
@@ -176,12 +178,20 @@ void Execute(boost::program_options::variables_map vm) {
 
         std::string embedBody = ss.str();
 
-        bot.Broadcast([=](dpp::snowflake channelID)
-        {
-            return dpp::message(channelID, dpp::embed()
-                .set_title(fmt::format("New build(s) for `{}`", productName))
-                .set_description(embedBody)
-            );
+        database.boundChannels.WithValues([&](auto entries) {
+            for (db::entity::bound_channel::Entity::as_projection const& entity : entries) {
+                if (db::get<db::entity::bound_channel::product_name>(entity) != productName)
+                    continue;
+
+                uint64_t channelID = db::get<db::entity::bound_channel::guild_id>(entity);
+                bot.bot.message_create(
+                    dpp::message(channelID, 
+                        dpp::embed()
+                            .set_title(fmt::format("Builds update for product `{}`.", productName))
+                            .set_description(embedBody)
+                    )
+                );
+            }
         });
     });
 

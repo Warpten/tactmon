@@ -60,6 +60,17 @@ namespace backend::db {
         };
     }
 
+    namespace del {
+        template <typename ENTITY, typename CRITERIA>
+        struct Query {
+            using transaction_type = pqxx::work;
+            using projection_type = ENTITY;
+            using entity_type = ENTITY;
+
+            static std::string Render();
+        };
+    }
+
     namespace renderer {
         template <typename T> struct Proxy { /* exists just to avoid empty ctors on type for which it doesn't make sense. */ };
 
@@ -110,6 +121,9 @@ namespace backend::db {
         static auto Render(std::ostream& strm, Proxy<update::Query<ENTITY, CRITERIA, COMPONENTS...>>, utility::Constant<PARAMETER> p);
         template <size_t PARAMETER, typename COMPONENT>
         static auto Render(std::ostream& strm, Proxy<update::Set<COMPONENT>>, utility::Constant<PARAMETER> p);
+
+        template <size_t PARAMETER, typename ENTITY, typename CRITERIA>
+        static auto Render(std::ostream& strm, Proxy<del::Query<ENTITY, CRITERIA>>, utility::Constant<PARAMETER> p);
 
         // And now implement them all
         template <utility::Literal SEPARATOR, size_t I, typename COMPONENT, typename... COMPONENTS, size_t PARAMETER>
@@ -260,6 +274,14 @@ namespace backend::db {
             return Render(strm, Proxy<insert::Value<COMPONENT>> { }, componentOffset);
         }
 
+
+        template <size_t PARAMETER, typename ENTITY, typename CRITERIA>
+        static auto Render(std::ostream& strm, Proxy<del::Query<ENTITY, CRITERIA>>, utility::Constant<PARAMETER> p) {
+            strm << "DELETE FROM ";
+            auto entityOfs = Render(strm, Proxy<ENTITY> { }, p);
+            return Render(strm, Proxy<CRITERIA> { }, entityOfs);
+        }
+
         template <size_t PARAMETER, typename CRITERIA>
         static auto Render(std::ostream& strm, Proxy<Where<CRITERIA>>, utility::Constant<PARAMETER> p) {
             strm << "WHERE ";
@@ -307,6 +329,13 @@ namespace backend::db {
     std::string update::Query<ENTITY, CRITERIA, COMPONENTS...>::Render() {
         std::stringstream ss;
         renderer::Render(ss, renderer::Proxy<update::Query<ENTITY, CRITERIA, COMPONENTS...>> { }, utility::Constant<1> { });
+        return ss.str();
+    }
+
+    template <typename ENTITY, typename CRITERIA>
+    std::string del::Query<ENTITY, CRITERIA>::Render() {
+        std::stringstream ss;
+        renderer::Render(ss, renderer::Proxy<del::Query<ENTITY, CRITERIA>> { }, utility::Constant<1> { });
         return ss.str();
     }
 }
