@@ -103,37 +103,49 @@ namespace frontend {
     }
 
     void Discord::HandleSlashCommand(dpp::slashcommand_t const& evnt) {
-        evnt.thinking(false);
+        try {
+            evnt.thinking(false);
 
-        for (std::shared_ptr<frontend::commands::ICommand> command : _commands)
-            if (command->OnSlashCommand(evnt, *this))
-                return;
+            for (std::shared_ptr<frontend::commands::ICommand> command : _commands)
+                if (command->OnSlashCommand(evnt, *this))
+                    return;
 
-        evnt.reply(dpp::message().add_embed(
-            dpp::embed()
+            evnt.reply(dpp::message().add_embed(
+                dpp::embed()
                 .set_color(0x00FF0000u)
                 .set_title("An error occured.")
                 .set_description("No command handler found for this command.")
                 .set_footer(dpp::embed_footer()
                     .set_text("How the hell did you manage to trigger this?")
                 )
-        ));
+            ));
+        } catch (std::exception const& ex) {
+            _logger->error(ex.what());
+        }
     }
 
     void Discord::HandleAutoCompleteEvent(dpp::autocomplete_t const& evnt) {
-        for (std::shared_ptr<frontend::commands::ICommand> command : _commands) {
-            if (command->OnAutoComplete(evnt, *this))
-                return;
-        }
+        try {
+            for (std::shared_ptr<frontend::commands::ICommand> command : _commands) {
+                if (command->OnAutoComplete(evnt, *this))
+                    return;
+            }
 
-        // Empty response by default.
-        bot.interaction_response_create_sync(evnt.command.id, evnt.command.token, dpp::interaction_response { dpp::ir_autocomplete_reply });
+            // Empty response by default.
+            bot.interaction_response_create_sync(evnt.command.id, evnt.command.token, dpp::interaction_response{ dpp::ir_autocomplete_reply });
+        } catch (std::exception const& ex) {
+            _logger->error(ex.what());
+        }
     }
 
     void Discord::HandleSelectClickEvent(dpp::select_click_t const& evnt) {
-        for (std::shared_ptr<frontend::commands::ICommand> command : _commands) {
-            if (command->OnSelectClick(evnt, *this))
-                return;
+        try {
+            for (std::shared_ptr<frontend::commands::ICommand> command : _commands) {
+                if (command->OnSelectClick(evnt, *this))
+                    return;
+            }
+        } catch (std::exception const& ex) {
+            _logger->error(ex.what());
         }
     }
 

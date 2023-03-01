@@ -3,13 +3,9 @@
 #include "backend/db/entity/Build.hpp"
 
 #include <atomic>
-#include <chrono>
-#include <functional>
 #include <list>
 #include <memory>
 #include <string>
-#include <unordered_map>
-#include <vector>
 
 #include <boost/asio/execution_context.hpp>
 #include <boost/asio/high_resolution_timer.hpp>
@@ -28,7 +24,6 @@ namespace backend {
 
         db::entity::build::Entity const& GetLoadedBuild() const { return _currentBuild; }
 
-        void AddListener(std::function<void(Product&)> callback);
         bool Load(db::entity::build::Entity const& entity);
 
         libtactmon::tact::data::product::Product* operator -> () { return _product.get(); }
@@ -37,7 +32,6 @@ namespace backend {
         db::entity::build::Entity _currentBuild;
         std::shared_ptr<libtactmon::tact::data::product::Product> _product;
 
-        std::vector<std::function<void(Product&)>> _callbacks;
         std::atomic_bool _loading;
     };
 

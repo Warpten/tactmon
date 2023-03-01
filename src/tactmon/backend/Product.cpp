@@ -10,20 +10,15 @@ namespace backend {
     }
 
     Product::Product(Product&& other) noexcept
-        : _currentBuild(std::move(other._currentBuild)), _product(std::move(other._product)), _callbacks(std::move(other._callbacks)), _loading(false)
+        : _currentBuild(std::move(other._currentBuild)), _product(std::move(other._product)), _loading(false)
     { }
 
     Product& Product::operator = (Product&& other) noexcept {
         _product = std::move(other._product);
         _loading.store(other._loading.load());
         _currentBuild = std::move(other._currentBuild);
-        _callbacks = std::move(other._callbacks);
 
         return *this;
-    }
-
-    void Product::AddListener(std::function<void(Product&)> callback) {
-        _callbacks.emplace_back(callback);
     }
 
     bool Product::Load(db::entity::build::Entity const& entity) {
@@ -35,9 +30,6 @@ namespace backend {
                     return false;
             }
         }
-
-        for (auto&& listener : _callbacks)
-            listener(*this);
 
         return true;
     }

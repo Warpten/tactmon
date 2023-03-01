@@ -39,8 +39,12 @@ namespace backend {
             return false;
 
         auto itr = _products.insert(_products.end(), std::make_shared<Record>(factoryItr->second(), std::chrono::high_resolution_clock::now() + 15min));
-        (*itr)->product.AddListener(handler);
-        return (*itr)->product.Load(configuration);
+        bool success = (*itr)->product.Load(configuration);
+
+        if (success)
+            handler((*itr)->product);
+
+        return success;
     }
 
     void ProductCache::RegisterFactory(std::string productName, std::function<Product()> factory) {

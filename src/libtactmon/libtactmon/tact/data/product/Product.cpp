@@ -38,9 +38,9 @@ namespace libtactmon::tact::data::product {
         // Begin loading here.
 
         if (_logger != nullptr) {
-            _logger->info("Detected encoding manifest: {}.", _buildConfig->Encoding.Key.EncodingKey.ToString());
-            _logger->info("Detected install manifest: {}.", _buildConfig->Install.Key.EncodingKey.ToString());
-            _logger->info("Detected root manifest: {}.", _buildConfig->Root.ToString());
+            _logger->info("({}) Detected encoding manifest: {}.", _buildConfig->BuildName, _buildConfig->Encoding.Key.EncodingKey.ToString());
+            _logger->info("({}) Detected install manifest: {}.", _buildConfig->BuildName, _buildConfig->Install.Key.EncodingKey.ToString());
+            _logger->info("({}) Detected root manifest: {}.", _buildConfig->BuildName, _buildConfig->Root.ToString());
         }
 
         _encoding = ResolveCachedData<tact::data::Encoding>(_buildConfig->Encoding.Key.EncodingKey.ToString(),
@@ -58,12 +58,12 @@ namespace libtactmon::tact::data::product {
 
         if (!_encoding.has_value()) {
             if (_logger != nullptr)
-                _logger->error("An error occured while parsing encoding manifest.");
+                _logger->error("({}) An error occured while parsing encoding manifest.", _buildConfig->BuildName);
             return false;
         }
 
         if (_logger != nullptr)
-            _logger->info("{} entries found in encoding manifest.", _encoding->count());
+            _logger->info("({}) {} entries found in encoding manifest.", _buildConfig->BuildName, _encoding->count());
 
         _install = ResolveCachedData<tact::data::Install>(_buildConfig->Install.Key.EncodingKey.ToString(),
             [&key = _buildConfig->Install.Key](io::FileStream& fstream) -> std::optional<tact::data::Install> {
@@ -79,12 +79,12 @@ namespace libtactmon::tact::data::product {
 
         if (!_install.has_value()) {
             if (_logger != nullptr)
-                _logger->error("An error occured while parsing install manifest.");
+                _logger->error("({}) An error occured while parsing install manifest.", _buildConfig->BuildName);
             return false;
         }
 
         if (_logger != nullptr)
-            _logger->info("{} entries found in install manifest.", _install->size());
+            _logger->info("({}) {} entries found in install manifest.", _buildConfig->BuildName, _install->size());
 
         _cdnConfig->ForEachArchive([this](std::string_view archiveName, size_t i) {
             auto dataStream = ResolveCachedData<io::FileStream>(fmt::format("{}.index", archiveName),

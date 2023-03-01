@@ -22,6 +22,6 @@ namespace backend::db::repository {
     }
 
     void Product::Update(std::string const& productName, uint64_t sequenceID) {
-        ExecuteOne<entity::product::queries::Update>(productName, sequenceID);
+        ExecuteOne<entity::product::queries::Update>(sequenceID, productName);
     }
 }

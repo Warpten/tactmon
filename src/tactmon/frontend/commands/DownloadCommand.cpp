@@ -178,7 +178,7 @@ namespace frontend::commands {
                     }
                 });
 
-                cluster.bot.interaction_response_create_sync(evnt.command.id, evnt.command.token, interactionResponse);
+                cluster.bot.interaction_response_create(evnt.command.id, evnt.command.token, interactionResponse);
                 break;
             }
             else if (eventOption.name == "version") {
@@ -213,7 +213,7 @@ namespace frontend::commands {
                     }
                 });
 
-                cluster.bot.interaction_response_create_sync(evnt.command.id, evnt.command.token, interactionResponse);
+                cluster.bot.interaction_response_create(evnt.command.id, evnt.command.token, interactionResponse);
                 break;
             }
         }

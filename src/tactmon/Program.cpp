@@ -86,7 +86,7 @@ void Execute(boost::program_options::variables_map vm) {
 #if defined(WIN32)
     asio::signal_set signals(service, SIGINT, SIGTERM, SIGBREAK);
 #else
-    asio::signal_set signals(service, SIGINT, SIGTERM);
+    asio::signal_set signals(service, SIGINT, SIGTERM, SIGKILL);
 #endif
     signals.async_wait([&guard, &service](boost::system::error_code const& ec, int signum) {
         guard.reset();
@@ -103,7 +103,7 @@ void Execute(boost::program_options::variables_map vm) {
     for (std::string_view gameProduct : WOW_PRODUCTS) {
         productCache.RegisterFactory(std::string { gameProduct }, [&localCache, gameProduct, &service]() -> backend::Product {
             return backend::Product {
-                std::make_shared<libtactmon::tact::data::product::wow::Product>(gameProduct, localCache, service, nullptr)
+                std::make_shared<libtactmon::tact::data::product::wow::Product>(gameProduct, localCache, service, utility::logging::GetAsyncLogger(gameProduct))
             };
         });
     }
