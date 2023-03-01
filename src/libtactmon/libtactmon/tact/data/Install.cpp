@@ -32,13 +32,14 @@ namespace libtactmon::tact::data {
             instance._entries.emplace_back(stream, hashSize, name);
         }
 
-        for (auto&& [name, tag] : instance._tags) {
-            auto itr = instance._entries.begin();
-            for (size_t i = 0; i < instance._entries.size(); ++i, ++itr) {
-                if (tag.Matches(i))
-                    itr->_tags.push_back(std::addressof(tag));
-            }
-        }
+        // Buggy, disabled for now.
+        // for (auto&& [name, tag] : instance._tags) {
+        //     auto itr = instance._entries.begin();
+        //     for (size_t i = 0; i < instance._entries.size(); ++i, ++itr) {
+        //         if (tag.Matches(i))
+        //             itr->_tags.push_back(std::addressof(tag));
+        //     }
+        // }
 
         return instance;
     }
@@ -89,9 +90,12 @@ namespace libtactmon::tact::data {
     }
 
     bool Install::Tag::Matches(size_t fileIndex) const {
-        size_t byteIndex = fileIndex / sizeof(uint8_t);
-        size_t bitIndex = fileIndex % sizeof(uint8_t);
+        return false;
 
-        return (_bitmask[byteIndex] & (1 << bitIndex)) != 0;
+        // Buggy, disabled for now.
+        // size_t byteIndex = fileIndex / sizeof(uint8_t);
+        // size_t bitIndex = fileIndex % sizeof(uint8_t);
+        //
+        // return (_bitmask[byteIndex] & (1 << bitIndex)) != 0;
     }
 }
