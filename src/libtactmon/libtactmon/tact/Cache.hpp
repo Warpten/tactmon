@@ -19,7 +19,13 @@ namespace libtactmon::tact {
          */
         template <typename T>
         std::optional<T> Resolve(std::string_view resourcePath, std::function<std::optional<T>(io::FileStream&)> handler) {
-            std::filesystem::path fullResourcePath = _root / resourcePath;
+            std::filesystem::path fullResourcePath = _root;
+
+            // Avoid reverting to absolute paths
+            // Maybe a code smell ?
+            if (resourcePath.size() > 0 && (resourcePath[0] == '/' || resourcePath[0] == '\\'))
+                fullResourcePath /= resourcePath.substr(1);
+
             if (!std::filesystem::is_regular_file(fullResourcePath))
                 return std::nullopt;
 
