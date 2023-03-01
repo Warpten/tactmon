@@ -18,7 +18,7 @@ namespace libtactmon::tact::data::product {
 
     bool Product::Load(std::string_view buildConfig, std::string_view cdnConfig) noexcept {
         // **Always** refresh CDN
-        _cdns = ribbit::CDNs<ribbit::Region::EU>::Execute(_context.get_executor(), std::string_view { _productName });
+        _cdns = ribbit::CDNs<>::Execute(_context.get_executor(), nullptr, ribbit::Region::US, std::string_view { _productName });
         if (!_cdns.has_value())
             return false;
 
@@ -103,7 +103,7 @@ namespace libtactmon::tact::data::product {
     }
 
     std::optional<ribbit::types::Versions> Product::Refresh() noexcept {
-        std::optional<ribbit::types::Summary> summary = ribbit::Summary<ribbit::Region::EU>::Execute(_context.get_executor(), _logger);
+        auto summary = ribbit::Summary<>::Execute(_context.get_executor(), _logger, ribbit::Region::US);
         if (!summary.has_value())
             return std::nullopt;
 
@@ -113,7 +113,7 @@ namespace libtactmon::tact::data::product {
         if (summaryItr == summary->end())
             return std::nullopt;
 
-        std::optional<ribbit::types::Versions> versions = ribbit::Versions<ribbit::Region::EU>::Execute(_context.get_executor(), _logger, std::string_view { _productName });
+        auto versions = ribbit::Versions<>::Execute(_context.get_executor(), _logger, ribbit::Region::US, std::string_view { _productName });
         if (!versions.has_value())
             return std::nullopt;
 

@@ -150,8 +150,8 @@ void Execute(boost::program_options::variables_map vm) {
         namespace tact = libtactmon::tact;
         namespace ribbit = libtactmon::ribbit;
 
-        std::optional<ribbit::types::Versions> versions = ribbit::Versions<ribbit::Region::EU>::Execute(service.get_executor(), productName);
-        std::optional<ribbit::types::CDNs>     cdns = ribbit::CDNs<ribbit::Region::EU>::Execute(service.get_executor(), productName);
+        auto versions = ribbit::Versions<>::Execute(service.get_executor(), nullptr, ribbit::Region::US, productName);
+        auto cdns = ribbit::CDNs<>::Execute(service.get_executor(), nullptr, ribbit::Region::US, productName);
         if (!versions.has_value() || !cdns.has_value())
             return;
 

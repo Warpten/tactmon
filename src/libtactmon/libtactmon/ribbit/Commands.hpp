@@ -1,5 +1,6 @@
 #pragma once
 
+#include "libtactmon/ribbit/Enums.hpp"
 #include "libtactmon/ribbit/types/BGDL.hpp"
 #include "libtactmon/ribbit/types/CDNs.hpp"
 #include "libtactmon/ribbit/types/Summary.hpp"
@@ -29,36 +30,7 @@
 #include "libtactmon/detail/ctre.hpp"
 
 namespace libtactmon::ribbit {
-    enum class Region : uint8_t {
-        EU = 1,
-        US = 2,
-        KR = 3,
-        CN = 4,
-        TW = 5
-    };
-
-    enum class Version : uint8_t {
-        V1 = 1,
-        V2 = 2
-    };
-
-    enum class Command : uint8_t {
-        Summary = 0,
-        ProductVersions = 1,
-        ProductCDNs = 2,
-        ProductBGDL = 3,
-        Certificate = 4,
-        OCSP = 5,
-    };
-
     namespace detail {
-        template <Region> struct RegionTraits;
-        template <> struct RegionTraits<Region::EU> { constexpr static const char Host[] = "eu.version.battle.net"; };
-        template <> struct RegionTraits<Region::US> { constexpr static const char Host[] = "us.version.battle.net"; };
-        template <> struct RegionTraits<Region::KR> { constexpr static const char Host[] = "kr.version.battle.net"; };
-        template <> struct RegionTraits<Region::CN> { constexpr static const char Host[] = "cn.version.battle.net"; };
-        template <> struct RegionTraits<Region::TW> { constexpr static const char Host[] = "tw.version.battle.net"; };
-
         template <Command> struct CommandTraits;
 
         template <> struct CommandTraits<Command::Summary> {
@@ -96,17 +68,6 @@ namespace libtactmon::ribbit {
 
             static std::optional<types::BGDL> Parse(std::string_view input);
         };
-
-        // template <> struct CommandTraits<Command::Certificate> {
-        // 	constexpr static const std::string_view Format = "{}/certs/{}";
-        // 
-        // 	using Args = std::tuple<std::string_view>;
-        // };
-        // template <> struct CommandTraits<Command::OCSP> {
-        // 	constexpr static const std::string_view Format = "{}/ocsp/{}";
-        // 
-        // 	using Args = std::tuple<std::string_view>;
-        // };
 
         template <Version> struct VersionTraits;
 
@@ -152,37 +113,37 @@ namespace libtactmon::ribbit {
             static std::vector<std::string_view> ParseCore(std::string_view input, std::shared_ptr<spdlog::logger> logger);
         };
 
-        template <Command C, Region R, Version V, typename Args> class command_executor_impl;
-        template <Command C, Region R, Version V, typename... Args>
-        class command_executor_impl<C, R, V, std::tuple<Args...>> {
+        template <Command C, Version V, typename Args> class command_executor_impl;
+        template <Command C, Version V, typename... Args>
+        class command_executor_impl<C, V, std::tuple<Args...>> {
             using CommandTraits = detail::CommandTraits<C>;
-            using RegionTraits = detail::RegionTraits<R>;
             using VersionTraits = detail::VersionTraits<V>;
 
         public:
-            static auto Execute(boost::asio::any_io_executor executor, Args&&... args) {
-                return Execute(executor, nullptr, std::forward<Args&&>(args)...);
+            static auto Execute(boost::asio::any_io_executor executor, Region region, Args&&... args) {
+                return Execute(executor, nullptr, region, std::forward<Args&&>(args)...);
             }
 
-            static auto Execute(boost::asio::any_io_executor executor, std::shared_ptr<spdlog::logger> logger, Args&&... args)
+            static auto Execute(boost::asio::any_io_executor executor, std::shared_ptr<spdlog::logger> logger, Region region, Args&&... args)
                 -> std::optional<typename CommandTraits::ValueType>
             {
-                namespace ip = boost::asio::ip;
+                namespace asio = boost::asio;
+                namespace ip = asio::ip;
                 using tcp = ip::tcp;
 
-                boost::asio::ip::tcp::socket socket{ executor };
+                ip::tcp::socket socket{ executor };
 
                 boost::system::error_code ec;
 
                 auto command = fmt::format(CommandTraits::Format, VersionTraits::Value, std::forward<Args>(args)...) + "\r\n";
 
-                if (logger != nullptr) {
-                    logger->info("Loading {}:{}/{}.", RegionTraits::Host, 1119, command);
-                    logger->trace("Connecting to {}:{}/{}.", RegionTraits::Host, 1119, command);
-                }
+                std::string_view host = fmt::format("{}.version.battle.net", region);
+
+                if (logger != nullptr)
+                    logger->info("Loading {}:{}/{}.", host, 1119, command);
 
                 tcp::resolver r{ executor };
-                boost::asio::connect(socket, r.resolve(RegionTraits::Host, "1119"), ec);
+                asio::connect(socket, r.resolve(host, "1119"), ec);
 
                 if (ec) {
                     if (logger != nullptr)
@@ -191,20 +152,17 @@ namespace libtactmon::ribbit {
                     return std::nullopt;
                 }
 
-                { // Write Ribbit request
-                    auto buf = boost::asio::buffer(command);
-                    boost::asio::write(socket, buf, ec);
-                    if (ec) {
-                        if (logger != nullptr)
-                            logger->error("An error occured: {}.", ec.message());
+                asio::write(socket, asio::buffer(command), ec);
+                if (ec) {
+                    if (logger != nullptr)
+                        logger->error("An error occured: {}.", ec.message());
 
-                        return std::nullopt;
-                    }
+                    return std::nullopt;
                 }
 
                 { // Read Ribbit response
                     boost::asio::streambuf buf;
-                    size_t bytesTransferred = boost::asio::read(socket, buf, ec);
+                    size_t bytesTransferred = asio::read(socket, buf, ec);
                     boost::ignore_unused(bytesTransferred);
                     if (ec && ec != boost::asio::error::eof) {
                         if (logger != nullptr)
@@ -214,7 +172,7 @@ namespace libtactmon::ribbit {
                     }
 
                     auto bufs = buf.data();
-                    std::string response{ boost::asio::buffers_begin(bufs), boost::asio::buffers_begin(bufs) + buf.size() };
+                    std::string response { asio::buffers_begin(bufs), asio::buffers_begin(bufs) + buf.size() };
 
                     return VersionTraits::template Parse<CommandTraits>(response, logger);
                 }
@@ -222,83 +180,15 @@ namespace libtactmon::ribbit {
         };
     }
 
-    template <Command C, Region R, Version V, typename Args = typename detail::CommandTraits<C>::Args>
-    struct CommandExecutor final : detail::command_executor_impl<C, R, V, Args> {
-        // using detail::command_executor_impl<C, R, V, Args>:::Execute;
-    };
+    template <Command C, Version V, typename Args = typename detail::CommandTraits<C>::Args>
+    struct CommandExecutor final : detail::command_executor_impl<C, V, Args> { };
 
-    /*template <Command C, Region R, Version V>
-    struct CommandExecutor {
-        template <typename... Args>
-        static auto Execute(boost::asio::any_io_executor executor, Args&&... args) {
-            return Execute(executor, nullptr, std::forward<Args>(args)...);
-        }
+    template <Version V = Version::V1>
+    using CDNs = CommandExecutor<Command::ProductCDNs, V>;
 
-        template <typename... Args>
-        requires std::is_same_v<std::tuple<Args...>, typename CommandTraits::Args>
-        static auto Execute(boost::asio::any_io_executor executor, std::shared_ptr<spdlog::logger> logger, Args&&... args)
-            -> std::optional<typename CommandTraits::ValueType>
-        {
-            namespace ip = boost::asio::ip;
-            using tcp = ip::tcp;
+    template <Version V = Version::V1>
+    using Versions = CommandExecutor<Command::ProductVersions, V>;
 
-            boost::asio::ip::tcp::socket socket { executor };
-
-            boost::system::error_code ec;
-
-            auto command = fmt::format(CommandTraits::Format, VersionTraits::Value, std::forward<Args>(args)...) + "\r\n";
-
-            if (logger != nullptr) {
-                logger->info("Loading {}:{}/{}.", RegionTraits::Host, 1119, command);
-                logger->trace("Connecting to {}:{}/{}.", RegionTraits::Host, 1119, command);
-            }
-
-            tcp::resolver r { executor };
-            boost::asio::connect(socket, r.resolve(RegionTraits::Host, "1119"), ec);
-
-            if (ec) {
-                if (logger != nullptr)
-                    logger->error("An error occured: {}.", ec.message());
-
-                return std::nullopt;
-            }
-
-            { // Write Ribbit request
-                auto buf = boost::asio::buffer(command);
-                boost::asio::write(socket, buf, ec);
-                if (ec) {
-                    if (logger != nullptr)
-                        logger->error("An error occured: {}.", ec.message());
-
-                    return std::nullopt;
-                }
-            }
-
-            { // Read Ribbit response
-                boost::asio::streambuf buf;
-                size_t bytesTransferred = boost::asio::read(socket, buf, ec);
-                boost::ignore_unused(bytesTransferred);
-                if (ec && ec != boost::asio::error::eof) {
-                    if (logger != nullptr)
-                        logger->error("An error occured: {}.", ec.message());
-
-                    return std::nullopt;
-                }
-
-                auto bufs = buf.data();
-                std::string response { boost::asio::buffers_begin(bufs), boost::asio::buffers_begin(bufs) + buf.size() };
-
-                return VersionTraits::template Parse<CommandTraits>(response, logger);
-            }
-        }
-    };*/
-
-    template <Region R, Version V = Version::V1>
-    using CDNs = CommandExecutor<Command::ProductCDNs, R, V>;
-
-    template <Region R, Version V = Version::V1>
-    using Versions = CommandExecutor<Command::ProductVersions, R, V>;
-
-    template <Region R, Version V = Version::V1>
-    using Summary = CommandExecutor<Command::Summary, R, V>;
+    template <Version V = Version::V1>
+    using Summary = CommandExecutor<Command::Summary, V>;
 }

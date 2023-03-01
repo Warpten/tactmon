@@ -117,7 +117,7 @@ namespace net {
         response.set("X-Tunnel-Archive-Name", params.ArchiveName);
         response.set("X-Tunnel-File-Name", params.FileName);
 
-        std::optional<ribbit::types::CDNs> cdns = ribbit::CDNs<ribbit::Region::EU>::Execute(_stream.get_executor(), params.Product);
+        auto cdns = ribbit::CDNs<>::Execute(_stream.get_executor(), nullptr, ribbit::Region::US, params.Product);
         if (!cdns.has_value()) {
             return writeError(http::status::not_found,
                 "Unable to resolve CDN configuration.\r\n"

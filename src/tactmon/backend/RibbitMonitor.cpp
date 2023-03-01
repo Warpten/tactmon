@@ -31,8 +31,7 @@ namespace backend {
         if (ec == boost::asio::error::operation_aborted)
             return;
 
-        std::optional<ribbit::types::Summary> summary = ribbit::Summary<ribbit::Region::EU>::Execute(_service.get_executor());
-
+        auto summary = ribbit::Summary<>::Execute(_service.get_executor(), nullptr, ribbit::Region::US);
         if (!summary.has_value())
             return;
 
