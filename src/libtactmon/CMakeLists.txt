@@ -17,6 +17,7 @@ add_library(libtactmon
 add_dependencies(libtactmon
   boost
   openssl
+  libassert
 )
 
 target_include_directories(libtactmon
@@ -44,6 +45,7 @@ target_link_libraries(libtactmon
   PRIVATE
     boost
     openssl
+    libassert
   PUBLIC
     ZLIB::ZLIB
     spdlog::spdlog

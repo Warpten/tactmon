@@ -18,6 +18,7 @@ add_dependencies(tactmon
   boost
   openssl
   libtactmon
+  libassert
 )
 
 target_include_directories(tactmon
@@ -59,6 +60,7 @@ target_link_libraries(tactmon
     libpqxx::pqxx
     spdlog::spdlog
     spdlog::spdlog_header_only
+    libassert
 )
 
 install(TARGETS tactmon

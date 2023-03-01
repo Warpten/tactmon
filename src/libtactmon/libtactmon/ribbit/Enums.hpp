@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include <assert.hpp>
+
 #include <fmt/format.h>
 
 namespace libtactmon::ribbit {
@@ -44,5 +46,8 @@ struct fmt::formatter<libtactmon::ribbit::Region> {
             case libtactmon::ribbit::Region::CN: return fmt::format_to(ctx.out(), "cn");
             case libtactmon::ribbit::Region::TW: return fmt::format_to(ctx.out(), "tw");
         }
+
+        DEBUG_ASSERT(false, "Unknown region type.");
+        return ctx.out();
     }
 };
