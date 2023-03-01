@@ -28,9 +28,10 @@ namespace backend::db::repository {
 
     void Build::Insert(std::string const& region, std::string const& productName, std::string const& buildName, std::string const& buildConfig, std::string const& cdnConfig) {
         using namespace std::chrono;
+        using clock = system_clock;
 
         ExecuteOne<entity::build::queries::Insert>(region, productName, buildName, buildConfig, cdnConfig,
-            static_cast<uint64_t>(duration_cast<seconds>(time_point_cast<seconds>(high_resolution_clock::now()).time_since_epoch()).count())
+            static_cast<uint64_t>(duration_cast<seconds>(clock::now().time_since_epoch()).count())
         );
     }
 }
