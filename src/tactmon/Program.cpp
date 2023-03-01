@@ -86,7 +86,7 @@ void Execute(boost::program_options::variables_map vm) {
 #if defined(WIN32)
     asio::signal_set signals(service, SIGINT, SIGTERM, SIGBREAK);
 #else
-    asio::signal_set signals(service, SIGINT, SIGTERM, SIGKILL);
+    asio::signal_set signals(service, SIGINT, SIGTERM);
 #endif
     signals.async_wait([&guard, &service](boost::system::error_code const& ec, int signum) {
         guard.reset();
