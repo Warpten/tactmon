@@ -114,8 +114,8 @@ namespace libtactmon::tact::data {
             friend struct Encoding;
 
             uint64_t _fileSize; // Of the non-encoded version of the file
-            std::unique_ptr<uint8_t[]> _ckey = nullptr;
-            std::unique_ptr<uint8_t[]> _ekeys = nullptr;
+            std::vector<uint8_t> _ckey;
+            std::vector<uint8_t> _ekeys;
             uint8_t _keyCount;
         };
 
@@ -130,7 +130,7 @@ namespace libtactmon::tact::data {
             static size_t HashSize(Header const& header);
 
         private:
-            std::unique_ptr<uint8_t[]> _ekey = nullptr;
+            std::vector<uint8_t> _ekey;
             uint32_t _especIndex = 0; // Not an offset but an index into the ESpec string block.
             uint64_t _fileSize = 0;   // Of the encoded version of the file.
         };

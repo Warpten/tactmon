@@ -28,6 +28,7 @@ namespace libtactmon::tact {
         explicit CKey(std::array<uint8_t, N> data) : _data(data), _size(N) { }
 
         CKey(uint8_t* data, size_t length);
+        CKey(uint8_t const* data, size_t length);
 
         std::string ToString() const;
 

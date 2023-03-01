@@ -37,12 +37,12 @@ namespace libtactmon::tact::data {
         _keyCount = stream.Read<uint8_t>(std::endian::little);
         _fileSize = ReadUInt40(stream, std::endian::big);
 
-        _ckey = std::make_unique<uint8_t[]>(header.ContentKeySize);
-        stream.Read(std::span { _ckey.get(), header.ContentKeySize }, std::endian::little);
+        _ckey.resize(header.ContentKeySize);
+        stream.Read(std::span { _ckey.data(), header.ContentKeySize }, std::endian::little);
 
         if (_keyCount * header.EncodingKeySize > 0) {
-            _ekeys = std::make_unique<uint8_t[]>(header.EncodingKeySize * _keyCount);
-            stream.Read(std::span{ _ekeys.get(), header.EncodingKeySize * _keyCount }, std::endian::little);
+            _ekeys.resize(header.EncodingKeySize * _keyCount);
+            stream.Read(std::span{ _ekeys.data(), header.EncodingKeySize * _keyCount }, std::endian::little);
         }
     }
 
@@ -61,7 +61,7 @@ namespace libtactmon::tact::data {
     }
 
     Encoding::CEKeyPageTable::operator bool() const {
-        return _ckey != nullptr && _ekeys != nullptr;
+        return !_ckey.empty() && !_ekeys.empty();
     }
 
     /* static */ size_t Encoding::CEKeyPageTable::HashSize(Header const& header) {
@@ -69,10 +69,10 @@ namespace libtactmon::tact::data {
     }
 
     tact::EKey Encoding::CEKeyPageTable::ekey(size_t index, Encoding const& owner) const {
-        return { _ekeys.get() + index * owner._header.EncodingKeySize, owner._header.EncodingKeySize };
+        return { _ekeys.data() + index * owner._header.EncodingKeySize, owner._header.EncodingKeySize };
     }
     tact::CKey Encoding::CEKeyPageTable::ckey(Encoding const& owner) const {
-        return { _ckey.get(), owner._header.ContentKeySize };
+        return { _ckey.data(), owner._header.ContentKeySize };
     }
 
     // ^^^ CEKeyPageTable / EKeySpecPageTable vvv
@@ -95,7 +95,7 @@ namespace libtactmon::tact::data {
     }
 
     Encoding::EKeySpecPageTable::operator bool() const {
-        return _ekey != nullptr;
+        return _ekey.size() != 0;
     }
 
     Encoding::EKeySpecPageTable::EKeySpecPageTable(io::IReadableStream& stream, Header const& header) {
@@ -103,8 +103,8 @@ namespace libtactmon::tact::data {
         if (!stream.CanRead(encodingKeySize + 4 + 5))
             return;
 
-        _ekey = std::make_unique<uint8_t[]>(encodingKeySize);
-        stream.Read(std::span{ _ekey.get(), encodingKeySize }, std::endian::little);
+        _ekey.resize(encodingKeySize);
+        stream.Read(std::span { _ekey.data(), encodingKeySize }, std::endian::little);
 
         _especIndex = stream.Read<uint32_t>(std::endian::big);
         _fileSize = ReadUInt40(stream, std::endian::big);
@@ -176,7 +176,7 @@ namespace libtactmon::tact::data {
                 auto&& entry = page[j].ckey(*this);
 
                 if (entry == contentKey)
-                    return tact::data::FileLocation { page[j].fileSize(), page[j].keyCount(), std::span<uint8_t> { page[j]._ekeys.get(), page[j].keyCount() * _header.EncodingKeySize }};
+                    return tact::data::FileLocation { page[j].fileSize(), page[j].keyCount(), std::span<uint8_t> { const_cast<uint8_t*>(page[j]._ekeys.data()), page[j].keyCount() * _header.EncodingKeySize }};
             }
         }
 

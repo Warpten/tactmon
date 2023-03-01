@@ -40,6 +40,13 @@ namespace libtactmon::tact {
         std::copy_n(data, length, _data.get());
     }
 
+    CKey::CKey(uint8_t const* data, size_t length) {
+        _data = std::make_unique<uint8_t[]>(length);
+        _size = length;
+
+        std::copy_n(data, length, _data.get());
+    }
+
     CKey& CKey::operator = (CKey const& other) {
         _data = std::make_unique<uint8_t[]>(other._size);
         _size = other._size;

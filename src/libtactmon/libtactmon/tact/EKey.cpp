@@ -36,6 +36,13 @@ namespace libtactmon::tact {
         std::copy_n(data, length, _data.get());
     }
 
+    EKey::EKey(uint8_t const* data, size_t length) {
+        _data = std::make_unique<uint8_t[]>(length);
+        _size = length;
+
+        std::copy_n(data, length, _data.get());
+    }
+
     std::string EKey::ToString() const {
         std::string value;
         value.reserve(_size * 2u);
