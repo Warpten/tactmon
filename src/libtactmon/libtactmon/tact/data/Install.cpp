@@ -21,7 +21,7 @@ namespace libtactmon::tact::data {
 
             instance._tags.emplace(std::piecewise_construct,
                 std::forward_as_tuple(std::string_view { nameItr }),
-                std::forward_as_tuple(instance, stream, numEntries, std::string_view { nameItr })
+                std::forward_as_tuple(stream, numEntries, std::string_view { nameItr })
             );
         }
 
@@ -29,7 +29,7 @@ namespace libtactmon::tact::data {
             std::string name;
             stream.ReadCString(name);
 
-            instance._entries.emplace_back(instance, stream, hashSize, name);
+            instance._entries.emplace_back(stream, hashSize, name);
         }
 
         for (auto&& [name, tag] : instance._tags) {
@@ -45,17 +45,15 @@ namespace libtactmon::tact::data {
 
     Install::Install() { }
 
-    Install::Entry::Entry(Install const& install, io::IReadableStream& stream, size_t hashSize, std::string const& name)
-        : _install(install), _hash((uint8_t*) stream.Data(), hashSize), _name(name)
+    Install::Entry::Entry(io::IReadableStream& stream, size_t hashSize, std::string const& name)
+        : _hash((uint8_t*) stream.Data(), hashSize), _name(name)
     {
         // This is the hash, but we read it "in-place" in the initialization list.
         stream.SkipRead(hashSize);
         _fileSize = stream.Read<uint32_t>(std::endian::big);
     }
 
-    Install::Tag::Tag(Install const& install, io::IReadableStream& stream, size_t bitmaskSize, std::string_view name) : _install(install) {
-        _name = name;
-
+    Install::Tag::Tag(io::IReadableStream& stream, size_t bitmaskSize, std::string_view name) : _name(name) {
         _type = stream.Read<uint16_t>(std::endian::big);
         _bitmaskSize = bitmaskSize;
 
@@ -64,7 +62,7 @@ namespace libtactmon::tact::data {
     }
 
     Install::Tag::Tag(Tag&& other) noexcept
-        : _install(other._install), _name(std::move(other._name)), _type(other._type), _bitmaskSize(other._bitmaskSize), _bitmask(std::move(other._bitmask))
+        : _name(std::move(other._name)), _type(other._type), _bitmaskSize(other._bitmaskSize), _bitmask(std::move(other._bitmask))
     {
         other._bitmaskSize = 0;
     }

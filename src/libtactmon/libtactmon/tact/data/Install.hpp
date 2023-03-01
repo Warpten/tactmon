@@ -22,7 +22,7 @@ namespace libtactmon::tact::data {
         struct Tag final {
             friend struct Install;
 
-            Tag(Install const& install, io::IReadableStream& stream, size_t bitmaskSize, std::string_view name);
+            Tag(io::IReadableStream& stream, size_t bitmaskSize, std::string_view name);
 
             Tag(Tag&& other) noexcept;
             Tag& operator = (Tag&& other) noexcept;
@@ -37,7 +37,6 @@ namespace libtactmon::tact::data {
             bool Matches(size_t fileIndex) const;
 
         private:
-            Install const& _install;
             std::string_view _name;
             uint8_t _type;
 
@@ -55,15 +54,13 @@ namespace libtactmon::tact::data {
         struct Entry {
             friend struct Install;
 
-            Entry(Install const& install, io::IReadableStream& stream, size_t hashSize, std::string const& name);
+            Entry(io::IReadableStream& stream, size_t hashSize, std::string const& name);
 
             std::string_view name() const { return _name; }
 
             tact::CKey const& ckey() const { return _hash; }
 
         private:
-            Install const& _install;
-
             std::string _name;
             size_t _fileSize;
             
