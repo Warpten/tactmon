@@ -11,8 +11,8 @@ namespace libtactmon::tact::data {
         stream.Read(std::span<uint8_t> { bytes.data(), 5 }, endianness);
 
         uint64_t value = 0;
-        for (size_t i = 0; i < bytes.size(); ++i)
-            value = (value << 8) | bytes[i];
+        for (uint8_t byte : bytes)
+            value = (value << 8) | byte;
         return value;
     }
 
@@ -38,11 +38,11 @@ namespace libtactmon::tact::data {
         _fileSize = ReadUInt40(stream, std::endian::big);
 
         _ckey.resize(header.ContentKeySize);
-        stream.Read(std::span { _ckey.data(), header.ContentKeySize }, std::endian::little);
+        stream.Read(std::span { _ckey }, std::endian::little);
 
         if (_keyCount * header.EncodingKeySize > 0) {
             _ekeys.resize(header.EncodingKeySize * _keyCount);
-            stream.Read(std::span{ _ekeys.data(), header.EncodingKeySize * _keyCount }, std::endian::little);
+            stream.Read(std::span { _ekeys }, std::endian::little);
         }
     }
 
@@ -124,7 +124,6 @@ namespace libtactmon::tact::data {
 
         size_t pageStart = stream.GetReadCursor() + _header.CEKey.PageCount * (_header.EncodingKeySize + 0x10);
 
-        _cekeyPageCount = _header.CEKey.PageCount;
         _cekeyPages.reserve(_header.CEKey.PageCount);
 
         for (size_t i = 0; i < _header.CEKey.PageCount; ++i) {
@@ -136,31 +135,25 @@ namespace libtactmon::tact::data {
     }
 
     Encoding::Encoding(Encoding&& other) noexcept
-        : _header(std::move(other._header)), _cekeyPageCount(other._cekeyPageCount), _cekeyPages(std::move(other._cekeyPages)), _keySpecPageTables(std::move(other._keySpecPageTables))
+        : _header(std::move(other._header)), _cekeyPages(std::move(other._cekeyPages)), _keySpecPageTables(std::move(other._keySpecPageTables))
     {
-        other._cekeyPageCount = 0;
     }
 
     Encoding& Encoding::operator = (Encoding&& other) noexcept {
         _header = std::move(other._header);
-        _cekeyPageCount = other._cekeyPageCount;
         _cekeyPages = std::move(other._cekeyPages);
         _keySpecPageTables = std::move(other._keySpecPageTables);
-
-        other._cekeyPageCount = 0;
 
         return *this;
     }
 
     Encoding::~Encoding() {
-        for (size_t i = 0; i < _cekeyPageCount; ++i)
-            (&_cekeyPages[i])->~Page();
     }
 
     size_t Encoding::count() const {
         size_t value = 0;
-        for (size_t i = 0; i < _cekeyPageCount; ++i)
-            value += _cekeyPages[i].size();
+        for (const auto & ceKeyPage : _cekeyPages)
+            value += ceKeyPage.size();
         return value;
     }
 
@@ -169,9 +162,7 @@ namespace libtactmon::tact::data {
     }
 
     std::optional<tact::data::FileLocation> Encoding::FindFile(tact::CKey const& contentKey) const {
-        for (size_t i = 0; i < _cekeyPageCount; ++i) {
-            Page<CEKeyPageTable> const& page = _cekeyPages[i];
-
+        for (Page<CEKeyPageTable> const& page : _cekeyPages) {
             for (size_t j = 0; j < page.size(); ++j) {
                 auto&& entry = page[j].ckey(*this);
 

@@ -137,9 +137,7 @@ namespace libtactmon::tact::data {
 
         Header _header;
 
-        size_t _cekeyPageCount = 0;
         std::vector<Page<CEKeyPageTable, false>> _cekeyPages;
-        size_t _keySpecPageTablesCount = 0;
         std::vector<Page<EKeySpecPageTable, false>> _keySpecPageTables;
     };
 }
