@@ -68,7 +68,7 @@ namespace libtactmon::tact::data {
                 stream.SeekRead(pageOffset);
 
                 while (stream.GetReadCursor() < pageEnd) {
-                    T pageEntry{ stream, header };
+                    T pageEntry { stream, header };
                     // Stop if the entry read was mostly padding bytes, or if we read past the end of the page in the process (alignment bytes)
                     if (!pageEntry || stream.GetReadCursor() > pageEnd)
                         break;
@@ -138,8 +138,8 @@ namespace libtactmon::tact::data {
         Header _header;
 
         size_t _cekeyPageCount = 0;
-        std::unique_ptr<Page<CEKeyPageTable, false>[]> _cekeyPages;
+        std::vector<Page<CEKeyPageTable, false>> _cekeyPages;
         size_t _keySpecPageTablesCount = 0;
-        std::unique_ptr<Page<EKeySpecPageTable, false>[]> _keySpecPageTables;
+        std::vector<Page<EKeySpecPageTable, false>> _keySpecPageTables;
     };
 }

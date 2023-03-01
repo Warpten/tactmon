@@ -125,13 +125,13 @@ namespace libtactmon::tact::data {
         size_t pageStart = stream.GetReadCursor() + _header.CEKey.PageCount * (_header.EncodingKeySize + 0x10);
 
         _cekeyPageCount = _header.CEKey.PageCount;
-        _cekeyPages = std::make_unique<Page<CEKeyPageTable>[]>(_header.CEKey.PageCount);
+        _cekeyPages.reserve(_header.CEKey.PageCount);
 
         for (size_t i = 0; i < _header.CEKey.PageCount; ++i) {
             size_t pageOffset = pageStart + i * _header.CEKey.PageSize;
             size_t pageEnd = pageOffset + _header.CEKey.PageSize;
 
-            new (&_cekeyPages[i]) Page<CEKeyPageTable>(stream, _header, pageOffset, pageEnd);
+            _cekeyPages.emplace_back(stream, _header, pageOffset, pageEnd);
         }
     }
 
