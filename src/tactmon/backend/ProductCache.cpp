@@ -17,7 +17,7 @@ namespace backend {
         _cacheExpiryTimer.expires_at(std::chrono::high_resolution_clock::now() + 1min);
         _cacheExpiryTimer.async_wait([this](boost::system::error_code ec) {
             if (ec != boost::asio::error::operation_aborted)
-            this->RemoveExpiredEntries();
+                this->RemoveExpiredEntries();
         });
     }
 

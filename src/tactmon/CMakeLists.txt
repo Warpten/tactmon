@@ -27,10 +27,14 @@ target_include_directories(tactmon
     ${Boost_INCLUDE_DIR}
 )
 
-# target_compile_definitions(tactmon
-#   PRIVATE
-#     BOOST_BEAST_USE_STD_STRING_VIEW
-# )
+if (TACTMON_ENABLE_ADDRESS_SANITIZER)
+  target_compile_options(tactmon
+    PRIVATE
+      -fno-omit-frame-pointer
+      -fsanitize=address
+      -fsanitize-recover=address
+      -fsanitize-address-use-after-scope)
+endif ()
 
 set_target_properties(tactmon
   PROPERTIES

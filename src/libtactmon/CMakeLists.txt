@@ -50,6 +50,15 @@ target_link_libraries(libtactmon
     spdlog::spdlog_header_only
 )
 
+if (TACTMON_ENABLE_ADDRESS_SANITIZER)
+  target_compile_options(libtactmon
+    PRIVATE
+      -fno-omit-frame-pointer
+      -fsanitize=address
+      -fsanitize-recover=address
+      -fsanitize-address-use-after-scope)
+endif ()
+
 install(TARGETS libtactmon
   DESTINATION "${CMAKE_INSTALL_PREFIX}"
 )
