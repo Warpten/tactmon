@@ -33,7 +33,8 @@ namespace libtactmon::tact::data::product::wow {
         if (!_root.has_value())
             return false;
 
-        _logger->info("{} entries found in root manifest.", _root->size());
+        if (_logger != nullptr)
+            _logger->info("{} entries found in root manifest.", _root->size());
         return true;
     }
 
