@@ -137,7 +137,7 @@ namespace libtactmon::ribbit {
 
                 auto command = fmt::format(CommandTraits::Format, VersionTraits::Value, std::forward<Args>(args)...) + "\r\n";
 
-                std::string_view host = fmt::format("{}.version.battle.net", region);
+                std::string host = fmt::format("{}.version.battle.net", region);
 
                 if (logger != nullptr)
                     logger->info("Loading {}:{}/{}.", host, 1119, command);
