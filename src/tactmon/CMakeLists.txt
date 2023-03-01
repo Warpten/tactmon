@@ -34,6 +34,13 @@ if (TACTMON_ENABLE_ADDRESS_SANITIZER)
       -fsanitize=address
       -fsanitize-recover=address
       -fsanitize-address-use-after-scope)
+
+  target_link_options(tactmon
+    PRIVATE
+      -fno-omit-frame-pointer
+      -fsanitize=address
+      -fsanitize-recover=address
+      -fsanitize-address-use-after-scope)
 endif ()
 
 set_target_properties(tactmon
