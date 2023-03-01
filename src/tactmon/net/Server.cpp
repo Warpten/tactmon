@@ -41,14 +41,14 @@ namespace net {
         boost::algorithm::hex(location.data(), location.data() + location.size(), std::back_inserter(hexstr));
         boost::algorithm::to_lower(hexstr);
 
-        return fmt::format("{}/{}/{}/{}/{}/{}", _documentRoot,
+        return fmt::format("{}/{}/{}/{}/{}/{}/{}", _documentRoot,
             product,
             hexstr, 0, 0, decompressedSize,
             fileName);
     }
 
     std::string Server::GenerateAdress(std::string_view product, libtactmon::tact::data::ArchiveFileLocation const& location, std::string_view fileName, size_t decompressedSize) const {
-        return fmt::format("{}/{}/{}/{}/{}/{}", _documentRoot,
+        return fmt::format("{}/{}/{}/{}/{}/{}/{}", _documentRoot,
             product,
             location.name(), location.offset(), location.fileSize(), decompressedSize,
             fileName);
