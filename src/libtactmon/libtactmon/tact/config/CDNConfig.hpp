@@ -12,6 +12,11 @@ namespace libtactmon::io {
 }
 
 namespace libtactmon::tact::config {
+    /**
+     * Represents a CDN configuration.
+     * 
+     * Does **not** model all properties **yet** (mostly because patch-archives are not really understood).
+     */
     struct CDNConfig final {
         struct Archive {
             std::string Name;

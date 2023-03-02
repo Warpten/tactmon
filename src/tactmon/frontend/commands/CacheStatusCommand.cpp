@@ -28,12 +28,21 @@ namespace frontend::commands {
         responseEmbed.set_color(0x0000FF00u)
             .set_title(fmt::format("{} builds loaded.", cluster.productManager.size()));
 
-        cluster.productManager.ForEachProduct([&](backend::Product& product, std::chrono::high_resolution_clock::time_point expiryTime) {
-            responseEmbed.add_field(
-                db::get<build::build_name>(product.GetLoadedBuild()),
-                fmt::format("Unloads in **{0:%M}** minutes and **{0:%S}** seconds.", std::chrono::duration_cast<std::chrono::seconds>(expiryTime - std::chrono::high_resolution_clock::now())),
-                true
-            );
+        cluster.productManager.ForEachProduct([&](backend::Product& product, std::chrono::high_resolution_clock::time_point expiryTime)
+        {
+            auto expiryDelta = std::chrono::duration_cast<std::chrono::seconds>(expiryTime - std::chrono::high_resolution_clock::now());
+            if (expiryDelta.count() < 0) {
+                responseEmbed.add_field("",
+                    fmt::format("`{}`: Currently unloading...", db::get<build::build_name>(product.GetLoadedBuild())),
+                    true
+                );
+            } else {
+                responseEmbed.add_field("",
+                    fmt::format("`{0}`: Unloads in **{1:%M}** minutes and **{1:%S}** seconds.",
+                        db::get<build::build_name>(product.GetLoadedBuild()), expiryDelta),
+                    true
+                );
+            }
         });
 
         evnt.edit_response(dpp::message().add_embed(responseEmbed));
