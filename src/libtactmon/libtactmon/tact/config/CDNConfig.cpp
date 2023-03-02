@@ -53,6 +53,7 @@ namespace libtactmon::tact::config {
             else if (tokens[1] == "file-index-size") {
                 if (tokens.size() == 1)
                     return std::nullopt;
+
                 if (!fileIndex.has_value())
                     fileIndex.emplace();
                 auto [ptr, ec] = std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), fileIndex->Size);
