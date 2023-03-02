@@ -50,7 +50,7 @@ namespace libtactmon::tact::config {
                     fileIndex.emplace();
                 fileIndex->Name = tokens[1];
             }
-            else if (tokens[1] == "file-index-size") {
+            else if (tokens[0] == "file-index-size") {
                 if (tokens.size() == 1)
                     return std::nullopt;
 

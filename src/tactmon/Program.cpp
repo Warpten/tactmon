@@ -171,7 +171,8 @@ void Execute(boost::program_options::variables_map vm) {
             if (!buildConfig.has_value())
                 continue;
 
-            database.builds.Insert(version.Region, productName, buildConfig->BuildName, version.BuildConfig, version.CDNConfig);
+            if (!database.builds.GetByBuildName(buildConfig->BuildName, version.Region).has_value())
+                database.builds.Insert(version.Region, productName, buildConfig->BuildName, version.BuildConfig, version.CDNConfig);
             ss << fmt::format("{:<8} | {:<25} | {:<34} | {:<34}\n", version.Region, buildConfig->BuildName, version.BuildConfig, version.CDNConfig);
         }
         ss << "```";

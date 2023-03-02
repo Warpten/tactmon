@@ -2,6 +2,7 @@
 
 #include <type_traits>
 
+#include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/executor_work_guard.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/post.hpp>
@@ -29,7 +30,7 @@ namespace utility {
         }
 
         boost::asio::io_context& service() { return _service; }
-        boost::asio::io_context::executor_type executor() { return _service.get_executor(); }
+        boost::asio::any_io_executor executor() { return _pool.get_executor(); }
 
     private:
         boost::asio::io_context _service;
