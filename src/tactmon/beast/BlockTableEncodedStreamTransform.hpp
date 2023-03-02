@@ -28,7 +28,7 @@ namespace boost::beast::user {
     private:
         enum Step : uint32_t {
             Header,
-            ChunkInfo,
+            ChunkHeaders,
             // From here N data_blocks entries where N is the amount of actual chunks
             // Don't add steps after this
             DataBlocks

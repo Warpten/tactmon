@@ -23,14 +23,14 @@ namespace libtactmon::tact::data::product {
             return false;
 
         // Load build config and cdn config; abort if invalid or not found.
-        _buildConfig = ResolveCachedConfig<tact::config::BuildConfig>(buildConfig, [](io::FileStream& fstream) -> std::optional<tact::config::BuildConfig> {
+        _buildConfig = ResolveCachedConfig<tact::config::BuildConfig>(buildConfig, [](io::FileStream& fstream) {
             return tact::config::BuildConfig::Parse(fstream);
         });
         if (!_buildConfig.has_value())
             return false;
 
-        _cdnConfig = ResolveCachedConfig<tact::config::CDNConfig>(cdnConfig, [](io::FileStream& fstream) -> std::optional<tact::config::CDNConfig> {
-            return tact::config::CDNConfig{ fstream };
+        _cdnConfig = ResolveCachedConfig<tact::config::CDNConfig>(cdnConfig, [](io::FileStream& fstream) {
+            return tact::config::CDNConfig::Parse(fstream);
         });
         if (!_cdnConfig.has_value())
             return false;

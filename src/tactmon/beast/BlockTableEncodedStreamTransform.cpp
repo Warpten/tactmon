@@ -28,10 +28,10 @@ namespace boost::beast::user {
 
                     _headerSize = _ms.Read<uint32_t>(std::endian::big);
 
-                    _step = Step::ChunkInfo;
+                    _step = Step::ChunkHeaders;
                     break;
                 }
-                case Step::ChunkInfo:
+                case Step::ChunkHeaders:
                 {
                     if (!_ms.CanRead(_headerSize))
                         return size;
@@ -116,7 +116,8 @@ namespace boost::beast::user {
                         case 'F':
                         {
                             // Nested BLTE stream
-                            BlockTableEncodedStreamTransform nestedReader { _handler };
+                            // Forward the output handler, but ignore the input feedback, since it's already handled by the block content parser.
+                            BlockTableEncodedStreamTransform nestedReader { _handler, [](size_t) { } };
                             nestedReader.Parse((uint8_t*) _ms.Data(), chunkInfo.compressedSize, ec);
                             _ms.SkipRead(chunkInfo.compressedSize);
                             break;
