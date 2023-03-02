@@ -31,8 +31,7 @@ namespace libtactmon::tact::config {
             std::vector<std::string_view> tokens = detail::Tokenize(line, std::span{ Separators }, true);
 
             if (tokens[0] == "archives") {
-                // Note: we allocate N + 1 because of file-index, which is optional, and counts as one extra archive.
-                config._archives.resize(tokens.size());
+                config._archives.resize(tokens.size() - 1);
                 for (size_t i = 1; i < tokens.size(); ++i)
                     config._archives[i - 1].Name = tokens[i];
             }
@@ -64,6 +63,8 @@ namespace libtactmon::tact::config {
 
         if (fileIndex.has_value())
             config._archives.emplace_back(*fileIndex);
+
+        config._archives.shrink_to_fit();
 
         return config;
     }

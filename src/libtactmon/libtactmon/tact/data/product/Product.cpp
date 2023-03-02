@@ -87,6 +87,9 @@ namespace libtactmon::tact::data::product {
             _logger->info("({}) {} entries found in install manifest.", _buildConfig->BuildName, _install->size());
 
         _cdnConfig->ForEachArchive([this](std::string_view archiveName, size_t i) {
+            if (_logger != nullptr)
+                _logger->info("({}) Loading archive {}", _buildConfig->BuildName, archiveName);
+
             auto dataStream = ResolveCachedData<io::FileStream>(fmt::format("{}.index", archiveName),
                 [](io::FileStream& fstream) -> std::optional<io::FileStream> {
                     if (!fstream)
