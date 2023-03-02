@@ -11,14 +11,14 @@
 namespace libtactmon::tact::data::product {
     using namespace std::string_view_literals;
 
-    Product::Product(std::string_view productName, Cache& localCache, boost::asio::io_context& context, std::shared_ptr<spdlog::logger> logger)
-        : ResourceResolver(context.get_executor(), localCache), _context(context), _productName(productName), _localCache(localCache), _logger(logger)
+    Product::Product(std::string_view productName, Cache& localCache, boost::asio::any_io_executor executor, std::shared_ptr<spdlog::logger> logger)
+        : ResourceResolver(executor, localCache), _executor(executor), _productName(productName), _localCache(localCache), _logger(logger)
     {
     }
 
     bool Product::Load(std::string_view buildConfig, std::string_view cdnConfig) noexcept {
         // **Always** refresh CDN
-        _cdns = ribbit::CDNs<>::Execute(_context.get_executor(), nullptr, ribbit::Region::US, std::string_view { _productName });
+        _cdns = ribbit::CDNs<>::Execute(_executor, nullptr, ribbit::Region::US, std::string_view { _productName });
         if (!_cdns.has_value())
             return false;
 
@@ -106,7 +106,7 @@ namespace libtactmon::tact::data::product {
     }
 
     std::optional<ribbit::types::Versions> Product::Refresh() noexcept {
-        auto summary = ribbit::Summary<>::Execute(_context.get_executor(), _logger, ribbit::Region::US);
+        auto summary = ribbit::Summary<>::Execute(_executor, _logger, ribbit::Region::US);
         if (!summary.has_value())
             return std::nullopt;
 
@@ -116,7 +116,7 @@ namespace libtactmon::tact::data::product {
         if (summaryItr == summary->end())
             return std::nullopt;
 
-        auto versions = ribbit::Versions<>::Execute(_context.get_executor(), _logger, ribbit::Region::US, std::string_view { _productName });
+        auto versions = ribbit::Versions<>::Execute(_executor, _logger, ribbit::Region::US, std::string_view { _productName });
         if (!versions.has_value())
             return std::nullopt;
 

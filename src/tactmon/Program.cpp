@@ -80,6 +80,7 @@ int main(int argc, char** argv) {
 void Execute(boost::program_options::variables_map vm) {
     // 1. General application context.
     asio::io_context service { 4 };
+    boost::asio::thread_pool pool { 4 };
 
     // 2. Setup interrupts handler, enqueue infinite work.
     asio::executor_work_guard<asio::io_context::executor_type> guard = asio::make_work_guard(service);
@@ -97,13 +98,15 @@ void Execute(boost::program_options::variables_map vm) {
     fs::path cacheRoot = std::filesystem::current_path() / "cache";
 
     libtactmon::tact::Cache localCache { cacheRoot };
-    backend::ProductCache productCache { service.get_executor() };
+    backend::ProductCache productCache { pool.get_executor() };
 
     constexpr static const std::string_view WOW_PRODUCTS[] = { "wow", "wow_beta", "wow_classic", "wow_classic_beta", "wow_classic_ptr" };
     for (std::string_view gameProduct : WOW_PRODUCTS) {
-        productCache.RegisterFactory(std::string { gameProduct }, [&localCache, gameProduct, &service]() -> backend::Product {
+        productCache.RegisterFactory(std::string { gameProduct }, [&localCache, gameProduct, &pool]() -> backend::Product {
             return backend::Product {
-                std::make_shared<libtactmon::tact::data::product::wow::Product>(gameProduct, localCache, service, utility::logging::GetAsyncLogger(gameProduct))
+                std::make_shared<libtactmon::tact::data::product::wow::Product>(
+                    gameProduct, localCache, pool.get_executor(), utility::logging::GetAsyncLogger(gameProduct)
+                )
             };
         });
     }
@@ -135,7 +138,7 @@ void Execute(boost::program_options::variables_map vm) {
     }();
 
     // 6. Initialize Ribbit monitor.
-    backend::RibbitMonitor monitor { service, database };
+    backend::RibbitMonitor monitor { pool.get_executor(), database };
 
     // 7. Initialize discord frontend
     frontend::Discord bot { vm["discord-thread-count"].as<uint16_t>(), vm["discord-token"].as<std::string>(), productCache, database, proxyServer };
@@ -150,8 +153,8 @@ void Execute(boost::program_options::variables_map vm) {
         namespace tact = libtactmon::tact;
         namespace ribbit = libtactmon::ribbit;
 
-        auto versions = ribbit::Versions<>::Execute(service.get_executor(), nullptr, ribbit::Region::US, productName);
-        auto cdns = ribbit::CDNs<>::Execute(service.get_executor(), nullptr, ribbit::Region::US, productName);
+        auto versions = ribbit::Versions<>::Execute(pool.get_executor(), nullptr, ribbit::Region::US, productName);
+        auto cdns = ribbit::CDNs<>::Execute(pool.get_executor(), nullptr, ribbit::Region::US, productName);
         if (!versions.has_value() || !cdns.has_value())
             return;
 
@@ -161,7 +164,7 @@ void Execute(boost::program_options::variables_map vm) {
         ss << fmt::format("{:<8} | {:<25} | {:<34} | {:<34}\n", "Region", "Build name", "Build config", "CDN Config");
 
         for (ribbit::types::versions::Record const& version : versions->Records) {
-            tact::data::product::ResourceResolver resolver(service.get_executor(), localCache);
+            tact::data::product::ResourceResolver resolver(pool.get_executor(), localCache);
 
             std::optional<tact::config::BuildConfig> buildConfig = resolver.ResolveConfiguration<tact::config::BuildConfig>(*cdns, version.BuildConfig,
                 [&](libtactmon::io::FileStream& fstream) {
@@ -200,7 +203,6 @@ void Execute(boost::program_options::variables_map vm) {
     monitor.BeginUpdate();
 
     // 9. Run until Ctrl+C.
-    boost::asio::thread_pool pool { 4 };
     for (size_t i = 0; i < 3; ++i)
         boost::asio::post(pool, [&]() { service.run(); });
     service.run();

@@ -22,6 +22,7 @@
 #include <optional>
 #include <string_view>
 
+#include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/io_context.hpp>
 
 #include <fmt/format.h>
@@ -38,8 +39,10 @@ namespace libtactmon::tact::data::product {
          * 
          * @param[in] productName The name of the product, as seen on Ribbit.
          * @param[in] localCache  A local cache manager controlling where configuration and data files will be read from and written to.
+         * @param[in] executor
+         * @param[in] logger
          */
-        Product(std::string_view productName, Cache& localCache, boost::asio::io_context& context, std::shared_ptr<spdlog::logger> logger);
+        Product(std::string_view productName, Cache& localCache, boost::asio::any_io_executor executor, std::shared_ptr<spdlog::logger> logger);
 
         /**
          * The name of this product.
@@ -124,7 +127,7 @@ namespace libtactmon::tact::data::product {
         std::optional<tact::data::ArchiveFileLocation> FindArchive(tact::EKey const& ekey) const;
 
     private:
-        boost::asio::io_context& _context;
+        boost::asio::any_io_executor _executor;
         std::string _productName;
 
     private:

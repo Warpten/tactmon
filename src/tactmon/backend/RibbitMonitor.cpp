@@ -9,7 +9,7 @@
 namespace ribbit = libtactmon::ribbit;
 
 namespace backend {
-    RibbitMonitor::RibbitMonitor(boost::asio::io_context& context, backend::Database& db) : _database(db), _service(context), _timer(context.get_executor())
+    RibbitMonitor::RibbitMonitor(boost::asio::any_io_executor executor, backend::Database& db) : _database(db), _executor(executor), _timer(executor)
     {
     }
 
@@ -31,7 +31,7 @@ namespace backend {
         if (ec == boost::asio::error::operation_aborted)
             return;
 
-        auto summary = ribbit::Summary<>::Execute(_service.get_executor(), nullptr, ribbit::Region::US);
+        auto summary = ribbit::Summary<>::Execute(_executor, nullptr, ribbit::Region::US);
         if (!summary.has_value())
             return;
 
