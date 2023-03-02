@@ -6,17 +6,27 @@
 #include <boost/algorithm/string.hpp>
 
 namespace libtactmon::tact {
+    bool CKey::TryParse(std::string_view value, CKey& target) {
+        // TODO: assert that the input target is empty
+
+        target._size = value.size() / 2;
+        target._data = std::make_unique<uint8_t[]>(target._size);
+        
+        auto itr = boost::algorithm::unhex(value.begin(), value.end(), target._data.get());
+        if (itr != target._data.get() + target._size) {
+            target._size = 0;
+            target._data.release();
+
+            return false;
+        }
+
+        return true;
+    }
+
     CKey::CKey() : _data(nullptr), _size(0) { }
 
     CKey::CKey(CKey const& other) : _data(std::make_unique<uint8_t[]>(other._size)), _size(other._size) {
         std::copy_n(other._data.get(), other._size, _data.get());
-    }
-
-    CKey::CKey(std::string_view value) {
-        _data = std::make_unique<uint8_t[]>(value.size() / 2);
-        _size = value.size() / 2;
-
-        boost::algorithm::unhex(value.begin(), value.end(), _data.get());
     }
 
     CKey::CKey(std::span<uint8_t> data) {
@@ -31,20 +41,6 @@ namespace libtactmon::tact {
         _size = data.size();
 
         std::copy_n(data.data(), _size, _data.get());
-    }
-
-    CKey::CKey(uint8_t* data, size_t length) {
-        _data = std::make_unique<uint8_t[]>(length);
-        _size = length;
-
-        std::copy_n(data, length, _data.get());
-    }
-
-    CKey::CKey(uint8_t const* data, size_t length) {
-        _data = std::make_unique<uint8_t[]>(length);
-        _size = length;
-
-        std::copy_n(data, length, _data.get());
     }
 
     CKey& CKey::operator = (CKey const& other) {

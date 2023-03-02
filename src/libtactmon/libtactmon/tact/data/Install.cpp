@@ -47,10 +47,10 @@ namespace libtactmon::tact::data {
     Install::Install() { }
 
     Install::Entry::Entry(io::IReadableStream& stream, size_t hashSize, std::string const& name)
-        : _hash((uint8_t*) stream.Data(), hashSize), _name(name)
+        : _hash(std::span<const uint8_t> { (uint8_t*) stream.Data(), hashSize }), _name(name)
     {
-        // This is the hash, but we read it "in-place" in the initialization list.
         stream.SkipRead(hashSize);
+
         _fileSize = stream.Read<uint32_t>(std::endian::big);
     }
 

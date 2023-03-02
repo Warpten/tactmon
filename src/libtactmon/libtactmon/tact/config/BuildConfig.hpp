@@ -4,6 +4,7 @@
 #include "libtactmon/tact/EKey.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 
 namespace libtactmon::io {
@@ -11,9 +12,18 @@ namespace libtactmon::io {
 }
 
 namespace libtactmon::tact::config {
+    /**
+     * Represents a build configuration as seen on the CDN.
+     * 
+     * Does **not** model all properties **yet**.
+     */
     struct BuildConfig final {
-        explicit BuildConfig(io::IReadableStream& fileStream);
+        static std::optional<BuildConfig> Parse(io::IReadableStream& stream);
 
+    private:
+        BuildConfig() = default;
+
+    public:
         struct Key {
             CKey ContentKey;
             EKey EncodingKey;

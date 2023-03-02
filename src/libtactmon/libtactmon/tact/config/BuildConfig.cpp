@@ -13,71 +13,123 @@ namespace libtactmon::tact::config {
     struct ConfigHandler {
         std::string_view Token;
 
-        std::function<void(BuildConfig&, std::vector<std::string_view>)> Handler;
+        std::function<bool(BuildConfig&, std::vector<std::string_view>)> Handler;
     };
 
+    // Not all properties are modeled here.
     static const ConfigHandler Handlers[] = {
         { "root", 
-            [](BuildConfig& cfg, auto tokens) {
-                cfg.Root = CKey { tokens[1] };
+            [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
+                if (tokens.size() != 2)
+                    return false;
+
+                if (!CKey::TryParse(tokens[1], cfg.Root))
+                    return false;
+
+                return true;
             }
         }, { "install",
-            [](BuildConfig& cfg, auto tokens) {
-                cfg.Install.Key.ContentKey = CKey { tokens[1] };
-                if (tokens.size() == 3)
-                    cfg.Install.Key.EncodingKey = EKey { tokens[2] };
+            [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
+                if (tokens.size() != 3 && tokens.size() != 2)
+                    return false;
+
+                if (!CKey::TryParse(tokens[1], cfg.Install.Key.ContentKey))
+                    return false;
+
+                if (!EKey::TryParse(tokens[2], cfg.Install.Key.EncodingKey))
+                    return false;
+
+                return true;
             }
         }, { "install-size",
-            [](BuildConfig& cfg, auto tokens) {
-                std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), cfg.Install.Size[0]);
-                if (tokens.size() == 3)
-                    std::from_chars(tokens[2].data(), tokens[2].data() + tokens[2].size(), cfg.Install.Size[1]);
+            [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
+                if (tokens.size() != 3 && tokens.size() != 2)
+                    return false;
+
+                {
+                    auto [ptr, ec] = std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), cfg.Install.Size[0]);
+                    if (ec != std::errc{ })
+                        return false;
+                }
+
+                if (tokens.size() == 3) {
+                    auto [ptr, ec] = std::from_chars(tokens[2].data(), tokens[2].data() + tokens[2].size(), cfg.Install.Size[1]);
+                    if (ec != std::errc{ })
+                        return false;
+                }
+
+                return true;
             }
-        },
-        // download
-        // download-size
-        // size
-        // size-size
-        { "encoding", 
-            [](BuildConfig& cfg, auto tokens) {
-                cfg.Encoding.Key.ContentKey = CKey { tokens[1] };
-                if (tokens.size() == 3)
-                    cfg.Encoding.Key.EncodingKey = EKey { tokens[2] };
+        }, { "encoding", 
+            [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
+                if (tokens.size() != 3 && tokens.size() != 2)
+                    return false;
+
+                if (!CKey::TryParse(tokens[1], cfg.Encoding.Key.ContentKey))
+                    return false;
+
+                if (!EKey::TryParse(tokens[2], cfg.Encoding.Key.EncodingKey))
+                    return false;
+
+                return true;
             }
         }, { "encoding-size",
-            [](BuildConfig& cfg, auto tokens) {
-                std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), cfg.Encoding.Size[0]);
-                if (tokens.size() == 3)
-                    std::from_chars(tokens[2].data(), tokens[2].data() + tokens[2].size(), cfg.Encoding.Size[1]);
+            [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
+                if (tokens.size() != 3 && tokens.size() != 2)
+                    return false;
+
+                {
+                    auto [ptr, ec] = std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), cfg.Encoding.Size[0]);
+                    if (ec != std::errc{ })
+                        return false;
+                }
+
+                if (tokens.size() == 3) {
+                    auto [ptr, ec] = std::from_chars(tokens[2].data(), tokens[2].data() + tokens[2].size(), cfg.Encoding.Size[1]);
+                    if (ec != std::errc{ })
+                        return false;
+                }
+
+                return true;
             }
         }, { "build-name",
-            [](BuildConfig& cfg, auto tokens) {
+            [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
+                if (tokens.size() != 2)
+                    return false;
+
                 cfg.BuildName = tokens[1];
+                return true;
             }
         }
     };
+    
+    /* static */ std::optional<BuildConfig> BuildConfig::Parse(io::IReadableStream& stream) {
+        stream.SeekRead(0);
+        
+        std::string_view contents = reinterpret_cast<const char*>(stream.Data());
+        std::vector<std::string_view> lines = detail::Tokenize(contents, '\n');
+        if (lines.empty())
+            return std::nullopt;
 
-    BuildConfig::BuildConfig(io::IReadableStream& fileStream) {
-        fileStream.SeekRead(0);
-        std::string fileContents;
-        fileStream.ReadString(fileContents, fileStream.GetLength());
-
-        std::vector<std::string_view> lines = detail::Tokenize(std::string_view { fileContents }, '\n');
+        BuildConfig config { };
 
         for (std::string_view line : lines) {
             if (line.empty() || line[0] == '#')
                 continue;
 
             static const char Separators[] = { ' ', '=' };
-            std::vector<std::string_view> tokens = detail::Tokenize(line, std::span{ Separators }, true);
+            std::vector<std::string_view> tokens = detail::Tokenize(line, std::span { Separators }, true);
 
             for (auto&& handler : Handlers) {
                 if (tokens[0] != handler.Token)
                     continue;
 
-                handler.Handler(*this, std::move(tokens));
+                if (!handler.Handler(config, std::move(tokens)))
+                    return std::nullopt;
                 break;
             }
         }
+
+        return config;
     }
 }

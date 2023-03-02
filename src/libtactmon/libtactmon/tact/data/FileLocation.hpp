@@ -1,5 +1,7 @@
 #pragma once
 
+#include "libtactmon/tact/EKey.hpp"
+
 #include <cstdint>
 #include <span>
 #include <string>
@@ -25,7 +27,7 @@ namespace libtactmon::tact::data {
         /**
          * Returns one of the encoding keys for the associated file.
          */
-        std::span<const uint8_t> operator [] (size_t index) const;
+        EKey operator [] (size_t index) const;
 
     private:
         size_t _fileSize;

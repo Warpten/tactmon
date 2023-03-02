@@ -36,12 +36,14 @@ namespace libtactmon::tact::data::product::wow {
 
             if (interleave) {
                 std::unique_ptr<uint8_t[]> hashBuffer = std::make_unique<uint8_t[]>(contentKeySize);
+                std::span<uint8_t> hashSpan { hashBuffer.get(), contentKeySize };
+
                 for (size_t i = 0; i < numRecords; ++i) {
-                    stream.Read(std::span<uint8_t> { hashBuffer.get(), contentKeySize }, std::endian::little);
+                    stream.Read(hashSpan, std::endian::little);
 
                     uint64_t nameHash = stream.Read<uint64_t>(std::endian::little); // Jenkins96 of the file's path
 
-                    _entries.emplace_back(tact::CKey { hashBuffer.get(), contentKeySize }, fileDataIDs[i], nameHash);
+                    _entries.emplace_back(tact::CKey { hashSpan }, fileDataIDs[i], nameHash);
                 }
             }
             else {

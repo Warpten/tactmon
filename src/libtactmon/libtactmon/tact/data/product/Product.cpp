@@ -24,7 +24,7 @@ namespace libtactmon::tact::data::product {
 
         // Load build config and cdn config; abort if invalid or not found.
         _buildConfig = ResolveCachedConfig<tact::config::BuildConfig>(buildConfig, [](io::FileStream& fstream) -> std::optional<tact::config::BuildConfig> {
-            return tact::config::BuildConfig { fstream };
+            return tact::config::BuildConfig::Parse(fstream);
         });
         if (!_buildConfig.has_value())
             return false;

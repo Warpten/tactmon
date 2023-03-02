@@ -16,18 +16,12 @@ namespace libtactmon::tact {
      * different type semantics.
      */
     struct EKey final {
+        static bool TryParse(std::string_view value, EKey& target);
+
         EKey();
 
-        explicit EKey(std::string_view value);
-
-        EKey(std::span<uint8_t> data);
-        EKey(std::span<uint8_t const> data);
-
-        template <size_t N>
-        explicit EKey(std::array<uint8_t, N> data) : _data(data), _size(N) { }
-
-        EKey(uint8_t* data, size_t length);
-        EKey(uint8_t const* data, size_t length);
+        explicit EKey(std::span<uint8_t> data);
+        explicit EKey(std::span<uint8_t const> data);
 
         std::string ToString() const;
 

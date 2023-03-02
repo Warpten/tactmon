@@ -69,10 +69,10 @@ namespace libtactmon::tact::data {
     }
 
     tact::EKey Encoding::CEKeyPageTable::ekey(size_t index, Encoding const& owner) const {
-        return { _ekeys.data() + index * owner._header.EncodingKeySize, owner._header.EncodingKeySize };
+        return tact::EKey { std::span<const uint8_t> { _ekeys.data() + index * owner._header.EncodingKeySize, owner._header.EncodingKeySize } };
     }
     tact::CKey Encoding::CEKeyPageTable::ckey(Encoding const& owner) const {
-        return { _ckey.data(), owner._header.ContentKeySize };
+        return tact::CKey { std::span<const uint8_t> { _ckey.data(), owner._header.ContentKeySize } };
     }
 
     // ^^^ CEKeyPageTable / EKeySpecPageTable vvv

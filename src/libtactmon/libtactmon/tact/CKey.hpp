@@ -13,22 +13,15 @@ namespace libtactmon::tact {
      * Represents a content key.
      */
     struct CKey final {
-        CKey();
+        static bool TryParse(std::string_view value, CKey& target);
 
+        CKey();
         CKey(CKey const& other);
 
         CKey& operator = (CKey const& other);
 
-        explicit CKey(std::string_view value);
-
-        CKey(std::span<uint8_t> data);
-        CKey(std::span<uint8_t const> data);
-
-        template <size_t N>
-        explicit CKey(std::array<uint8_t, N> data) : _data(data), _size(N) { }
-
-        CKey(uint8_t* data, size_t length);
-        CKey(uint8_t const* data, size_t length);
+        explicit CKey(std::span<uint8_t> data);
+        explicit CKey(std::span<uint8_t const> data);
 
         std::string ToString() const;
 

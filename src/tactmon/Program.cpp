@@ -165,7 +165,7 @@ void Execute(boost::program_options::variables_map vm) {
 
             std::optional<tact::config::BuildConfig> buildConfig = resolver.ResolveConfiguration<tact::config::BuildConfig>(*cdns, version.BuildConfig,
                 [&](libtactmon::io::FileStream& fstream) {
-                    return tact::config::BuildConfig { fstream };
+                    return tact::config::BuildConfig::Parse(fstream);
                 });
 
             if (!buildConfig.has_value())
