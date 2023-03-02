@@ -1,34 +1,37 @@
-#include "beast/blte_stream_reader.hpp"
+#include "beast/BlockTableEncodedStreamTransform.hpp"
 
 #include <boost/beast/http.hpp>
 
 #include <zlib.h>
 
 namespace boost::beast::user {
-    blte_stream_reader::blte_stream_reader() : _ms(std::endian::little) { }
+    BlockTableEncodedStreamTransform::BlockTableEncodedStreamTransform(OutputHandler handler, InputFeedback feedback) 
+        : _handler(handler), _feedback(feedback), _ms(std::endian::little)
+    { }
 
-    std::size_t blte_stream_reader::write_some(uint8_t* data, size_t size, std::function<void(std::span<uint8_t const>)> acceptor, boost::beast::error_code& ec) {
+    std::size_t BlockTableEncodedStreamTransform::Parse(uint8_t* data, size_t size, boost::beast::error_code& ec) {
         _ms.Write(std::span<uint8_t> { data, size }, std::endian::little);
+        _feedback(size);
 
-        while (true) {
+        for (;;) {
             switch (_step) {
-                case step::header:
+                case Step::Header:
                 {
                     if (!_ms.CanRead(8))
                         return size;
 
                     uint32_t signature = _ms.Read<uint32_t>(std::endian::little);
                     if (signature != 0x45544c42) {
-                        ec = boost::beast::http::error::need_more;
+                        ec = boost::beast::http::error::body_limit;
                         return size;
                     }
 
                     _headerSize = _ms.Read<uint32_t>(std::endian::big);
 
-                    _step = step::chunk_info;
+                    _step = Step::ChunkInfo;
                     break;
                 }
-                case step::chunk_info:
+                case Step::ChunkInfo:
                 {
                     if (!_ms.CanRead(_headerSize))
                         return size;
@@ -50,16 +53,15 @@ namespace boost::beast::user {
                         _ms.Read(_chunks[i].checksum, std::endian::little);
                     }
 
-                    _step = step::data_blocks;
+                    _step = Step::DataBlocks;
                     break;
                 }
                 default:
                 {
-                    if (_step - step::data_blocks >= _chunks.size()) {
+                    if (_step - Step::DataBlocks >= _chunks.size())
                         return size;
-                    }
 
-                    chunk_info_t& chunkInfo = _chunks[_step - step::data_blocks];
+                    ChunkInfo& chunkInfo = _chunks[_step - Step::DataBlocks];
                     if (!_ms.CanRead(chunkInfo.compressedSize))
                         return size;
 
@@ -69,7 +71,7 @@ namespace boost::beast::user {
                         case 'N':
                         {
                             // Using C style cast because cba const_cast(reinterpret_cast())
-                            acceptor(std::span<uint8_t const> { reinterpret_cast<uint8_t const*>(_ms.Data()), chunkInfo.compressedSize - 1 });
+                            _handler(std::span<uint8_t const> { reinterpret_cast<uint8_t const*>(_ms.Data()), chunkInfo.compressedSize });
                             _ms.SkipRead(chunkInfo.compressedSize);
                             break;
                         }
@@ -104,7 +106,7 @@ namespace boost::beast::user {
                                     return size;
                                 }
 
-                                acceptor(std::span<uint8_t const> { decompressedBuffer.data(), decompressedBuffer.size() - strm.avail_out });
+                                _handler(std::span<uint8_t const> { decompressedBuffer.data(), decompressedBuffer.size() - strm.avail_out });
                             }
 
                             ret = inflateEnd(&strm);
@@ -114,8 +116,8 @@ namespace boost::beast::user {
                         case 'F':
                         {
                             // Nested BLTE stream
-                            blte_stream_reader nestedReader { };
-                            nestedReader.write_some((uint8_t*) _ms.Data(), chunkInfo.compressedSize, acceptor, ec);
+                            BlockTableEncodedStreamTransform nestedReader { _handler };
+                            nestedReader.Parse((uint8_t*) _ms.Data(), chunkInfo.compressedSize, ec);
                             _ms.SkipRead(chunkInfo.compressedSize);
                             break;
                         }
@@ -127,7 +129,7 @@ namespace boost::beast::user {
                         }
                     }
 
-                    _step = static_cast<step>(static_cast<uint32_t>(_step) + 1);
+                    _step = static_cast<Step>(static_cast<uint32_t>(_step) + 1);
                     break;
                 }
             }

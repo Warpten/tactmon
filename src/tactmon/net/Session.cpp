@@ -177,17 +177,15 @@ namespace net {
         if (ec.failed())
             return true;
 
-        // Note: we need to persist the reader implementation except that it's response_parser::_rd, which is 
-        // private and not publicly exposed. Therefore, we store parser state in the value_type itself so we can move it around.
-        std::shared_ptr<beast::user::blte_body::value_type_handle> parserState = std::make_shared<beast::user::blte_body::value_type_handle>();
-        parserState->handler = [&](std::span<uint8_t const> data) {
-            // Update range values for next case if need be
-            params.Offset += data.size();
-            params.Length -= data.size();
-
-            // Calling Asio write instead of Beast write, because I want the data to send out instantly, not buffer in memory
+        // Note: body implementation is a shared_ptr so that it can be ... you guessed it, shared!
+        auto parserState = std::make_shared<beast::user::BlockTableEncodedStreamTransform>([&](std::span<uint8_t const> data) {
+            // Call asio::write instead of beast, because we want the data to get out instantly.
             boost::asio::write(_stream.socket(), boost::asio::buffer(data.data(), data.size()));
-        };
+        }, [&](size_t bytesRead) {
+            // Update remote range header; This will make sure we currectly resume from another CDN if the current one fails.
+            params.Offset += bytesRead;
+            params.Length -= bytesRead;
+        });
 
         for (auto [cdn, remotePath] : availableRemoteArchives) {
             beast::tcp_stream remoteStream { _stream.get_executor() };
