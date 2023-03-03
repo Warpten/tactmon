@@ -12,7 +12,17 @@ namespace backend {
     }
 
     void ProductCache::RemoveExpiredEntries() {
-        _products.remove_if([](std::shared_ptr<Record> record) { return record->expirationTimer <= std::chrono::high_resolution_clock::now(); });
+        _products.remove_if([](std::shared_ptr<Record> record)
+        {
+            bool expiredEntry = record->expirationTimer <= std::chrono::high_resolution_clock::now();
+            if (expiredEntry && record->product.IsLoading()) {
+                // Expired but loading? Your internet is bad, let's be nice and keep the instance active
+                record->expirationTimer += 1min;
+                return false;
+            }
+
+            return expiredEntry;
+        });
 
         _cacheExpiryTimer.expires_at(std::chrono::high_resolution_clock::now() + 1min);
         _cacheExpiryTimer.async_wait([this](boost::system::error_code ec) {

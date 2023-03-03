@@ -28,6 +28,8 @@ namespace backend {
 
         libtactmon::tact::data::product::Product* operator -> () { return _product.get(); }
 
+        bool IsLoading() const { return _loading.load(); }
+
     private:
         db::entity::build::Entity _currentBuild;
         std::shared_ptr<libtactmon::tact::data::product::Product> _product;
