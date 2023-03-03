@@ -124,21 +124,14 @@ namespace frontend::commands {
                 return; // Done.
             }
 
-            // Otherwise, the ekey is literally a file on the CDN
-            // TODO: If there are multiple ekeys, provide multiple links to the client?
-            for (size_t i = 0; i < fileLocation->keyCount(); ++i) {
-                std::string fileAddress = cluster.httpServer->GenerateAdress(product, (*fileLocation)[i].data(), fileNameComponent, fileLocation->fileSize());
-
-                evnt.edit_response(dpp::message().add_embed(
-                    dpp::embed()
-                        .set_title("Download this file.")
-                        .set_url(fileAddress)
-                        .set_description(fmt::format("Click here to download `{}`.", file))
-                        .set_footer(dpp::embed_footer().set_text(version))
-                ));
-
-                break;
-            }
+            evnt.edit_response(dpp::message().add_embed(
+                dpp::embed()
+                .set_title(product)
+                .set_color(0x00FF0000u)
+                .set_description(fmt::format("`{}` does not exist.", file))
+                .set_footer(dpp::embed_footer()
+                    .set_text(version))
+            ));
         });
     }
 

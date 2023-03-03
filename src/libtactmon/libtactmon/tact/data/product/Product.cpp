@@ -93,30 +93,40 @@ namespace libtactmon::tact::data::product {
 
         using index_parse_task = boost::packaged_task<std::optional<tact::data::Index>>;
         std::list<boost::future<std::optional<tact::data::Index>>> archiveFutures;
-        _cdnConfig->ForEachArchive([&](std::string_view archiveName, size_t archiveSize)
-        {
-            std::shared_ptr<index_parse_task> task = std::make_shared<index_parse_task>([=]() -> std::optional<tact::data::Index> {
-                if (_logger != nullptr)
-                    _logger->info("({}) Loading archive '{}'. {}", _buildConfig->BuildName, archiveName, std::this_thread::get_id());
 
-                auto dataStream = ResolveCachedData<io::FileStream>(fmt::format("{}.index", archiveName),
-                    [archiveSize](io::FileStream& fstream) -> std::optional<io::FileStream> {
-                        if (!fstream/* || fstream.GetLength() != archiveSize*/)
-                            return std::nullopt;
+        for (config::CDNConfig::Archive const& archive : _cdnConfig->archives) {
+            std::shared_ptr<index_parse_task> task = std::make_shared<index_parse_task>(
+                [archiveName = archive.Name, buildName = _buildConfig->BuildName, logger = _logger, this]() -> std::optional<tact::data::Index> {
+                    if (logger != nullptr)
+                        logger->info("({}) Loading archive '{}'.", buildName, archiveName);
 
-                        return fstream;
-                    });
+                    return ResolveCachedData<tact::data::Index>(fmt::format("{}.index", archiveName),
+                        [&](io::FileStream& fstream) -> std::optional<tact::data::Index> {
+                            if (!fstream/* || fstream.GetLength() != archive.Size*/)
+                                return std::nullopt;
 
-                if (dataStream.has_value())
-                    return tact::data::Index{ archiveName, dataStream.value() };
-
-                return std::nullopt;
-            });
+                            return tact::data::Index { archiveName, fstream };
+                        });
+                }
+            );
 
             archiveFutures.push_back(task->get_future());
 
             boost::asio::post(_executor, [task]() { (*task)(); });
-        });
+        }
+
+        if (_cdnConfig->fileIndex.has_value()) {
+            if (_logger != nullptr)
+                _logger->info("({}) Loading file index '{}'.", _buildConfig->BuildName, _cdnConfig->fileIndex->Name);
+
+            _fileIndex = ResolveCachedData<tact::data::Index>(fmt::format("{}.index", _cdnConfig->fileIndex->Name),
+                [name = _cdnConfig->fileIndex->Name](io::FileStream& fstream) -> std::optional<tact::data::Index> {
+                    if (!fstream)
+                        return std::nullopt;
+                    
+                    return tact::data::Index { name, fstream };
+                });
+        }
 
         for (boost::future<std::optional<tact::data::Index>>& future : boost::when_all(archiveFutures.begin(), archiveFutures.end()).get()) {
             std::optional<tact::data::Index> futureOutcome = future.get();
@@ -171,6 +181,13 @@ namespace libtactmon::tact::data::product {
     }
 
     std::optional<tact::data::ArchiveFileLocation> Product::FindArchive(tact::EKey const& ekey) const {
+        // Fast path for non-archived files
+        if (_fileIndex.has_value()) {
+            tact::data::Index::Entry const* entry = (*_fileIndex)[ekey];
+            if (entry != nullptr)
+                return tact::data::ArchiveFileLocation { ekey.ToString(), entry->offset(), entry->size() };
+        }
+
         for (tact::data::Index const& index : _indices) {
             tact::data::Index::Entry const* entry = index[ekey];
             if (entry != nullptr)

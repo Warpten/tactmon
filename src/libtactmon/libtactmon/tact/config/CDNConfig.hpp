@@ -29,9 +29,7 @@ namespace libtactmon::tact::config {
         CDNConfig() = default;
         
     public:
-        void ForEachArchive(std::function<void(std::string_view, size_t)> handler);
-
-    private:
-        std::vector<Archive> _archives;
+        std::vector<Archive> archives;
+        std::optional<CDNConfig::Archive> fileIndex;
     };
 }

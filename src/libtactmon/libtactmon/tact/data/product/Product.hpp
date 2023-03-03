@@ -143,6 +143,8 @@ namespace libtactmon::tact::data::product {
 
         std::optional<tact::data::Encoding> _encoding;
         std::optional<tact::data::Install> _install;
+
         std::vector<tact::data::Index> _indices;
+        std::optional<tact::data::Index> _fileIndex;
     };
 }
