@@ -2,8 +2,14 @@
 
 namespace libtactmon::io {
     FileStream::FileStream(std::filesystem::path filePath, std::endian fileEndianness)
-        : IStream(fileEndianness), _stream(filePath.string())
-    { }
+        : IStream(fileEndianness)
+    {
+        try {
+            _stream.open(filePath.string());
+        } catch (...) {
+            // Failed to open the file, probably does not exist, is empty, or invalid
+        }
+    }
 
     size_t FileStream::SeekRead(size_t offset) {
         return _cursor = offset;

@@ -7,6 +7,11 @@
 #include "libtactmon/tact/EKey.hpp"
 
 #include <filesystem>
+#include <future>
+
+#include <boost/thread/future.hpp>
+
+#include <fmt/std.h>
 
 namespace libtactmon::tact::data::product {
     using namespace std::string_view_literals;
@@ -86,22 +91,38 @@ namespace libtactmon::tact::data::product {
         if (_logger != nullptr)
             _logger->info("({}) {} entries found in install manifest.", _buildConfig->BuildName, _install->size());
 
-        _cdnConfig->ForEachArchive([this](std::string_view archiveName, size_t archiveSize)
+        using index_parse_task = boost::packaged_task<std::optional<tact::data::Index>>;
+        std::list<boost::future<std::optional<tact::data::Index>>> archiveFutures;
+        _cdnConfig->ForEachArchive([&](std::string_view archiveName, size_t archiveSize)
         {
-            if (_logger != nullptr)
-                _logger->info("({}) Loading archive {}", _buildConfig->BuildName, archiveName);
+            std::shared_ptr<index_parse_task> task = std::make_shared<index_parse_task>([=]() -> std::optional<tact::data::Index> {
+                if (_logger != nullptr)
+                    _logger->info("({}) Loading archive '{}'. {}", _buildConfig->BuildName, archiveName, std::this_thread::get_id());
 
-            auto dataStream = ResolveCachedData<io::FileStream>(fmt::format("{}.index", archiveName),
-                [archiveSize](io::FileStream& fstream) -> std::optional<io::FileStream> {
-                    if (!fstream || fstream.GetLength() != archiveSize)
-                        return std::nullopt;
-            
-                    return fstream;
-                });
-            
-            if (dataStream.has_value())
-                _indices.emplace_back(archiveName, *dataStream);
+                auto dataStream = ResolveCachedData<io::FileStream>(fmt::format("{}.index", archiveName),
+                    [archiveSize](io::FileStream& fstream) -> std::optional<io::FileStream> {
+                        if (!fstream/* || fstream.GetLength() != archiveSize*/)
+                            return std::nullopt;
+
+                        return fstream;
+                    });
+
+                if (dataStream.has_value())
+                    return tact::data::Index{ archiveName, dataStream.value() };
+
+                return std::nullopt;
+            });
+
+            archiveFutures.push_back(task->get_future());
+
+            boost::asio::post(_executor, [task]() { (*task)(); });
         });
+
+        for (boost::future<std::optional<tact::data::Index>>& future : boost::when_all(archiveFutures.begin(), archiveFutures.end()).get()) {
+            std::optional<tact::data::Index> futureOutcome = future.get();
+            if (futureOutcome.has_value())
+                _indices.push_back(std::move(futureOutcome.value()));
+        }
 
         return true;
     }

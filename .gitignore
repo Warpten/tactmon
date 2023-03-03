@@ -350,7 +350,7 @@ MigrationBackup/
 .ionide/
 
 
-build/
+[Bb]uild*/
 Debug/
 Release/
 Dumps/

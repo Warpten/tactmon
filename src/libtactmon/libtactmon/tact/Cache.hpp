@@ -19,24 +19,25 @@ namespace libtactmon::tact {
          */
         template <typename T>
         std::optional<T> Resolve(std::string_view resourcePath, std::function<std::optional<T>(io::FileStream&)> handler) {
-            std::filesystem::path fullResourcePath = _root;
-
-            // Avoid reverting to absolute paths
-            // Maybe a code smell ?
-            if (resourcePath.size() > 0 && (resourcePath[0] == '/' || resourcePath[0] == '\\'))
-                fullResourcePath /= resourcePath.substr(1);
+            std::filesystem::path fullResourcePath = GetAbsolutePath(resourcePath);
 
             if (!std::filesystem::is_regular_file(fullResourcePath))
                 return std::nullopt;
 
-            io::FileStream fstream { fullResourcePath, std::endian::little };
-            return handler(fstream);
+            try {
+                io::FileStream fstream{ fullResourcePath, std::endian::little };
+                return handler(fstream);
+            } catch (std::exception const& ex) {
+                // TODO: possibly log this
+                Delete(resourcePath);
+                return std::nullopt;
+            }
         }
 
         /**
          * Resolves the absolute path to the specific resource. Does not check for the resource's existence!
          */
-        std::filesystem::path GetAbsolutePath(std::string_view relativePath) const { return _root / relativePath; }
+        std::filesystem::path GetAbsolutePath(std::string_view relativePath) const;
 
         /**
          * Returns a stream around a file, allowing to write to it. If the file does not exist, it is created before this function returns.

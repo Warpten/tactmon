@@ -24,6 +24,7 @@
         "boost-iostreams",
         "boost-program-options",
         "boost-range",
+        "boost-thread",
         "openssl",
         "zlib"
     ]

@@ -14,6 +14,17 @@ namespace libtactmon::tact {
         return io::FileStream { absolutePath, std::endian::little };
     }
 
+    std::filesystem::path Cache::GetAbsolutePath(std::string_view relativePath) const { 
+        std::filesystem::path fullResourcePath = _root;
+
+        // Avoid reverting to absolute paths
+        // Maybe a code smell ?
+        if (relativePath.size() > 0 && (relativePath[0] == '/' || relativePath[0] == '\\'))
+            return fullResourcePath / relativePath.substr(1);
+
+        return _root / relativePath;
+    }
+
     void Cache::Delete(std::string_view relativePath) const {
         std::filesystem::remove(GetAbsolutePath(relativePath));
     }

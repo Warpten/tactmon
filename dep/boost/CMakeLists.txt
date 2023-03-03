@@ -35,7 +35,7 @@ else()
   set(BOOST_REQUIRED_VERSION 1.71)
 endif()
 
-find_package(Boost ${BOOST_REQUIRED_VERSION} REQUIRED system filesystem program_options iostreams regex)
+find_package(Boost ${BOOST_REQUIRED_VERSION} REQUIRED system filesystem program_options iostreams regex thread)
 
 if(NOT Boost_FOUND)
   if(NOT DEFINED ENV{BOOST_ROOT} AND NOT DEFINED Boost_DIR AND NOT DEFINED BOOST_ROOT AND NOT DEFINED BOOSTROOT)
@@ -46,7 +46,7 @@ endif()
 # Find if Boost was compiled in C++03 mode because it requires -DBOOST_NO_CXX11_SCOPED_ENUMS
 
 set(CMAKE_REQUIRED_INCLUDES ${Boost_INCLUDE_DIR})
-set(CMAKE_REQUIRED_LIBRARIES ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_IOSTREAMS_LIBRARY})
+set(CMAKE_REQUIRED_LIBRARIES ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_IOSTREAMS_LIBRARY})
 set(CMAKE_REQUIRED_FLAGS "-std=c++11")
 check_cxx_source_compiles("
   #include <boost/filesystem/path.hpp>
@@ -73,7 +73,11 @@ target_compile_definitions(boost
     -DBOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE
     -DBOOST_ASIO_NO_DEPRECATED
     -DBOOST_BIND_NO_PLACEHOLDERS
-    -DBOOST_SYSTEM_USE_UTF8)
+    -DBOOST_SYSTEM_USE_UTF8
+    -DBOOST_THREAD_PROVIDES_FUTURE
+    -DBOOST_THREAD_PROVIDES_FUTURE_CONTINUATION
+    -DBOOST_THREAD_PROVIDES_FUTURE_WHEN_ALL_WHEN_ANY
+)
 
 if (NOT boost_filesystem_copy_links_without_NO_SCOPED_ENUM)
   target_compile_definitions(boost
@@ -104,5 +108,6 @@ if (WITH_BOOST_STACKTRACE AND NOT WIN32)
 
   target_link_libraries(boost
     INTERFACE
-      backtrace)
+      backtrace
+  )
 endif()

@@ -84,7 +84,7 @@ void Execute(boost::program_options::variables_map vm) {
     // 1. General application context.
     utility::ThreadPool threadPool { vm["thread-count"].as<uint16_t>() };
     for (size_t i = 0; i < threadPool.size(); ++i)
-        threadPool.PostWork([](auto&& svc, auto&& guard) { svc.run(); });
+        threadPool.PostWork([](boost::asio::io_context& service) { service.run(); });
 
     // 2. Setup interrupts handler, enqueue infinite work.
     asio::executor_work_guard<asio::io_context::executor_type> guard = asio::make_work_guard(threadPool.service());

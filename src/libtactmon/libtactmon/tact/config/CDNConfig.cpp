@@ -13,7 +13,7 @@ namespace libtactmon::tact::config {
     std::optional<CDNConfig> CDNConfig::Parse(io::IReadableStream& stream) {
         stream.SeekRead(0);
 
-        std::string_view contents = reinterpret_cast<const char*>(stream.Data());
+        std::string_view contents{ reinterpret_cast<const char*>(stream.Data()), stream.GetLength() };
         std::vector<std::string_view> lines = detail::Tokenize(contents, '\n');
 
         if (lines.empty())

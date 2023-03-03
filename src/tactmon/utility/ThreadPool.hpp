@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <type_traits>
 
 #include <boost/asio/any_io_executor.hpp>
@@ -14,8 +15,12 @@ namespace utility {
         }
 
         void PostWork(std::function<void(boost::asio::io_context&, boost::asio::executor_work_guard<boost::asio::io_context::executor_type> const&)> work) {
-            boost::asio::post(_pool, [&]() {
-                work(_service, _guard);
+            boost::asio::post(_pool, [&, work = std::move(work)]() {
+                try {
+                    work(_service, _guard);
+                } catch (std::exception const& ex) {
+                    std::cerr << ex.what() << std::endl;
+                }
             });
         }
 
@@ -23,19 +28,31 @@ namespace utility {
 
         void Interrupt() {
             _guard.reset();
+            _pool.stop();
+            _pool.join();
         }
 
         void PostWork(std::function<void()> work) {
             boost::asio::post(_pool, work);
         }
 
+        void PostWork(std::function<void(boost::asio::io_context&)> work) {
+            boost::asio::post(_pool, [&, work = std::move(work)]() {
+                try {
+                    work(_service);
+                }
+                catch (std::exception const& ex) {
+                    std::cerr << ex.what() << std::endl;
+                }
+            });
+        }
+
         ~ThreadPool() {
             Interrupt();
-            _pool.join();
         }
 
         boost::asio::io_context& service() { return _service; }
-        boost::asio::any_io_executor executor() { return _pool.get_executor(); }
+        boost::asio::any_io_executor executor() { return _service.get_executor(); }
 
     private:
         size_t _size;
