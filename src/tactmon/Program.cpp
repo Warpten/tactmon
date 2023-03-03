@@ -5,6 +5,7 @@
 #include "frontend/Discord.hpp"
 #include "net/Server.hpp"
 #include "utility/Logging.hpp"
+#include "utility/ThreadPool.hpp"
 
 #include <libtactmon/ribbit/Commands.hpp>
 #include <libtactmon/ribbit/types/Versions.hpp>
@@ -59,6 +60,8 @@ int main(int argc, char** argv) {
         ("http-thread-count",    po::value<uint16_t>()->required(),          "The amount of threads dedicated to the HTTP proxy server. "
                                                                              "If zero, the server is disabled.")
         ("http-document-root",   po::value<std::string>()->required(),       "A document root that will be used when generating download links to files.")
+
+        ("thread-count",         po::value<uint16_t>()->default_value(std::thread::hardware_concurrency() * 2), "Amount of general purpose threads.")
         ;
 
     try {
@@ -79,33 +82,34 @@ int main(int argc, char** argv) {
 
 void Execute(boost::program_options::variables_map vm) {
     // 1. General application context.
-    asio::io_context service { 4 };
-    boost::asio::thread_pool pool { 4 };
+    utility::ThreadPool threadPool { vm["thread-count"].as<uint16_t>() };
+    for (size_t i = 0; i < threadPool.size(); ++i)
+        threadPool.PostWork([](auto&& svc, auto&& guard) { svc.run(); });
 
     // 2. Setup interrupts handler, enqueue infinite work.
-    asio::executor_work_guard<asio::io_context::executor_type> guard = asio::make_work_guard(service);
+    asio::executor_work_guard<asio::io_context::executor_type> guard = asio::make_work_guard(threadPool.service());
 #if defined(WIN32)
-    asio::signal_set signals(service, SIGINT, SIGTERM, SIGBREAK);
+    asio::signal_set signals(threadPool.executor(), SIGINT, SIGTERM, SIGBREAK);
 #else
-    asio::signal_set signals(service, SIGINT, SIGTERM);
+    asio::signal_set signals(threadPool.executor(), SIGINT, SIGTERM);
 #endif
-    signals.async_wait([&guard, &service](boost::system::error_code const& ec, int signum) {
-        guard.reset();
-        service.stop();
+
+    signals.async_wait([&threadPool](boost::system::error_code const& ec, int signum) {
+        threadPool.Interrupt();
     });
 
     // 3. Initialize product manager.
     fs::path cacheRoot = std::filesystem::current_path() / "cache";
 
     libtactmon::tact::Cache localCache { cacheRoot };
-    backend::ProductCache productCache { pool.get_executor() };
+    backend::ProductCache productCache { threadPool.executor() };
 
     constexpr static const std::string_view WOW_PRODUCTS[] = { "wow", "wow_beta", "wow_classic", "wow_classic_beta", "wow_classic_ptr" };
     for (std::string_view gameProduct : WOW_PRODUCTS) {
-        productCache.RegisterFactory(std::string { gameProduct }, [&localCache, gameProduct, &pool]() -> backend::Product {
+        productCache.RegisterFactory(std::string { gameProduct }, [&localCache, gameProduct, &threadPool]() -> backend::Product {
             return backend::Product {
                 std::make_shared<libtactmon::tact::data::product::wow::Product>(
-                    gameProduct, localCache, pool.get_executor(), utility::logging::GetAsyncLogger(gameProduct)
+                    gameProduct, localCache, threadPool.executor(), utility::logging::GetAsyncLogger(gameProduct)
                 )
             };
         });
@@ -138,7 +142,7 @@ void Execute(boost::program_options::variables_map vm) {
     }();
 
     // 6. Initialize Ribbit monitor.
-    backend::RibbitMonitor monitor { pool.get_executor(), database };
+    backend::RibbitMonitor monitor { threadPool.executor(), database };
 
     // 7. Initialize discord frontend
     frontend::Discord bot { vm["discord-thread-count"].as<uint16_t>(), vm["discord-token"].as<std::string>(), productCache, database, proxyServer };
@@ -153,8 +157,8 @@ void Execute(boost::program_options::variables_map vm) {
         namespace tact = libtactmon::tact;
         namespace ribbit = libtactmon::ribbit;
 
-        auto versions = ribbit::Versions<>::Execute(pool.get_executor(), nullptr, ribbit::Region::US, productName);
-        auto cdns = ribbit::CDNs<>::Execute(pool.get_executor(), nullptr, ribbit::Region::US, productName);
+        auto versions = ribbit::Versions<>::Execute(threadPool.executor(), nullptr, ribbit::Region::US, productName);
+        auto cdns = ribbit::CDNs<>::Execute(threadPool.executor(), nullptr, ribbit::Region::US, productName);
         if (!versions.has_value() || !cdns.has_value())
             return;
 
@@ -164,7 +168,7 @@ void Execute(boost::program_options::variables_map vm) {
         ss << fmt::format("{:<8} | {:<25} | {:<34} | {:<34}\n", "Region", "Build name", "Build config", "CDN Config");
 
         for (ribbit::types::versions::Record const& version : versions->Records) {
-            tact::data::product::ResourceResolver resolver(pool.get_executor(), localCache);
+            tact::data::product::ResourceResolver resolver(threadPool.executor(), localCache);
 
             std::optional<tact::config::BuildConfig> buildConfig = resolver.ResolveConfiguration<tact::config::BuildConfig>(*cdns, version.BuildConfig,
                 [&](libtactmon::io::FileStream& fstream) {
@@ -201,13 +205,6 @@ void Execute(boost::program_options::variables_map vm) {
 
     // Start updating ribbit state
     monitor.BeginUpdate();
-
-    // 9. Run until Ctrl+C.
-    for (size_t i = 0; i < 3; ++i)
-        boost::asio::post(pool, [&]() { service.run(); });
-    service.run();
-
-    pool.join();
 
     // 10. Cleanup
     if (proxyServer != nullptr)

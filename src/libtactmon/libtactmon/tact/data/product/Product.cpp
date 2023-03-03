@@ -86,7 +86,8 @@ namespace libtactmon::tact::data::product {
         if (_logger != nullptr)
             _logger->info("({}) {} entries found in install manifest.", _buildConfig->BuildName, _install->size());
 
-        _cdnConfig->ForEachArchive([this](std::string_view archiveName, size_t archiveSize) {
+        _cdnConfig->ForEachArchive([this](std::string_view archiveName, size_t archiveSize)
+        {
             if (_logger != nullptr)
                 _logger->info("({}) Loading archive {}", _buildConfig->BuildName, archiveName);
 
