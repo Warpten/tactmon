@@ -19,6 +19,8 @@ namespace libtactmon::tact::config {
      */
     struct CDNConfig final {
         struct Archive {
+            Archive() { }
+
             std::string Name;
             size_t Size = 0;
         };
