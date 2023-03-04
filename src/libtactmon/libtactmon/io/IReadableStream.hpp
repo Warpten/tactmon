@@ -47,7 +47,7 @@ namespace libtactmon::io {
          */
         virtual std::span<std::byte const> Data() const = 0;
 
-        template <typename T> requires !std::same_as<T, std::byte> && std::is_trivial_v<T>
+        template <typename T> requires (!std::same_as<T, std::byte> && std::is_trivial_v<T>)
         std::span<const T> Data() const {
             return std::span { reinterpret_cast<const T*>(Data().data()), Data().size() / sizeof(T) };
         }
