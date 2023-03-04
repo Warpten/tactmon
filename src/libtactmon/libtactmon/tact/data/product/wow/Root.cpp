@@ -35,11 +35,9 @@ namespace libtactmon::tact::data::product::wow {
             }
 
             if (interleave) {
-                std::unique_ptr<uint8_t[]> hashBuffer = std::make_unique<uint8_t[]>(contentKeySize);
-                std::span<uint8_t> hashSpan { hashBuffer.get(), contentKeySize };
-
                 for (size_t i = 0; i < numRecords; ++i) {
-                    stream.Read(hashSpan, std::endian::little);
+                    std::span<const uint8_t> hashSpan = stream.Data<uint8_t>().subspan(0, contentKeySize);
+                    stream.SkipRead(contentKeySize);
 
                     uint64_t nameHash = stream.Read<uint64_t>(std::endian::little); // Jenkins96 of the file's path
 
@@ -48,9 +46,8 @@ namespace libtactmon::tact::data::product::wow {
             }
             else {
                 // Read the file's data hashes in one pass.
-                std::unique_ptr<uint8_t[]> hashBuffer = std::make_unique<uint8_t[]>(numRecords * contentKeySize);
-                stream.Read(std::span<uint8_t> { hashBuffer.get(), numRecords * contentKeySize }, std::endian::little);
-                std::span<uint8_t> hashSpan{ hashBuffer.get(), numRecords * contentKeySize };
+                std::span<const uint8_t> hashSpan = stream.Data<uint8_t>().subspan(0, numRecords * contentKeySize);
+                stream.SkipRead(hashSpan.size());
 
                 if (!canSkip || (static_cast<uint32_t>(contentFlags) & static_cast<uint32_t>(ContentFlags::NoNameHash)) == 0) {
                     for (size_t i = 0; i < numRecords; ++i) {

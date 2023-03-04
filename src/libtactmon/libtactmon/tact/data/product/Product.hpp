@@ -119,7 +119,7 @@ namespace libtactmon::tact::data::product {
         std::optional<tact::data::FileLocation> FindFile(tact::CKey const& contentKey) const;
 
         /**
-         * Locates the archive that encodes a given encoding key.
+         * Locates the archive that contains a given encoding key.
          * 
          * @param[in] ekey The encoding key.
          * @returns Location of the file in an archive, or an empty optional if the file could not be found.
