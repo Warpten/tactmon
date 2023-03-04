@@ -43,7 +43,6 @@ namespace libtactmon::io {
     private:
         template <typename T>
         size_t _WriteSpan(std::span<const T> valueSpan, std::endian endianness, size_t elementSize) {
-            size_t writeCursor = GetWriteCursor();
             std::span<std::byte> writtenBytes = _WriteImpl(std::as_bytes(valueSpan));
 
             if (endianness != GetEndianness()) {
