@@ -25,5 +25,4 @@ namespace libtactmon::net {
 
         return _localCache.OpenWrite(_resourcePath);
     }
-
 }

@@ -20,7 +20,7 @@ namespace libtactmon::io {
         void SkipRead(size_t offset) override { _cursor += offset; }
         bool CanRead(size_t count) const override { return _cursor + count <= _stream.size(); }
 
-        std::byte const* Data() const override { return reinterpret_cast<std::byte const*>(_stream.data() + _cursor); }
+        std::span<std::byte const> Data() const override { return std::span { reinterpret_cast<std::byte const*>(_stream.data() + _cursor), _stream.size() - _cursor }; }
 
     protected: // IReadableStream
         size_t _ReadImpl(std::span<std::byte> bytes) override;

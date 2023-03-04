@@ -1,4 +1,3 @@
-
 #include "libtactmon/io/IReadableStream.hpp"
 #include "libtactmon/tact/data/Encoding.hpp"
 

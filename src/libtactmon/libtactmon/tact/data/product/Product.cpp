@@ -58,7 +58,7 @@ namespace libtactmon::tact::data::product {
                 if (!compressedArchive.has_value())
                     return std::nullopt;
 
-                return tact::data::Encoding{ compressedArchive->GetStream() };
+                return tact::data::Encoding { compressedArchive->GetStream() };
             });
 
         if (!_encoding.has_value()) {
@@ -96,7 +96,7 @@ namespace libtactmon::tact::data::product {
 
         for (config::CDNConfig::Archive const& archive : _cdnConfig->archives) {
             std::shared_ptr<index_parse_task> task = std::make_shared<index_parse_task>(
-                [archiveName = archive.Name, buildName = _buildConfig->BuildName, logger = _logger, this]() -> std::optional<tact::data::Index> {
+                [archiveName = archive.Name, buildName = _buildConfig->BuildName, logger = _logger, this]() {
                     if (logger != nullptr)
                         logger->info("({}) Loading archive '{}'.", buildName, archiveName);
 

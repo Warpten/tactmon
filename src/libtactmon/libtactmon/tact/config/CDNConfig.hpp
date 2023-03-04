@@ -31,6 +31,9 @@ namespace libtactmon::tact::config {
         CDNConfig() = default;
         
     public:
+        /**
+         * Archives associated with this file.
+         */
         std::vector<Archive> archives;
         std::optional<CDNConfig::Archive> fileIndex;
     };

@@ -16,7 +16,7 @@ namespace libtactmon::tact::data {
             size_t footerSize = checksumSize * 2 + sizeof(uint8_t) * 8 + sizeof(uint32_t);
 
             stream.SeekRead(stream.GetLength() - footerSize);
-            std::span<uint8_t> footerData { (uint8_t*) stream.Data(), footerSize };
+            std::span<const uint8_t> footerData = stream.Data<uint8_t>().subspan(0, footerSize);
             auto digest = crypto::MD5::Of(footerData);
 
             if (std::equal(hashBytes.begin(), hashBytes.end(), digest.begin(), digest.end()))
@@ -32,7 +32,7 @@ namespace libtactmon::tact::data {
         stream.SeekRead(stream.GetLength() - footerSize);
 
         // Read footer
-        std::span<uint8_t> tocHash { (uint8_t*) stream.Data(), checksumSize };
+        std::span<const uint8_t> tocHash = stream.Data<uint8_t>().subspan(0, checksumSize);
         stream.SkipRead(checksumSize);
 
         uint8_t version = stream.Read<uint8_t>(std::endian::little);
@@ -67,11 +67,11 @@ namespace libtactmon::tact::data {
 
         for (size_t i = 0; i < blockCount; ++i) {
             stream.SeekRead(i * blockSize);
-            std::span<uint8_t> rawBlockData { (uint8_t*) stream.Data(), blockSize };
+            std::span<const uint8_t> rawBlockData = stream.Data<uint8_t>().subspan(0, blockSize);
 
             // Skip over TOC's first array, effectively getting to the block hash of this block
             stream.SeekRead(blockCount * blockSize + blockCount * _keySizeBytes + i * checksumSize);
-            std::span<uint8_t> checksum { (uint8_t*) stream.Data(), checksumSize };
+            std::span<const uint8_t> checksum = stream.Data<uint8_t>().subspan(0, checksumSize);
             crypto::MD5::Digest digest = crypto::MD5::Of(rawBlockData);
             if (!std::equal(digest.begin(), digest.begin() + checksumSize, checksum.begin(), checksum.end()))
                 continue;
@@ -80,7 +80,7 @@ namespace libtactmon::tact::data {
                 stream.SeekRead(i * blockSize + j * entrySize);
 
                 // Read the key and insert it into storage
-                std::span<uint8_t> keyData{ (uint8_t*)stream.Data(), _keySizeBytes };
+                std::span<const uint8_t> keyData = stream.Data<uint8_t>().subspan(0, _keySizeBytes);
                 stream.SkipRead(_keySizeBytes);
 
                 if (std::ranges::all_of(keyData, [](uint8_t b){ return b == 0; }))
@@ -98,7 +98,7 @@ namespace libtactmon::tact::data {
     Index::Entry::Entry(io::IReadableStream& stream, size_t sizeBytes, size_t offsetBytes, size_t keyOffset)
         : _keyOffset(keyOffset)
     {
-        std::span<uint8_t> dataBytes { (uint8_t*) stream.Data(), sizeBytes + offsetBytes };
+        std::span<const uint8_t> dataBytes = stream.Data<uint8_t>().subspan(0, sizeBytes + offsetBytes);
         stream.SkipRead(sizeBytes + offsetBytes);
 
         for (size_t i = 0; i < sizeBytes; ++i) {

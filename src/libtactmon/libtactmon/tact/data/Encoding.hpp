@@ -29,7 +29,6 @@ namespace libtactmon::tact::data {
         size_t GetContentKeySize() const;
 
         size_t count() const;
-        size_t specCount() const;
 
         std::optional<tact::data::FileLocation> FindFile(tact::CKey const& ckey) const;
 

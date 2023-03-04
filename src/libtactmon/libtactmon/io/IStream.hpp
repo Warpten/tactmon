@@ -18,6 +18,9 @@ namespace libtactmon::io {
         constexpr static const bool is_span_v = is_span<T>::value;
     }
 
+    /**
+     * Encapsulates a sequence of bytes.
+     */
     struct IStream {
         explicit IStream(std::endian endianness = std::endian::native) : _endianness(endianness) { }
 

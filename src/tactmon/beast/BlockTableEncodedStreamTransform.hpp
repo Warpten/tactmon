@@ -23,7 +23,7 @@ namespace boost::beast::user {
 
         BlockTableEncodedStreamTransform(OutputHandler handler, InputFeedback feedback);
 
-        std::size_t Parse(uint8_t* data, size_t size, boost::beast::error_code& ec);
+        std::size_t Parse(uint8_t const* data, size_t size, boost::beast::error_code& ec);
 
     private:
         enum Step : uint32_t {

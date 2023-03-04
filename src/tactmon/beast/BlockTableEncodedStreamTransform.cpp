@@ -9,8 +9,8 @@ namespace boost::beast::user {
         : _handler(handler), _feedback(feedback), _ms(std::endian::little)
     { }
 
-    std::size_t BlockTableEncodedStreamTransform::Parse(uint8_t* data, size_t size, boost::beast::error_code& ec) {
-        _ms.Write(std::span<uint8_t> { data, size }, std::endian::little);
+    std::size_t BlockTableEncodedStreamTransform::Parse(uint8_t const* data, size_t size, boost::beast::error_code& ec) {
+        _ms.Write(std::span { data, size }, std::endian::little);
         _feedback(size);
 
         for (;;) {
@@ -71,7 +71,7 @@ namespace boost::beast::user {
                         case 'N':
                         {
                             // Using C style cast because cba const_cast(reinterpret_cast())
-                            _handler(std::span<uint8_t const> { reinterpret_cast<uint8_t const*>(_ms.Data()), chunkInfo.compressedSize });
+                            _handler(_ms.Data<uint8_t>().subspan(0, chunkInfo.compressedSize));
                             _ms.SkipRead(chunkInfo.compressedSize);
                             break;
                         }
@@ -91,7 +91,7 @@ namespace boost::beast::user {
                             }
 
                             strm.avail_in = chunkInfo.compressedSize;
-                            strm.next_in = (uint8_t*) (_ms.Data());
+                            strm.next_in = const_cast<uint8_t*>(_ms.Data<uint8_t>().data());
 
                             std::array<uint8_t, 8192> decompressedBuffer;
                             while (ret != Z_STREAM_END && strm.avail_in != 0) {
@@ -118,7 +118,7 @@ namespace boost::beast::user {
                             // Nested BLTE stream
                             // Forward the output handler, but ignore the input feedback, since it's already handled by the block content parser.
                             BlockTableEncodedStreamTransform nestedReader { _handler, [](size_t) { } };
-                            nestedReader.Parse((uint8_t*) _ms.Data(), chunkInfo.compressedSize, ec);
+                            nestedReader.Parse(_ms.Data<uint8_t>().data(), chunkInfo.compressedSize, ec);
                             _ms.SkipRead(chunkInfo.compressedSize);
                             break;
                         }

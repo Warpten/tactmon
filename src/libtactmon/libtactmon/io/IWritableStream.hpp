@@ -17,17 +17,17 @@ namespace libtactmon::io {
         virtual void SkipWrite(size_t offset) = 0;
 
         template <typename T>
-        size_t Write(T value, std::endian endianness) {
+        size_t Write(T const value, std::endian endianness) {
             if constexpr (utility::is_span_v<T>) {
-                return _WriteSpan(value, endianness, sizeof(T));
+                return _WriteSpan(std::as_bytes(value), endianness, sizeof(T));
             } else {
-                std::span<T> valueSpan { std::addressof(value), 1 };
+                std::span<const T> valueSpan { std::addressof(value), 1 };
                 return _WriteSpan(valueSpan, endianness, sizeof(T));
             }
         }
 
         size_t WriteString(std::string_view value) {
-            return Write(std::span<char> { const_cast<char*>(value.data()), value.size() }, GetEndianness());
+            return Write(std::span { value }, GetEndianness());
         }
 
         size_t WriteCString(std::string_view value) {
@@ -38,17 +38,17 @@ namespace libtactmon::io {
         }
 
     protected:
-        virtual size_t _WriteImpl(std::span<std::byte> value) = 0;
+        virtual std::span<std::byte> _WriteImpl(std::span<const std::byte> value) = 0;
 
     private:
         template <typename T>
-        size_t _WriteSpan(std::span<T> valueSpan, std::endian endianness, size_t elementSize) {
-            // BUG: This should not mutate the input, but it does
-            std::span<std::byte> byteSpan = std::as_writable_bytes(valueSpan);
+        size_t _WriteSpan(std::span<const T> valueSpan, std::endian endianness, size_t elementSize) {
+            size_t writeCursor = GetWriteCursor();
+            std::span<std::byte> writtenBytes = _WriteImpl(std::as_bytes(valueSpan));
 
             if (endianness != GetEndianness()) {
-                auto begin = std::ranges::begin(byteSpan);
-                auto end = std::ranges::end(byteSpan);
+                auto begin = writtenBytes.begin();
+                auto end = writtenBytes.end();
 
                 while (begin != end) {
                     auto tail = begin;
@@ -59,7 +59,7 @@ namespace libtactmon::io {
                 }
             }
 
-            return _WriteImpl(byteSpan);
+            return writtenBytes.size();
         }
     };
 }

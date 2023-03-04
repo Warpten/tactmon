@@ -96,7 +96,7 @@ namespace libtactmon::tact {
         if (stream.GetReadCursor() + compressedSize > stream.GetLength())
             return false;
 
-        std::span<uint8_t> chunkSpan { (uint8_t*) stream.Data(), compressedSize };
+        std::span<const uint8_t> chunkSpan = stream.Data<uint8_t>().subspan(0, compressedSize);
 
         // Ensure data matches checksum
         crypto::MD5::Digest digest = crypto::MD5::Of(chunkSpan);
@@ -123,7 +123,7 @@ namespace libtactmon::tact {
                     return false;
 
                 strm.avail_in = chunkSpan.subspan(1).size();
-                strm.next_in = chunkSpan.subspan(1).data();
+                strm.next_in = const_cast<uint8_t*>(chunkSpan.subspan(1).data());
 
                 std::array<uint8_t, 8192> decompressedBuffer;
                 while (ret != Z_STREAM_END && strm.avail_in != 0) {
@@ -136,7 +136,7 @@ namespace libtactmon::tact {
                         return false;
                     }
 
-                    size_t writeCount = _dataBuffer.Write(std::span<uint8_t> { decompressedBuffer.data(), decompressedBuffer.size() - strm.avail_out }, std::endian::little);
+                    size_t writeCount = _dataBuffer.Write(std::span { decompressedBuffer.data(), decompressedBuffer.size() - strm.avail_out }, std::endian::little);
                     if (writeCount != decompressedBuffer.size() - strm.avail_out)
                         return false;
                 }
@@ -156,7 +156,7 @@ namespace libtactmon::tact {
     }
 
     bool BLTE::Validate(tact::CKey const& ckey) const {
-        crypto::MD5::Digest checksum = crypto::MD5::Of(_dataBuffer.AsSpan());
+        crypto::MD5::Digest checksum = crypto::MD5::Of(_dataBuffer.Data());
 
         return ckey == checksum;
     }

@@ -13,7 +13,7 @@
 
 namespace libtactmon::io {
     /**
-     * Implementation of a readable stream.
+     * Provides read operations on a sequence of bytes.
      */
     struct IReadableStream : virtual IStream {
         explicit IReadableStream(std::endian endianness = std::endian::native) : IStream(endianness) { }
@@ -45,7 +45,12 @@ namespace libtactmon::io {
         /**
          * Returns a pointer to the data located at offset specified by the read cursor.
          */
-        virtual std::byte const* Data() const = 0;
+        virtual std::span<std::byte const> Data() const = 0;
+
+        template <typename T> requires !std::same_as<T, std::byte> && std::is_trivial_v<T>
+        std::span<const T> Data() const {
+            return std::span { reinterpret_cast<const T*>(Data().data()), Data().size() / sizeof(T) };
+        }
 
         /**
          * Reads a value from the stream, using the given endianness.
