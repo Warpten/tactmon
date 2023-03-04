@@ -5,18 +5,39 @@
 
 namespace libtactmon::io {
     /**
-     * Implementation of a writable stream.
+     * Provides write operations on a sequence of bytes.
      */
     struct IWritableStream : virtual IStream {
         explicit IWritableStream(std::endian endianness = std::endian::native) : IStream(endianness) { }
         virtual ~IWritableStream() = default;
 
+        /**
+         * Returns the position of the write cursor within the stream.
+         */
         virtual size_t GetWriteCursor() const = 0;
-        virtual size_t SeekWrite(size_t offset) = 0;
 
+        /**
+         * Sets the position of the write cursor.
+         * 
+         * @param[in] offset The desired position of the write cursor.
+         * @returns The new position of the write cursor.
+         */
+        virtual size_t SeekWrite(size_t offset) = 0;
+        
+        /**
+         * Moves the write cursor by a specific offset.
+         * 
+         * @param[in] offset The amount of bytes by which to shift the write cursor.
+         */
         virtual void SkipWrite(size_t offset) = 0;
 
-        template <typename T>
+        /**
+         * Writes a value to the stream, with the given endianness.
+         * 
+         * @param[in] value      The value to write to the stream.
+         * @param[in] endianness The endianness to use.
+         */
+        template <typename T> requires (utility::is_span_v<T> || std::is_trivial_v<T>)
         size_t Write(T const value, std::endian endianness) {
             if constexpr (utility::is_span_v<T>) {
                 return _WriteSpan(std::as_bytes(value), endianness, sizeof(T));

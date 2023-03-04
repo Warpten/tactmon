@@ -29,11 +29,6 @@ target_include_directories(libtactmon
     ${Boost_INCLUDE_DIR}
 )
 
-target_compile_definitions(libtactmon
-  PRIVATE
-    BOOST_BEAST_USE_STD_STRING_VIEW
-)
-
 set_target_properties(libtactmon
   PROPERTIES
     CXX_STANDARD 20

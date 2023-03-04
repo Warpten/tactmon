@@ -59,7 +59,7 @@ namespace libtactmon::io {
          * @param[in] endianness The endianness to use.
          * @eturns The amount of bytes that were effectively read.
          */
-        template <typename T, typename = std::enable_if_t<!utility::is_span_v<T>>>
+        template <typename T, typename = std::enable_if_t<!utility::is_span_v<T> && std::is_trivial_v<T>>>
         size_t Read(T& value, std::endian endianness) {
             return _ReadSpan(std::span<T> { std::addressof(value), 1 }, endianness, sizeof(T));
         }
@@ -72,7 +72,7 @@ namespace libtactmon::io {
          * 
          * @returns The amount of bytes read.
          */
-        template <typename T>
+        template <typename T> requires (std::is_trivial_v<T>)
         size_t Read(std::span<T> span, std::endian endianness) {
             return _ReadSpan(span, endianness, sizeof(T));
         }
