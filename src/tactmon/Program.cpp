@@ -161,10 +161,7 @@ void Execute(boost::program_options::variables_map vm) {
         if (!versions.has_value() || !cdns.has_value())
             return;
 
-        std::stringstream ss;
-        ss << fmt::format("One or more builds have been pushed for the product `{}`.", productName) << '\n';
-        ss << "```";
-        ss << fmt::format("{:<8} | {:<25} | {:<34} | {:<34}\n", "Region", "Build name", "Build config", "CDN Config");
+        std::vector<dpp::embed> embeds;
 
         for (ribbit::types::versions::Record const& version : versions->Records) {
             tact::data::product::ResourceResolver resolver(threadPool.executor(), localCache);
@@ -179,6 +176,15 @@ void Execute(boost::program_options::variables_map vm) {
 
             if (!database.builds.GetByBuildName(buildConfig->BuildName, version.Region).has_value())
                 database.builds.Insert(version.Region, productName, buildConfig->BuildName, version.BuildConfig, version.CDNConfig);
+
+            dpp::embed embed;
+            embed.set_title(fmt::format("`{}` ({})", buildConfig->BuildName, version.Region));
+            embed.add_field("Build Configuration", fmt::format("`{}`", version.BuildConfig), true);
+            embed.add_field("CDN Configuration", fmt::format("`{}`", version.CDNConfig), true);
+            embed.set_color(0x00FF0000u);
+
+            embeds.emplace_back(std::move(embed));
+
             ss << fmt::format("{:<8} | {:<25} | {:<34} | {:<34}\n", version.Region, buildConfig->BuildName, version.BuildConfig, version.CDNConfig);
         }
         ss << "```";
@@ -191,13 +197,13 @@ void Execute(boost::program_options::variables_map vm) {
                     continue;
 
                 uint64_t channelID = db::get<db::entity::bound_channel::channel_id>(entity);
-                bot.bot.message_create(
-                    dpp::message(dpp::snowflake { channelID }, 
-                        dpp::embed()
-                            .set_title(fmt::format("Builds update for product `{}`.", productName))
-                            .set_description(embedBody)
-                    )
-                );
+
+                dpp::message message(dpp::snowflake{ channelID });
+                message.set_content("Builds update for product `{0}` has been detected (**{1:%Y-%m-%d}** at **{1:%H:%M:%S}**).", productName, std::chrono::system_clock::now());
+                for (auto&& embed : embeds)
+                    message.add_embed(embed);
+
+                bot.bot.message_create(message);
             }
         });
     });

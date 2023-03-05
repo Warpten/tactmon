@@ -158,7 +158,7 @@ namespace net {
             if (ec.failed())
                 continue;
 
-            http::request<http::dynamic_body> remoteRequest{ http::verb::get, remotePath, 11 };
+            http::request<http::empty_body> remoteRequest { http::verb::get, remotePath, 11 };
             remoteRequest.set(http::field::host, cdn);
             if (params.Length != 0)
                 remoteRequest.set(http::field::range, fmt::format("{}-{}", params.Offset, params.Offset + params.Length - 1));
