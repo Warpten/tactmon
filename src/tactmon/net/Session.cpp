@@ -241,6 +241,8 @@ namespace net {
                                 case http::status::range_not_satisfiable:
                                 case http::status::method_not_allowed:
                                     return false;
+                                default:
+                                    break;
                             }
 
                             return true;
