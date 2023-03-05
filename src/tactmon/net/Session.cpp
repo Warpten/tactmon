@@ -121,17 +121,8 @@ namespace net {
                 "Try again in a bit; if this error persists, you're out of luck.");
         }
 
+        // TODO: Probably use a different executor ?
         boost::asio::ip::tcp::resolver resolver { _stream.get_executor() };
-
-        // 1. Collect eligible CDNs.
-        std::unordered_map<std::string_view, std::string> availableRemoteArchives = CollectAvailableCDNs(*cdns, params.ArchiveName, params.Offset, params.Length);
-        if (availableRemoteArchives.empty())
-            return writeError(http::status::not_found, "No CDN could fulfill this request.");
-
-        http::response_serializer<http::dynamic_body> responseSerializer { response };
-        http::write_header(_stream, responseSerializer, ec);
-        if (ec.failed())
-            return true;
 
         response.content_length(params.DecompressedSize);
         response.set(http::field::content_disposition, "attachment");
@@ -139,6 +130,17 @@ namespace net {
         response.set("X-Tunnel-Product", params.Product);
         response.set("X-Tunnel-Archive-Name", params.ArchiveName);
         response.set("X-Tunnel-File-Name", params.FileName);
+
+        http::response_serializer<http::dynamic_body> responseSerializer{ response };
+        http::write_header(_stream, responseSerializer, ec);
+        if (ec.failed())
+            return true;
+
+
+        // 1. Collect eligible CDNs.
+        std::unordered_map<std::string_view, std::string> availableRemoteArchives = CollectAvailableCDNs(*cdns, params.ArchiveName, params.Offset, params.Length);
+        if (availableRemoteArchives.empty())
+            return writeError(http::status::not_found, "No CDN could fulfill this request.");
 
         // Note: body implementation is a shared_ptr so that it can be ... you guessed it, shared!
         auto parserState = std::make_shared<beast::user::BlockTableEncodedStreamTransform>([&](std::span<uint8_t const> data) {
@@ -206,7 +208,7 @@ namespace net {
             std::string remotePath = fmt::format("/{}/data/{}/{}/{}", cdn.Path, archiveName.substr(0, 2), archiveName.substr(2, 2), archiveName);
 
             for (std::string_view host : cdn.Hosts) {
-                auto validationTask = std::make_shared<boost::packaged_task<std::optional<result_type>>>([&]() -> std::optional<result_type>
+                auto validationTask = std::make_shared<boost::packaged_task<std::optional<result_type>>>([&, remotePath]() -> std::optional<result_type>
                     {
                         beast::error_code ec;
 
@@ -256,8 +258,11 @@ namespace net {
 
                 archiveFutures.push_back(validationTask->get_future());
 
-                boost::asio::post(workers.executor(), [validationTask]() { (*validationTask)(); });
+                boost::asio::post(workers.pool_executor(), [validationTask]() { (*validationTask)(); });
+                break; // For testing
             }
+
+            break; // For testing
         }
 
         std::unordered_map<std::string_view, std::string> resultSet;
