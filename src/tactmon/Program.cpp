@@ -199,7 +199,7 @@ void Execute(boost::program_options::variables_map vm) {
                 uint64_t channelID = db::get<db::entity::bound_channel::channel_id>(entity);
 
                 dpp::message message(dpp::snowflake{ channelID });
-                message.set_content("Builds update for product `{0}` has been detected (**{1:%Y-%m-%d}** at **{1:%H:%M:%S}**).", productName, std::chrono::system_clock::now());
+                message.set_content(fmt::format("Builds update for product `{0}` has been detected (**{1:%Y-%m-%d}** at **{1:%H:%M:%S}**).", productName, std::chrono::system_clock::now()));
                 for (auto&& embed : embeds)
                     message.add_embed(embed);
 
