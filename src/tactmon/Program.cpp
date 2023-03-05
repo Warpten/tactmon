@@ -182,7 +182,6 @@ void Execute(boost::program_options::variables_map vm) {
 
             embeds.emplace_back(std::move(embed));
         }
-        ss << "```";
 
         std::string embedBody = ss.str();
 
