@@ -54,6 +54,8 @@ namespace utility {
         boost::asio::io_context& service() { return _service; }
         boost::asio::any_io_executor executor() { return _service.get_executor(); }
 
+        boost::asio::any_io_executor pool_executor() { return _pool.get_executor(); }
+
     private:
         size_t _size;
         boost::asio::io_context _service;

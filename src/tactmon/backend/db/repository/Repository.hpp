@@ -35,7 +35,8 @@ namespace backend::db::repository {
 
         template <> struct repository_base<true> {
             repository_base(utility::ThreadPool& threadPool, std::chrono::seconds refreshInterval)
-                : _threadPool(threadPool), _refreshTimer(threadPool.executor()), _refreshInterval(refreshInterval)
+                // TODO: Not **quite** sure why I need to use the pool executor here; sounds like an antipattern that needs to be fixed
+                : _threadPool(threadPool), _refreshTimer(threadPool.pool_executor()), _refreshInterval(refreshInterval)
             { }
 
             // io_context::strand is immovable?
