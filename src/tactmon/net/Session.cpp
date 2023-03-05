@@ -1,14 +1,17 @@
 #include "beast/blte_body.hpp"
 #include "net/Session.hpp"
+#include "utility/ThreadPool.hpp"
 
 #include <chrono>
 #include <string>
 #include <string_view>
 
 #include <boost/asio/dispatch.hpp>
+#include <boost/asio/strand.hpp>
 #include <boost/beast/http/read.hpp>
 #include <boost/beast/http/write.hpp>
 #include <boost/beast/core/ostream.hpp>
+#include <boost/thread/future.hpp>
 
 #include <libtactmon/detail/Tokenizer.hpp>
 #include <libtactmon/ribbit/Commands.hpp>
@@ -110,13 +113,6 @@ namespace net {
 
         params.FileName = tokens[5];
 
-        response.content_length(params.DecompressedSize);
-        response.set(http::field::content_disposition, "attachment");
-        response.keep_alive(false);
-        response.set("X-Tunnel-Product", params.Product);
-        response.set("X-Tunnel-Archive-Name", params.ArchiveName);
-        response.set("X-Tunnel-File-Name", params.FileName);
-
         auto cdns = ribbit::CDNs<>::Execute(_stream.get_executor(), nullptr, ribbit::Region::US, params.Product);
         if (!cdns.has_value()) {
             return writeError(http::status::not_found,
@@ -128,47 +124,7 @@ namespace net {
         boost::asio::ip::tcp::resolver resolver { _stream.get_executor() };
 
         // 1. Collect eligible CDNs.
-        std::unordered_map<std::string_view, std::string> availableRemoteArchives;
-        for (ribbit::types::cdns::Record const& cdn : *cdns) {
-            std::string remotePath = fmt::format("/{}/data/{}/{}/{}", cdn.Path, params.ArchiveName.substr(0, 2), params.ArchiveName.substr(2, 2), params.ArchiveName);
-
-            for (std::string_view host : cdn.Hosts) {
-                beast::tcp_stream remoteStream { _stream.get_executor() };
-                remoteStream.connect(resolver.resolve(host, "80"), ec);
-                if (ec.failed())
-                    continue;
-
-                auto checkExistence = [&params, &remotePath, host, &remoteStream](http::verb method) -> bool {
-                    beast::error_code ec;
-
-                    http::request<http::dynamic_body> remoteRequest { method, remotePath, 11 };
-                    remoteRequest.set(http::field::host, host);
-                    if (params.Length != 0)
-                        remoteRequest.set(http::field::range, fmt::format("{}-{}", params.Offset, params.Offset + params.Length - 1));
-
-                    http::write(remoteStream, remoteRequest, ec);
-                    if (ec.failed())
-                        return false;
-
-                    beast::flat_buffer buffer{ 8192 };
-                    http::response_parser<http::dynamic_body> remoteResponse;
-                    remoteResponse.body_limit({ });
-                    http::read_header(remoteStream, buffer, remoteResponse, ec);
-                    if (ec.failed()
-                        || remoteResponse.get().result() == http::status::not_found
-                        || remoteResponse.get().result() == http::status::range_not_satisfiable
-                        || remoteResponse.get().result() == http::status::method_not_allowed)
-                        return false;
-
-                    return true;
-                };
-
-                if (checkExistence(http::verb::head) || checkExistence(http::verb::get))
-                    availableRemoteArchives.emplace(host, remotePath);
-            }
-        }
-
-        // No CDN can serve that file? Return an error.
+        std::unordered_map<std::string_view, std::string> availableRemoteArchives = CollectAvailableCDNs(*cdns, params.ArchiveName, params.Offset, params.Length);
         if (availableRemoteArchives.empty())
             return writeError(http::status::not_found, "No CDN could fulfill this request.");
 
@@ -176,6 +132,13 @@ namespace net {
         http::write_header(_stream, responseSerializer, ec);
         if (ec.failed())
             return true;
+
+        response.content_length(params.DecompressedSize);
+        response.set(http::field::content_disposition, "attachment");
+        response.keep_alive(false);
+        response.set("X-Tunnel-Product", params.Product);
+        response.set("X-Tunnel-Archive-Name", params.ArchiveName);
+        response.set("X-Tunnel-File-Name", params.FileName);
 
         // Note: body implementation is a shared_ptr so that it can be ... you guessed it, shared!
         auto parserState = std::make_shared<beast::user::BlockTableEncodedStreamTransform>([&](std::span<uint8_t const> data) {
@@ -230,6 +193,81 @@ namespace net {
 
         // If we got here, bail out.
         return false;
+    }
+
+    std::unordered_map<std::string_view, std::string> Session::CollectAvailableCDNs(libtactmon::ribbit::types::CDNs& cdns, std::string_view archiveName, size_t offset, size_t length) {
+        utility::ThreadPool workers{ 4 };
+
+        using result_type = std::pair<std::string_view, std::string>;
+
+        std::list<boost::future<std::optional<result_type>>> archiveFutures;
+        
+        for (ribbit::types::cdns::Record const& cdn : cdns) {
+            std::string remotePath = fmt::format("/{}/data/{}/{}/{}", cdn.Path, archiveName.substr(0, 2), archiveName.substr(2, 2), archiveName);
+
+            for (std::string_view host : cdn.Hosts) {
+                auto validationTask = std::make_shared<boost::packaged_task<std::optional<result_type>>>([&]() -> std::optional<result_type>
+                    {
+                        beast::error_code ec;
+
+                        auto strand = boost::asio::make_strand(workers.executor());
+
+                        boost::asio::ip::tcp::resolver resolver(strand);
+                        beast::tcp_stream remoteStream(strand);
+                        remoteStream.connect(resolver.resolve(host, "80"), ec);
+                        if (ec.failed())
+                            return std::nullopt;
+
+                        auto checkExistence = [&](http::verb method) -> bool
+                        {
+                            http::request<http::empty_body> remoteRequest(method, remotePath, 11);
+                            remoteRequest.set(http::field::host, host);
+                            if (length != 0)
+                                remoteRequest.set(http::field::range, fmt::format("{}-{}", offset, offset + length - 1));
+
+                            http::write(remoteStream, remoteRequest, ec);
+                            if (ec.failed())
+                                return false;
+
+                            beast::flat_buffer buffer { 1024 };
+                            http::response_parser<http::dynamic_body> response;
+                            response.body_limit({ });
+                            http::read_header(remoteStream, buffer, response, ec);
+                            if (ec.failed())
+                                return false;
+
+                            switch (response.get().result()) {
+                                case http::status::not_found:
+                                case http::status::range_not_satisfiable:
+                                case http::status::method_not_allowed:
+                                    return false;
+                            }
+
+                            return true;
+                        };
+
+                        if (checkExistence(http::verb::head) || checkExistence(http::verb::get))
+                            return std::pair { host, remotePath };
+
+                        return std::nullopt;
+                    });
+
+                archiveFutures.push_back(validationTask->get_future());
+
+                boost::asio::post(workers.executor(), [validationTask]() { (*validationTask)(); });
+            }
+        }
+
+        std::unordered_map<std::string_view, std::string> resultSet;
+        for (boost::future<std::optional<result_type>>& future : boost::when_all(archiveFutures.begin(), archiveFutures.end()).get()) {
+            std::optional<result_type> value = future.get();
+            if (!value.has_value())
+                continue;
+
+            resultSet.emplace(value->first, value->second);
+        }
+
+        return resultSet;
     }
 
     void Session::BeginWrite(http::message_generator&& response) {

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string_view>
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/http/dynamic_body.hpp>
@@ -10,6 +11,8 @@
 #include <boost/beast/http/parser.hpp>
 #include <boost/beast/core/tcp_stream.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
+
+#include <libtactmon/ribbit/types/CDNs.hpp>
 
 namespace net {
     struct Session : std::enable_shared_from_this<Session> {
@@ -29,6 +32,10 @@ namespace net {
 
         void BeginWrite(boost::beast::http::message_generator&& response);
         void HandleWrite(bool keepAlive, boost::beast::error_code ec, std::size_t bytesTransferred);
+
+    private:
+        std::unordered_map<std::string_view, std::string> CollectAvailableCDNs(libtactmon::ribbit::types::CDNs& cdns,
+            std::string_view archiveName, size_t offset, size_t length);
 
     private:
         boost::beast::tcp_stream _stream;
