@@ -191,9 +191,9 @@ void Execute(boost::program_options::variables_map vm) {
                 if (db::get<db::entity::bound_channel::product_name>(entity) != productName)
                     continue;
 
-                uint64_t channelID = db::get<db::entity::bound_channel::guild_id>(entity);
+                uint64_t channelID = db::get<db::entity::bound_channel::channel_id>(entity);
                 bot.bot.message_create(
-                    dpp::message(channelID, 
+                    dpp::message(dpp::snowflake { channelID }, 
                         dpp::embed()
                             .set_title(fmt::format("Builds update for product `{}`.", productName))
                             .set_description(embedBody)
