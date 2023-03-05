@@ -87,7 +87,6 @@ void Execute(boost::program_options::variables_map vm) {
         threadPool.PostWork([](boost::asio::io_context& service) { service.run(); });
 
     // 2. Setup interrupts handler, enqueue infinite work.
-    asio::executor_work_guard<asio::io_context::executor_type> guard = asio::make_work_guard(threadPool.service());
 #if defined(WIN32)
     asio::signal_set signals(threadPool.executor(), SIGINT, SIGTERM, SIGBREAK);
 #else
