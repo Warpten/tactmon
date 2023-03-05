@@ -183,8 +183,6 @@ void Execute(boost::program_options::variables_map vm) {
             embeds.emplace_back(std::move(embed));
         }
 
-        std::string embedBody = ss.str();
-
         database.boundChannels.WithValues([&](auto entries) {
             for (db::entity::bound_channel::Entity::as_projection const& entity : entries) {
                 if (db::get<db::entity::bound_channel::product_name>(entity) != productName)
