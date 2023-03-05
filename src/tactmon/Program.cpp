@@ -7,6 +7,17 @@
 #include "utility/Logging.hpp"
 #include "utility/ThreadPool.hpp"
 
+#include <chrono>
+#include <csignal>
+#include <filesystem>
+#include <memory>
+#include <string_view>
+#include <thread>
+#include <utility>
+
+#include <fmt/format.h>
+#include <fmt/chrono.h>
+
 #include <libtactmon/ribbit/Commands.hpp>
 #include <libtactmon/ribbit/types/Versions.hpp>
 #include <libtactmon/tact/data/product/wow/Product.hpp>
@@ -17,20 +28,6 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/asio/thread_pool.hpp>
-
-#include <spdlog/spdlog.h>
-#include <spdlog/logger.h>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/sinks/rotating_file_sink.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-
-#include <chrono>
-#include <csignal>
-#include <filesystem>
-#include <memory>
-#include <string_view>
-#include <thread>
-#include <utility>
 
 void Execute(boost::program_options::variables_map vm);
 
@@ -184,8 +181,6 @@ void Execute(boost::program_options::variables_map vm) {
             embed.set_color(0x00FF0000u);
 
             embeds.emplace_back(std::move(embed));
-
-            ss << fmt::format("{:<8} | {:<25} | {:<34} | {:<34}\n", version.Region, buildConfig->BuildName, version.BuildConfig, version.CDNConfig);
         }
         ss << "```";
 
