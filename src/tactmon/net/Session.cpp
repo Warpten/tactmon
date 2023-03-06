@@ -208,7 +208,7 @@ namespace net {
             std::string remotePath = fmt::format("/{}/data/{}/{}/{}", cdn.Path, archiveName.substr(0, 2), archiveName.substr(2, 2), archiveName);
 
             for (std::string_view host : cdn.Hosts) {
-                auto validationTask = std::make_shared<boost::packaged_task<std::optional<result_type>>>([&, remotePath]() -> std::optional<result_type>
+                auto validationTask = std::make_shared<boost::packaged_task<std::optional<result_type>>>([&, remotePath, host]() -> std::optional<result_type>
                     {
                         beast::error_code ec;
 
