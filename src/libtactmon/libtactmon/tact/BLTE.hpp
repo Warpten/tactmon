@@ -47,6 +47,6 @@ namespace libtactmon::tact {
         io::IReadableStream& GetStream() { return _dataBuffer; }
 
     private:
-        io::GrowableMemoryStream _dataBuffer { std::endian::little };
+        io::GrowableMemoryStream _dataBuffer;
     };
 }

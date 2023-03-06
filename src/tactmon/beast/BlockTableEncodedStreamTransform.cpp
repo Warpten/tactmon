@@ -6,11 +6,11 @@
 
 namespace boost::beast::user {
     BlockTableEncodedStreamTransform::BlockTableEncodedStreamTransform(OutputHandler handler, InputFeedback feedback) 
-        : _handler(handler), _feedback(feedback), _ms(std::endian::little)
+        : _handler(handler), _feedback(feedback), _ms()
     { }
 
     std::size_t BlockTableEncodedStreamTransform::Parse(uint8_t const* data, size_t size, boost::beast::error_code& ec) {
-        _ms.Write(std::span { data, size }, std::endian::little);
+        _ms.Write(std::span { data, size });
         _feedback(size);
 
         for (;;) {

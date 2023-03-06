@@ -16,7 +16,7 @@ namespace libtactmon::io {
      * Provides read operations on a sequence of bytes.
      */
     struct IReadableStream : virtual IStream {
-        explicit IReadableStream(std::endian endianness = std::endian::native) : IStream(endianness) { }
+        explicit IReadableStream() { }
         virtual ~IReadableStream() = default;
 
         /**
@@ -44,6 +44,8 @@ namespace libtactmon::io {
 
         /**
          * Returns a pointer to the data located at offset specified by the read cursor.
+         *
+         * Warning: the data returned by this function is using the endianness of the platform.
          */
         virtual std::span<std::byte const> Data() const = 0;
 
@@ -56,11 +58,11 @@ namespace libtactmon::io {
          * Reads a value from the stream, using the given endianness.
          *
          * @param[in] value      The value to read.
-         * @param[in] endianness The endianness to use.
+         * @param[in] endianness The endianness to use. By default, the endianness of the current platform is used.
          * @eturns The amount of bytes that were effectively read.
          */
         template <typename T, typename = std::enable_if_t<!utility::is_span_v<T> && std::is_trivial_v<T>>>
-        size_t Read(T& value, std::endian endianness) {
+        size_t Read(T& value, std::endian endianness = std::endian::native) {
             return _ReadSpan(std::span<T> { std::addressof(value), 1 }, endianness, sizeof(T));
         }
 
@@ -68,23 +70,23 @@ namespace libtactmon::io {
          * Reads a span of values from the stream, using the given endianness.
          * 
          * @param[in] span       A span around the values to read to.
-         * @param[in] endianness The endianness to use.
+         * @param[in] endianness The endianness to use. By default, the endianness of the current platform is used.
          * 
          * @returns The amount of bytes read.
          */
         template <typename T> requires (std::is_trivial_v<T>)
-        size_t Read(std::span<T> span, std::endian endianness) {
+        size_t Read(std::span<T> span, std::endian endianness = std::endian::native) {
             return _ReadSpan(span, endianness, sizeof(T));
         }
 
         template <typename T>
-        size_t Read(std::vector<T>& value, std::endian endianness) {
+        size_t Read(std::vector<T>& value, std::endian endianness = std::endian::native) {
             return _ReadSpan(std::span<T> { value }, endianness, sizeof(T));
         }
 
         template <typename T>
         requires std::integral<T>
-        T Read(std::endian endianness) {
+        T Read(std::endian endianness = std::endian::native) {
             T value { };
             Read(value, endianness);
             return value;
@@ -96,7 +98,7 @@ namespace libtactmon::io {
             std::unique_ptr<char[]> buffer = std::make_unique<char[]>(length);
             std::span<char> bufferView { buffer.get(), length };
 
-            size_t bytesRead = Read(bufferView, GetEndianness());
+            size_t bytesRead = Read(bufferView);
             value.assign(buffer.get(), bytesRead);
             return bytesRead;
         }
@@ -104,7 +106,7 @@ namespace libtactmon::io {
         size_t ReadCString(std::string& value) {
             char elem{ };
             do {
-                Read(elem, GetEndianness());
+                Read(elem);
                 if (elem == '\0')
                     break;
 
@@ -131,7 +133,7 @@ namespace libtactmon::io {
             if constexpr (std::is_same_v<std::byte, T>) {
                 size_t readCount = _ReadImpl(writableSpan);
 
-                if (endianness != GetEndianness()) {
+                if (endianness != std::endian::native) {
                     auto begin = std::ranges::begin(writableSpan);
                     auto end = std::next(begin, readCount);
 

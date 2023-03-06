@@ -8,7 +8,7 @@ namespace libtactmon::io {
      * Provides write operations on a sequence of bytes.
      */
     struct IWritableStream : virtual IStream {
-        explicit IWritableStream(std::endian endianness = std::endian::native) : IStream(endianness) { }
+        explicit IWritableStream() { }
         virtual ~IWritableStream() = default;
 
         /**
@@ -35,10 +35,10 @@ namespace libtactmon::io {
          * Writes a value to the stream, with the given endianness.
          * 
          * @param[in] value      The value to write to the stream.
-         * @param[in] endianness The endianness to use.
+         * @param[in] endianness The endianness to use. By default, the native endianness is used.
          */
         template <typename T> requires (utility::is_span_v<T> || std::is_trivial_v<T>)
-        size_t Write(T const value, std::endian endianness) {
+        size_t Write(T const value, std::endian endianness = std::endian::native) {
             if constexpr (utility::is_span_v<T>) {
                 return _WriteSpan(std::as_bytes(value), endianness, sizeof(T));
             } else {
@@ -48,13 +48,13 @@ namespace libtactmon::io {
         }
 
         size_t WriteString(std::string_view value) {
-            return Write(std::span { value }, GetEndianness());
+            return Write(std::span { value });
         }
 
         size_t WriteCString(std::string_view value) {
             size_t bytesWritten = WriteString(value);
             if (bytesWritten == value.length())
-                bytesWritten += Write(uint8_t(0), GetEndianness());
+                bytesWritten += Write(uint8_t(0));
             return bytesWritten;
         }
 
@@ -66,7 +66,7 @@ namespace libtactmon::io {
         size_t _WriteSpan(std::span<const T> valueSpan, std::endian endianness, size_t elementSize) {
             std::span<std::byte> writtenBytes = _WriteImpl(std::as_bytes(valueSpan));
 
-            if (endianness != GetEndianness()) {
+            if (endianness != std::endian::native) {
                 auto begin = writtenBytes.begin();
                 auto end = writtenBytes.end();
 

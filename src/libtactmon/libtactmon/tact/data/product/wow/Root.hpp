@@ -50,7 +50,12 @@ namespace libtactmon::tact::data::product::wow {
             ptPT = 0x00010000,
         };
 
-        Root(io::IReadableStream& stream, size_t contentKeySize);
+        static std::optional<Root> Parse(io::IReadableStream& stream, size_t contentKeySize);
+
+    private:
+        Root();
+
+    public:
         Root(Root&& other) noexcept;
 
         Root& operator = (Root&& other) noexcept;
@@ -73,7 +78,14 @@ namespace libtactmon::tact::data::product::wow {
             Entry(tact::CKey contentKey, uint32_t fileDataID, uint64_t nameHash) : ContentKey(contentKey), FileDataID(fileDataID), NameHash(nameHash) { }
         };
 
+        struct Block {
+            ContentFlags Content;
+            LocaleFlags Locales;
+
+            std::vector<Entry> entries;
+        };
+
     private:
-        std::vector<Entry> _entries;
+        std::vector<Block> _blocks;
     };
 }

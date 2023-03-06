@@ -25,7 +25,7 @@ namespace libtactmon::tact {
                 return std::nullopt;
 
             try {
-                io::FileStream fstream{ fullResourcePath, std::endian::little };
+                io::FileStream fstream { fullResourcePath };
                 return handler(fstream);
             } catch (std::exception const& ex) {
                 // TODO: possibly log this

@@ -9,6 +9,6 @@ namespace libtactmon::net {
         if (message.result() != boost::beast::http::status::ok)
             return std::nullopt;
 
-        return io::GrowableMemoryStream { message.body().data(), std::endian::little };
+        return io::GrowableMemoryStream { message.body().data() };
     }
 }
