@@ -1,6 +1,7 @@
 #include "utility/Logging.hpp"
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 
 #include <spdlog/async.h>

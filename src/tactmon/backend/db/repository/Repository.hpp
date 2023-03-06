@@ -43,6 +43,7 @@ namespace backend::db::repository {
             repository_base(repository_base&&) noexcept = delete;
             repository_base& operator = (repository_base&&) noexcept = delete;
 
+        protected:
             template <typename T>
             void Refresh_(boost::system::error_code const& ec, T* self) {
                 if (ec == boost::asio::error::operation_aborted)
@@ -62,6 +63,7 @@ namespace backend::db::repository {
                 return callback();
             }
 
+        private:
             utility::ThreadPool& _threadPool;
             boost::asio::high_resolution_timer _refreshTimer;
             std::chrono::seconds _refreshInterval;
@@ -71,6 +73,7 @@ namespace backend::db::repository {
         template <> struct repository_base<false> {
             repository_base() = default;
 
+        protected:
             template <typename T> void Refresh_(boost::system::error_code const& ec) { }
 
             template <typename Callback> decltype(auto) WithMutex_(Callback callback) const { return callback(); }
@@ -152,6 +155,17 @@ namespace backend::db::repository {
         void WithValues(Callback&& callback) const {
             repository_base::WithMutex_([&]() {
                 callback(boost::adaptors::values(_storage));
+            });
+        }
+
+        template <typename Callback>
+        bool Any(Callback&& callback) const {
+            return repository_base::WithMutex_([&]() {
+                for (auto [k, v] : _storage)
+                    if (callback(v))
+                        return true;
+
+                return false;
             });
         }
 

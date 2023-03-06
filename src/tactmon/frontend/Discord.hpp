@@ -6,7 +6,6 @@
 #include "frontend/commands/ICommand.hpp"
 #include "net/Server.hpp"
 
-#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -28,13 +27,11 @@ namespace frontend {
 
         void Run();
 
-        void Broadcast(std::function<dpp::message(dpp::snowflake)> handler);
-
     private:
         template <typename T>
         void RegisterCommand(dpp::snowflake const& guildID) {
             auto command = _commands.emplace_back(std::make_shared<T>());
-            bot.guild_command_create_sync(command->GetRegistrationInfo(bot), guildID);
+            bot.guild_command_create(command->GetRegistrationInfo(bot), guildID);
         }
 
         void HandleGuildCreate(dpp::guild_create_t const& event);

@@ -154,7 +154,7 @@ namespace frontend::commands {
             if (eventOption.name == "product") {
                 std::string optionValue = std::get<std::string>(eventOption.value);
                 if (optionValue.empty())
-                    break;
+                    return;
 
                 size_t suggestionCount = 0;
                 dpp::interaction_response interactionResponse { dpp::ir_autocomplete_reply };
@@ -172,14 +172,14 @@ namespace frontend::commands {
                 });
 
                 cluster.bot.interaction_response_create(evnt.command.id, evnt.command.token, interactionResponse);
-                break;
+                return;
             }
             else if (eventOption.name == "version") {
                 std::string optionValue = std::get<std::string>(eventOption.value);
 
                 // Don't suggest on empty value (would explode)
                 if (optionValue.empty())
-                    break;
+                    return;
 
                 dpp::interaction_response interactionResponse { dpp::ir_autocomplete_reply };
                 std::unordered_set<std::string> uniqueBuildNames;
@@ -207,7 +207,7 @@ namespace frontend::commands {
                 });
 
                 cluster.bot.interaction_response_create(evnt.command.id, evnt.command.token, interactionResponse);
-                break;
+                return;
             }
         }
     }

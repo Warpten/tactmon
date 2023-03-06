@@ -4,6 +4,7 @@
 #include "backend/db/repository/BoundChannel.hpp"
 #include "backend/db/repository/Build.hpp"
 #include "backend/db/repository/Product.hpp"
+#include "backend/db/repository/TrackedFile.hpp"
 #include "utility/ThreadPool.hpp"
 
 #include <cstdint>
@@ -31,5 +32,6 @@ namespace backend {
         db::repository::Build builds;
         db::repository::Product products;
         db::repository::BoundChannel boundChannels;
+        db::repository::TrackedFile trackedFiles;
     };
 }

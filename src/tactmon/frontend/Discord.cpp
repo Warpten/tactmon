@@ -2,6 +2,7 @@
 #include "frontend/commands/CacheStatusCommand.hpp"
 #include "frontend/commands/DownloadCommand.hpp"
 #include "frontend/commands/ProductStatusCommand.hpp"
+#include "frontend/commands/TrackFileCommand.hpp"
 #include "frontend/Discord.hpp"
 #include "backend/db/entity/Build.hpp"
 #include "backend/db/repository/Build.hpp"
@@ -50,35 +51,6 @@ namespace frontend {
         bot.start(dpp::start_type::st_return);
     }
 
-    void Discord::Broadcast(std::function<dpp::message(dpp::snowflake)> handler) {
-        bot.current_user_get_guilds([=](dpp::confirmation_callback_t const& guildsEvent)
-        {
-            if (!std::holds_alternative<dpp::guild_map>(guildsEvent.value))
-                return;
-
-            dpp::guild_map guilds = std::get<dpp::guild_map>(guildsEvent.value);
-
-            for (auto [guildID, guild] : guilds) {
-                bot.channels_get(guildID, [=](dpp::confirmation_callback_t const& channelsEvent) {
-                    if (!std::holds_alternative<dpp::channel_map>(channelsEvent.value))
-                        return;
-
-                    dpp::channel_map channels = std::get<dpp::channel_map>(channelsEvent.value);
-
-                    for (auto [channelID, channel] : channels) {
-                        if (!channel.is_text_channel())
-                            continue;
-
-                        // TODO: I may have barfed something when setting up the bot on my server but this doesn't appear to suffice?
-                        dpp::permission perms = channel.get_user_permissions(&bot.me);
-                        if (perms.has(dpp::permissions::p_send_messages))
-                            bot.message_create(handler(channelID));
-                    }
-                });
-            }
-        });
-    }
-
     void Discord::HandleGuildCreate(dpp::guild_create_t const& evnt) {
         if (evnt.created == nullptr)
             return;
@@ -89,16 +61,17 @@ namespace frontend {
         RegisterCommand<frontend::commands::ProductStatusCommand>(evnt.created->id);
         RegisterCommand<frontend::commands::CacheStatusCommand>(evnt.created->id);
         RegisterCommand<frontend::commands::BindCommand>(evnt.created->id);
+        RegisterCommand<frontend::commands::TrackFileCommand>(evnt.created->id);
     }
 
-    void Discord::HandleLogEvent(dpp::log_t const& event) {
-        switch (event.severity) {
-            case dpp::ll_trace:   _logger->trace("{}", event.message); break;
-            case dpp::ll_debug:   _logger->debug("{}", event.message); break;
-            case dpp::ll_info:    _logger->info("{}", event.message); break;
-            case dpp::ll_warning: _logger->warn("{}", event.message); break;
-            case dpp::ll_error:   _logger->error("{}", event.message); break;
-            default:              _logger->critical("{}", event.message); break;
+    void Discord::HandleLogEvent(dpp::log_t const& evnt) {
+        switch (evnt.severity) {
+            case dpp::ll_trace:   _logger->trace("{}", evnt.message); break;
+            case dpp::ll_debug:   _logger->debug("{}", evnt.message); break;
+            case dpp::ll_info:    _logger->info("{}", evnt.message); break;
+            case dpp::ll_warning: _logger->warn("{}", evnt.message); break;
+            case dpp::ll_error:   _logger->error("{}", evnt.message); break;
+            default:              _logger->critical("{}", evnt.message); break;
         }
     }
 
