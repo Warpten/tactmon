@@ -3,6 +3,10 @@
 
 #include <fstream>
 
+#include <fmt/chrono.h>
+
+#include <spdlog/stopwatch.h>
+
 namespace libtactmon::tact::data::product::wow {
     bool Product::Load(std::string_view buildConfig, std::string_view cdnConfig) noexcept {
         if (!tact::data::product::Product::Load(buildConfig, cdnConfig))
@@ -12,6 +16,8 @@ namespace libtactmon::tact::data::product::wow {
         if (!rootLocation)
             return false;
 
+        spdlog::stopwatch sw;
+
         _root = [&]() -> std::optional<tact::data::product::wow::Root> {
             for (size_t i = 0; i < rootLocation->keyCount(); ++i) {
                 tact::EKey key = (*rootLocation)[i];
@@ -19,7 +25,7 @@ namespace libtactmon::tact::data::product::wow {
                 auto root = Base::ResolveCachedData<tact::data::product::wow::Root>(key.ToString(), [&encoding = _encoding](io::IReadableStream& fstream) -> std::optional<tact::data::product::wow::Root> {
                     std::optional<tact::BLTE> blte = tact::BLTE::Parse(fstream);
                     if (blte.has_value())
-                        return tact::data::product::wow::Root { blte->GetStream(), encoding->GetContentKeySize() };
+                        return tact::data::product::wow::Root::Parse(blte->GetStream(), encoding->GetContentKeySize());
 
                     return std::nullopt;
                 });
@@ -34,7 +40,9 @@ namespace libtactmon::tact::data::product::wow {
             return false;
 
         if (_logger != nullptr)
-            _logger->info("({}) {} entries found in root manifest.", _buildConfig->BuildName, _root->size());
+            _logger->info("({}) Root manifest loaded in {:.3} seconds ({} entries).", _buildConfig->BuildName,
+                sw,
+                _root->size());
         return true;
     }
 

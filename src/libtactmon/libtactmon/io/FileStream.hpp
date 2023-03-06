@@ -8,7 +8,7 @@
 
 namespace libtactmon::io {
     struct FileStream final : IReadableStream {
-        FileStream(std::filesystem::path filePath, std::endian fileEndianness);
+        explicit FileStream(std::filesystem::path filePath);
 
     public: // IStream
         size_t GetLength() const override;

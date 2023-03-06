@@ -1,8 +1,8 @@
 #include "libtactmon/io/FileStream.hpp"
 
 namespace libtactmon::io {
-    FileStream::FileStream(std::filesystem::path filePath, std::endian fileEndianness)
-        : IStream(fileEndianness)
+    FileStream::FileStream(std::filesystem::path filePath)
+        : IStream()
     {
         try {
             _stream.open(filePath.string());

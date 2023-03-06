@@ -26,11 +26,15 @@ namespace backend {
             _currentBuild = entity;
 
             if (!_loading.exchange(true)) {
-                if (!_product->Load(db::get<db::entity::build::build_config>(entity), db::get<db::entity::build::cdn_config>(entity)))
+                if (!_product->Load(db::get<db::entity::build::build_config>(entity), db::get<db::entity::build::cdn_config>(entity))) {
+                    _loading.exchange(false);
+
                     return false;
+                }
             }
         }
 
+        _loading.exchange(false);
         return true;
     }
 }

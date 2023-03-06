@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <future>
 
+#include <boost/asio/thread_pool.hpp>
 #include <boost/thread/future.hpp>
 
 #include <fmt/std.h>
@@ -96,13 +97,10 @@ namespace libtactmon::tact::data::product {
 
         for (config::CDNConfig::Archive const& archive : _cdnConfig->archives) {
             std::shared_ptr<index_parse_task> task = std::make_shared<index_parse_task>(
-                [archiveName = archive.Name, buildName = _buildConfig->BuildName, logger = _logger, this]() {
-                    if (logger != nullptr)
-                        logger->info("({}) Loading archive '{}'.", buildName, archiveName);
-
+                [archiveName = archive.Name, archiveSize = archive.Size, buildName = _buildConfig->BuildName, logger = _logger, this]() {
                     return ResolveCachedData<tact::data::Index>(fmt::format("{}.index", archiveName),
                         [&](io::FileStream& fstream) -> std::optional<tact::data::Index> {
-                            if (!fstream/* || fstream.GetLength() != archive.Size*/)
+                            if (!fstream || fstream.GetLength() != archiveSize)
                                 return std::nullopt;
 
                             return tact::data::Index { archiveName, fstream };
@@ -123,8 +121,8 @@ namespace libtactmon::tact::data::product {
                 [name = _cdnConfig->fileIndex->Name](io::FileStream& fstream) -> std::optional<tact::data::Index> {
                     if (!fstream)
                         return std::nullopt;
-                    
-                    return tact::data::Index { name, fstream };
+
+                    return tact::data::Index{ name, fstream };
                 });
         }
 

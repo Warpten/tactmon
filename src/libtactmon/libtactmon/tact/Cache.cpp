@@ -11,7 +11,7 @@ namespace libtactmon::tact {
         if (!std::filesystem::is_directory(absolutePath.parent_path()))
             std::filesystem::create_directories(absolutePath.parent_path());
 
-        return io::FileStream { absolutePath, std::endian::little };
+        return io::FileStream { absolutePath };
     }
 
     std::filesystem::path Cache::GetAbsolutePath(std::string_view relativePath) const { 

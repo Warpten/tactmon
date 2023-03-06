@@ -22,9 +22,8 @@ namespace libtactmon::io {
      * Encapsulates a sequence of bytes.
      */
     struct IStream {
-        explicit IStream(std::endian endianness = std::endian::native) : _endianness(endianness) { }
-
-        std::endian GetEndianness() const { return _endianness; }
+        explicit IStream() { }
+        virtual ~IStream() = default;
 
         /**
          * Returns the length of this stream.
@@ -35,9 +34,6 @@ namespace libtactmon::io {
          * Determines if this stream was successfully opened.
          */
         virtual operator bool() const = 0;
-
-    private:
-        std::endian _endianness;
     };
 
 }

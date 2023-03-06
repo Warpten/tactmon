@@ -1,8 +1,18 @@
 #include "libtactmon/io/MemoryStream.hpp"
 
 namespace libtactmon::io {
-    MemoryStream::MemoryStream(std::span<std::byte> data, std::endian endianness)
-        : IReadableStream(endianness), _data(data)
+    SpanStream::SpanStream(std::span<const std::byte> data) : _data(data) { }
+
+    size_t SpanStream::_ReadImpl(std::span<std::byte> bytes) {
+        size_t length = std::min(bytes.size(), _data.size() - _cursor);
+
+        std::copy_n(Data().subspan(length).data(), length, bytes.data());
+        _cursor += length;
+        return length;
+    }
+
+    MemoryStream::MemoryStream(std::span<std::byte> data)
+        : IReadableStream(), _data(data)
     { }
 
     size_t MemoryStream::SeekRead(size_t offset) {
@@ -21,10 +31,10 @@ namespace libtactmon::io {
 
     // ^^^ MemoryStream / GrowableMemoryStream vvv
 
-    GrowableMemoryStream::GrowableMemoryStream(std::endian endianness) : IReadableStream(endianness), IWritableStream(endianness) { }
+    GrowableMemoryStream::GrowableMemoryStream() : IReadableStream(), IWritableStream() { }
 
-    GrowableMemoryStream::GrowableMemoryStream(std::span<std::byte> data, std::endian endianness)
-        : IReadableStream(endianness), IWritableStream(endianness), _data(data.begin(), data.end())
+    GrowableMemoryStream::GrowableMemoryStream(std::span<std::byte> data)
+        : IReadableStream(), IWritableStream(), _data(data.begin(), data.end())
     { }
 
     size_t GrowableMemoryStream::SeekRead(size_t offset) {

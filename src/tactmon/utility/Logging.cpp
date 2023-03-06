@@ -47,10 +47,6 @@ namespace utility::logging {
     template <typename T>
     struct Manager final : private ManagerBase {
         explicit Manager(std::function<std::shared_ptr<T>(std::string, spdlog::sinks_init_list)> factory) : ManagerBase(), _factory(factory) { 
-            if constexpr (!std::is_same_v<T, spdlog::async_logger>)
-                _consoleSink->set_pattern("[%Y-%d-%m %H:%M:%S %z] [%n] [%^%l%$] [thread %t] %v");
-            else
-                _consoleSink->set_pattern("[%Y-%d-%m %H:%M:%S %z] [%n] [%^%l%$] [thread %t] %v");
         }
 
         std::shared_ptr<T> operator [] (std::string_view name) {

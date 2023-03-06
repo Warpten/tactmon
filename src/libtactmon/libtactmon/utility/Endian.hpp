@@ -30,4 +30,17 @@ namespace libtactmon::utility {
         return utility::bit_cast<T>(value_representation);
     }
 #endif
+
+    template <std::integral T>
+    constexpr T to_endianness(T value, std::endian from, std::endian to) {
+        return (from == to) ? value : byteswap(value);
+    }
+
+    template <std::endian To, std::endian From = std::endian::native, typename T>
+    constexpr T to_endianness(T value) {
+        if constexpr (From == To)
+            return value;
+
+        return byteswap(value);
+    }
 }
