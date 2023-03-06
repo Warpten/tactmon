@@ -100,7 +100,7 @@ namespace libtactmon::tact::data::product {
                 [archiveName = archive.Name, archiveSize = archive.Size, buildName = _buildConfig->BuildName, logger = _logger, this]() {
                     return ResolveCachedData<tact::data::Index>(fmt::format("{}.index", archiveName),
                         [&](io::FileStream& fstream) -> std::optional<tact::data::Index> {
-                            if (!fstream /* || fstream.GetLength() != archiveSize * / )
+                            if (!fstream /* || fstream.GetLength() != archiveSize */ )
                                 return std::nullopt;
 
                             return tact::data::Index { archiveName, fstream };
