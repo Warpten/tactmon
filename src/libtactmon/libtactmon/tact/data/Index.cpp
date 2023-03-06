@@ -83,6 +83,7 @@ namespace libtactmon::tact::data {
                 std::span<const uint8_t> keyData = stream.Data<uint8_t>().subspan(0, _keySizeBytes);
                 stream.SkipRead(_keySizeBytes);
 
+                // If the key is all 0s, that's an end marker
                 if (std::ranges::all_of(keyData, [](uint8_t b){ return b == 0; }))
                     continue;
 

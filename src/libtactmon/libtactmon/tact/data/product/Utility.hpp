@@ -47,15 +47,15 @@ namespace libtactmon::tact::data::product {
         }
 
         /**
-        * Resolves a data file.
-        * 
-        * @param[in] cdns   A list of available CDNs, as provided by Ribbit.
-        * @param[in] key    The configuration file's key.
-        * @param[in] parser A callable in charge of parsing the file.
-        * @param[in] logger A logger for errors that occur during download.
-        * 
-        * @returns The parsed file or an empty optional if unable to.
-        */
+         * Resolves a data file.
+         * 
+         * @param[in] cdns   A list of available CDNs, as provided by Ribbit.
+         * @param[in] key    The configuration file's key.
+         * @param[in] parser A callable in charge of parsing the file.
+         * @param[in] logger A logger for errors that occur during download.
+         * 
+         * @returns The parsed file or an empty optional if unable to.
+         */
         template <typename T>
         std::optional<T> ResolveData(ribbit::types::CDNs const& cdns,
             std::string_view key, Parser<T> parser, std::shared_ptr<spdlog::logger> logger = nullptr) const

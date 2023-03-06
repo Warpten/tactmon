@@ -1,5 +1,7 @@
 #include "backend/ProductCache.hpp"
 
+#include <functional>
+
 #include <boost/range/adaptor/map.hpp>
 
 using namespace std::chrono_literals;
@@ -17,6 +19,7 @@ namespace backend {
             bool expiredEntry = record->expirationTimer <= std::chrono::high_resolution_clock::now();
             if (expiredEntry && record->product.IsLoading()) {
                 // Expired but loading? Your internet is bad, let's be nice and keep the instance active
+                // TODO: Probably a code smell, should not belong here.
                 record->expirationTimer += 1min;
                 return false;
             }
