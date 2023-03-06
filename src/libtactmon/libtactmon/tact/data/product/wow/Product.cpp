@@ -3,6 +3,10 @@
 
 #include <fstream>
 
+#include <fmt/chrono.h>
+
+#include <spdlog/stopwatch.h>
+
 namespace libtactmon::tact::data::product::wow {
     bool Product::Load(std::string_view buildConfig, std::string_view cdnConfig) noexcept {
         if (!tact::data::product::Product::Load(buildConfig, cdnConfig))
@@ -11,6 +15,8 @@ namespace libtactmon::tact::data::product::wow {
         std::optional<tact::data::FileLocation> rootLocation = Base::FindFile(_buildConfig->Root);
         if (!rootLocation)
             return false;
+
+        spdlog::stopwatch sw;
 
         _root = [&]() -> std::optional<tact::data::product::wow::Root> {
             for (size_t i = 0; i < rootLocation->keyCount(); ++i) {
@@ -34,7 +40,9 @@ namespace libtactmon::tact::data::product::wow {
             return false;
 
         if (_logger != nullptr)
-            _logger->info("({}) {} entries found in root manifest.", _buildConfig->BuildName, _root->size());
+            _logger->info("({}) Root manifest loaded in {:.3} seconds ({} entries).", _buildConfig->BuildName,
+                sw,
+                _root->size());
         return true;
     }
 
