@@ -17,7 +17,9 @@
 
 namespace libtactmon::io {
     struct SpanStream final : IReadableStream {
-        explicit SpanStream(std::span<const uint8_t> data);
+        explicit SpanStream(std::span<const std::byte> data);
+
+        using IReadableStream::Data;
 
     public: // IReadableStream
         size_t GetReadCursor() const override { return _cursor; }
@@ -28,13 +30,13 @@ namespace libtactmon::io {
 
         operator bool() const override { return true; }
 
-        std::span<std::byte const> Data() const override { return std::as_bytes(_data.subspan(_cursor)); }
+        std::span<std::byte const> Data() const override { return _data.subspan(_cursor); }
 
     protected:
         size_t _ReadImpl(std::span<std::byte> writableSpan) override;
 
     private:
-        std::span<const uint8_t> _data;
+        std::span<const std::byte> _data;
         size_t _cursor = 0;
     };
 
@@ -68,7 +70,7 @@ namespace libtactmon::io {
 
         template <typename ConstBufferSequence>
         requires boost::asio::is_const_buffer_sequence<ConstBufferSequence>::value
-        GrowableMemoryStream(ConstBufferSequence const& buffers) : GrowableMemoryStream(endianness) {
+        GrowableMemoryStream(ConstBufferSequence const& buffers) : GrowableMemoryStream() {
             _data.reserve(boost::asio::buffer_size(buffers));
             for (auto const buffer : boost::beast::buffers_range_ref(buffers))
                 _data.insert(_data.end(), reinterpret_cast<const std::byte*>(buffer.data()), reinterpret_cast<const std::byte*>(buffer.data()) + buffer.size());

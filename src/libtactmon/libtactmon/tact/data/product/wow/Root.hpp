@@ -53,7 +53,7 @@ namespace libtactmon::tact::data::product::wow {
         static std::optional<Root> Parse(io::IReadableStream& stream, size_t contentKeySize);
 
     private:
-        Root();
+        Root() = default;
 
     public:
         Root(Root&& other) noexcept;
@@ -63,7 +63,7 @@ namespace libtactmon::tact::data::product::wow {
         std::optional<tact::CKey> FindFile(uint32_t fileDataID) const;
         std::optional<tact::CKey> FindFile(std::string_view fileName) const;
 
-        size_t size() const { return _entries.size(); }
+        size_t size() const;
 
         struct Entry {
             tact::CKey ContentKey;
@@ -83,6 +83,14 @@ namespace libtactmon::tact::data::product::wow {
             LocaleFlags Locales;
 
             std::vector<Entry> entries;
+
+            Block() = default;
+
+            Block(Block&& other) noexcept = default;
+            Block& operator = (Block&& other) noexcept = default;
+
+            Block(Block const&) = delete;
+            Block& operator = (Block const&) = delete;
         };
 
     private:

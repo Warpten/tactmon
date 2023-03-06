@@ -1,6 +1,8 @@
 #include "libtactmon/io/MemoryStream.hpp"
 
 namespace libtactmon::io {
+    SpanStream::SpanStream(std::span<const std::byte> data) : _data(data) { }
+
     size_t SpanStream::_ReadImpl(std::span<std::byte> bytes) {
         size_t length = std::min(bytes.size(), _data.size() - _cursor);
 

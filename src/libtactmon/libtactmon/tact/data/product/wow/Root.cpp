@@ -9,37 +9,60 @@
 namespace libtactmon::tact::data::product::wow {
     struct PageInfo {
         uint32_t numRecords;
-        ContentFlags contentFlags;
-        LocaleFlags localeFlags;
+        Root::ContentFlags contentFlags;
+        Root::LocaleFlags localeFlags;
 
-        std::optional<std::span<const uint8_t>> data;
-        size_t offset;
-        size_t length;
+        std::optional<std::span<const std::byte>> data;
     };
 
-    std::optional<Root::Block> ParseBlock(PageInfo const& pageInfo) {
+    std::optional<Root::Block> ParseBlock(PageInfo const& pageInfo, size_t contentKeySize, bool interleave, bool canSkip) {
         Root::Block block;
         block.Content = pageInfo.contentFlags;
         block.Locales = pageInfo.localeFlags;
 
         block.entries.reserve(pageInfo.numRecords);
 
-        // Get some stream here, around the span
-        io::SpanStream stream { pageInfo.data }; // ...
+        io::SpanStream stream { pageInfo.data.value() };
 
         std::span<uint32_t const> fileDataIDs = stream.Data<uint32_t>().subspan(0, pageInfo.numRecords);
         stream.SkipRead(pageInfo.numRecords * sizeof(uint32_t));
 
-        for (size_t i = 0; i < numRecords; ++i) {
-            fileDataID += utility::to_endianness<std::endian::little>(fileDataIDs[i]) + 1;
+        uint32_t fileDataID = -1;
 
-            std::span<const uint8_t> hashSpan = stream.Data<uint8_t>().subspan(0, contentKeySize);
-            stream.SkipRead(contentKeySize);
+        if (interleave) {
+            for (size_t i = 0; i < pageInfo.numRecords; ++i) {
+                fileDataID += utility::to_endianness<std::endian::little>(fileDataIDs[i]) + 1;
 
-            uint64_t nameHash = stream.Read<uint64_t>(std::endian::little); // Jenkins96 of the file's path
+                std::span<const uint8_t> hashSpan = stream.Data<uint8_t>().subspan(0, contentKeySize);
+                stream.SkipRead(contentKeySize);
 
-            _entries.emplace_back(tact::CKey{ hashSpan }, fileDataID, nameHash);
+                uint64_t nameHash = stream.Read<uint64_t>(std::endian::little); // Jenkins96 of the file's path
+
+                block.entries.emplace_back(tact::CKey{ hashSpan }, fileDataID, nameHash);
+            }
         }
+        else {
+            std::span<const uint8_t> hashSpan = stream.Data<uint8_t>().subspan(0, pageInfo.numRecords * contentKeySize);
+            stream.SkipRead(hashSpan.size());
+
+            if (!canSkip || (static_cast<uint32_t>(block.Content) & static_cast<uint32_t>(Root::ContentFlags::NoNameHash)) == 0) {
+                for (size_t i = 0; i < pageInfo.numRecords; ++i) {
+                    fileDataID += utility::to_endianness<std::endian::little>(fileDataIDs[i]) + 1;
+
+                    uint64_t nameHash = stream.Read<uint64_t>(std::endian::little); // Jenkins96 of the file's path
+
+                    block.entries.emplace_back(tact::CKey{ hashSpan.subspan(i * contentKeySize, contentKeySize) }, fileDataID, nameHash);
+                }
+            }
+            else {
+                for (size_t i = 0; i < pageInfo.numRecords; ++i) {
+                    fileDataID += utility::to_endianness<std::endian::little>(fileDataIDs[i]) + 1;
+                    block.entries.emplace_back(tact::CKey{ hashSpan.subspan(i * contentKeySize, contentKeySize) }, fileDataID, 0);
+                }
+            }
+        }
+
+        return block;
     }
 
     /* static */ std::optional<Root> Root::Parse(io::IReadableStream& stream, size_t contentKeySize) {
@@ -65,7 +88,7 @@ namespace libtactmon::tact::data::product::wow {
         // Generate segments of data to parse in parallel
         boost::asio::thread_pool pool { 4 };
 
-        std::list<std::future<std::optional<Block>>> futures;
+        std::list<boost::future<std::optional<Block>>> futures;
 
         while (stream.GetReadCursor() < stream.GetLength()) {
             if (!stream.CanRead(12))
@@ -76,32 +99,33 @@ namespace libtactmon::tact::data::product::wow {
             page.contentFlags = static_cast<ContentFlags>(stream.Read<uint32_t>(std::endian::little));
             page.localeFlags = static_cast<LocaleFlags>(stream.Read<uint32_t>(std::endian::little));
 
-            page.offset = stream.GetReadCursor();
-
             size_t length = sizeof(uint32_t) * page.numRecords; // u32 fileDataID[numRecords]
             if (interleave) {
                 length += contentKeySize * page.numRecords; // u8 contentKeys[contentKeySize][numRecords]
                 length += sizeof(uint64_t) * page.numRecords; // u64 nameHash[numRecords]
             }
             else {
-                if (!canSkip || (static_cast<uint32_t>(contentFlags) & static_cast<uint32_t>(ContentFlags::NoNameHash)) == 0) {
+                length += contentKeySize * page.numRecords;
+                if (!canSkip || (static_cast<uint32_t>(page.contentFlags) & static_cast<uint32_t>(ContentFlags::NoNameHash)) == 0) {
                     length += sizeof(uint64_t) * page.numRecords; // u64 nameHash[numRecords]
                 }
             }
 
-            if (!stream.CanRead(page.length))
+            if (!stream.CanRead(length))
                 return std::nullopt;
 
-            page.data.emplace(stream.Data<uint8_t>().subspan(0, length));
-            stream.SkipRead(page.length);
+            page.data.emplace(stream.Data().subspan(0, length));
+            stream.SkipRead(length);
 
-            auto blockLoader = std::make_shared<boost::packaged_task<std::optional<Block>>>([pageInfo = std::move(page)]() {
-                return ParseBlock(pageInfo);
+            auto blockLoader = std::make_shared<boost::packaged_task<std::optional<Block>>>([pageInfo = std::move(page), interleave, canSkip, contentKeySize]() {
+                return ParseBlock(pageInfo, contentKeySize, interleave, canSkip);
             });
 
-            futures.push_back(blockLoader.get_future());
+            futures.push_back(blockLoader->get_future());
             boost::asio::post(pool, [blockLoader]() { (*blockLoader)(); });
         }
+
+        pool.wait();
 
         Root instance;
 
@@ -119,99 +143,12 @@ namespace libtactmon::tact::data::product::wow {
         return instance;
     }
 
-    /*Root::Root(io::IReadableStream& stream, size_t contentKeySize) {
-        uint32_t magic = stream.Read<uint32_t>(std::endian::little);
-
-        bool interleave = true;
-        bool canSkip = false;
-
-        if (magic == 0x4D465354) {
-            uint32_t totalFileCount = stream.Read<uint32_t>(std::endian::little);
-            uint32_t namedFileCount = stream.Read<uint32_t>(std::endian::little);
-
-            interleave = false;
-            canSkip = totalFileCount != namedFileCount;
-        }
-
-        while (stream.GetReadCursor() < stream.GetLength()) {
-            if (!stream.CanRead(12))
-                return; // TODO: Throw
-
-            uint32_t numRecords = stream.Read<uint32_t>(std::endian::little);
-            ContentFlags contentFlags = static_cast<ContentFlags>(stream.Read<uint32_t>(std::endian::little));
-            LocaleFlags localeFlags = static_cast<LocaleFlags>(stream.Read<uint32_t>(std::endian::little));
-
-            if (!stream.CanRead(numRecords * sizeof(uint32_t))) {
-                _entries.clear();
-                return;
-            }
-
-            std::span<uint32_t const> fileDataIDs = stream.Data<uint32_t>().subspan(0, numRecords);
-            stream.SkipRead(numRecords * sizeof(uint32_t));
-
-            _entries.reserve(_entries.size() + numRecords);
-
-            if (interleave) {
-                if (!stream.CanRead((contentKeySize + sizeof(uint64_t)) * numRecords)) {
-                    _entries.clear();
-                    return;
-                }
-
-                uint32_t fileDataID = -1;
-                for (size_t i = 0; i < numRecords; ++i) {
-                    fileDataID += utility::to_endianness<std::endian::little>(fileDataIDs[i]) + 1;
-
-                    std::span<const uint8_t> hashSpan = stream.Data<uint8_t>().subspan(0, contentKeySize);
-                    stream.SkipRead(contentKeySize);
-
-                    uint64_t nameHash = stream.Read<uint64_t>(std::endian::little); // Jenkins96 of the file's path
-
-                    _entries.emplace_back(tact::CKey{ hashSpan }, fileDataID, nameHash);
-                }
-            }
-            else {
-                // Read the file's data hashes in one pass.
-                if (!stream.CanRead(numRecords * contentKeySize)) {
-                    _entries.clear();
-                    return;
-                }
-
-                std::span<const uint8_t> hashSpan = stream.Data<uint8_t>().subspan(0, numRecords * contentKeySize);
-                stream.SkipRead(hashSpan.size());
-
-                uint32_t fileDataID = -1;
-
-                if (!canSkip || (static_cast<uint32_t>(contentFlags) & static_cast<uint32_t>(ContentFlags::NoNameHash)) == 0) {
-                    if (!stream.CanRead(numRecords * sizeof(uint64_t))) {
-                        _entries.clear();
-                        return;
-                    }
-
-                    for (size_t i = 0; i < numRecords; ++i) {
-                        fileDataID += utility::to_endianness<std::endian::little>(fileDataIDs[i]) + 1;
-
-                        uint64_t nameHash = stream.Read<uint64_t>(std::endian::little); // Jenkins96 of the file's path
-
-                        _entries.emplace_back(tact::CKey{ hashSpan.subspan(i * contentKeySize, contentKeySize) }, fileDataID, nameHash);
-                    }
-                }
-                else {
-                    for (size_t i = 0; i < numRecords; ++i) {
-                        fileDataID += utility::to_endianness<std::endian::little>(fileDataIDs[i]) + 1;
-                        _entries.emplace_back(tact::CKey{ hashSpan.subspan(i * contentKeySize, contentKeySize) }, fileDataID, 0);
-                    }
-                }
-            }
-        }
-    }
-
-    */
-    Root::Root(Root&& other) noexcept : _entries(std::move(other._entries)) {
+    Root::Root(Root&& other) noexcept : _blocks(std::move(other._blocks)) {
 
     }
 
     Root& Root::operator = (Root&& other) noexcept {
-        _entries = std::move(other._entries);
+        _blocks = std::move(other._blocks);
         return *this;
     }
 
@@ -231,6 +168,14 @@ namespace libtactmon::tact::data::product::wow {
         return *this;
     }
 
+    size_t Root::size() const {
+        size_t result = 0;
+        for (Block const& block : _blocks)
+            result += block.entries.size();
+
+        return result;
+    }
+
     std::optional<tact::CKey> Root::FindFile(uint32_t fileDataID) const {
         // Can a bonary search be used on the blocks as well? This assumes blocks don't overlap and max(prev_block.fdids) < min(curr_block.fdids)
         for (Block const& block : _blocks) {
@@ -246,10 +191,10 @@ namespace libtactmon::tact::data::product::wow {
     std::optional<tact::CKey> Root::FindFile(std::string_view fileName) const {
         uint32_t jenkinsHash = crypto::JenkinsHash(fileName);
 
-        // Unfortunately, no binary search here.
-        for (Entry const& entry : _entries)
-            if (entry.NameHash == jenkinsHash)
-                return entry.ContentKey;
+        for (Block const& block : _blocks)
+            for (Entry const& entry : block.entries)
+                if (entry.NameHash == jenkinsHash)
+                    return entry.ContentKey;
 
         return std::nullopt;
     }
