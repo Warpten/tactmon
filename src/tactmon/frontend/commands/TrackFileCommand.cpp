@@ -16,22 +16,20 @@ namespace product = entity::product;
 
 namespace frontend::commands {
     dpp::slashcommand TrackFileCommand::GetRegistrationInfo(dpp::cluster& bot) const {
-        dpp::slashcommand command("track", "Adds or removes a file from the tracked files for a specific product.", bot.me.id);
-        command.add_option(
-            dpp::command_option(dpp::co_sub_command_group, "filename", "yep cock")
-                .add_option(
-                    dpp::command_option(dpp::co_sub_command, "add", "Tracks a specific file for a given product.")
-                        .add_option(dpp::command_option(dpp::co_string, "product", "The name of the product.", true).set_auto_complete(true))
-                        .add_option(dpp::command_option(dpp::co_string, "filePath", "Absolute path to the file.", true))
-                )
-                .add_option(
-                    dpp::command_option(dpp::co_sub_command, "remove", "Removes a file from the list of track files for a specific product.")
-                        .add_option(dpp::command_option(dpp::co_string, "product", "The name of the product.", true).set_auto_complete(true))
-                        .add_option(dpp::command_option(dpp::co_string, "filePath", "Absolute path to the file.", true).set_auto_complete(true))
-                )
-        );
-
-        return command;
+        return dpp::slashcommand("track", "Adds or removes a file from the tracked files for a specific product.", bot.me.id)
+            .add_option(
+                dpp::command_option(dpp::co_sub_command, "filename", "Adds or remove a file from the tracked files for a product via its name.", true)
+                    .add_option(
+                        dpp::command_option(dpp::co_sub_command, "add", "Tracks a specific file for a given product.", true)
+                            .add_option(dpp::command_option(dpp::co_string, "product", "The name of the product.", true).set_auto_complete(true))
+                            .add_option(dpp::command_option(dpp::co_string, "filepath", "Absolute path to the file.", true))
+                    )
+                    .add_option(
+                        dpp::command_option(dpp::co_sub_command, "remove", "Removes a file from the list of track files for a specific product.", true)
+                            .add_option(dpp::command_option(dpp::co_string, "product", "The name of the product.", true).set_auto_complete(true))
+                            .add_option(dpp::command_option(dpp::co_string, "filepath", "Absolute path to the file.", true).set_auto_complete(true))
+                    )
+            );
     }
 
     bool TrackFileCommand::Matches(dpp::interaction const& evnt) const {
@@ -46,7 +44,7 @@ namespace frontend::commands {
         dpp::command_data_option const& subcommand = interaction.options[0];
 
         std::string product = std::get<std::string>(evnt.get_parameter("product"));
-        std::string filePath = std::get<std::string>(evnt.get_parameter("filePath"));
+        std::string filePath = std::get<std::string>(evnt.get_parameter("filepath"));
 
         bool alreadyChecked = cluster.db.trackedFiles.Any([&](auto const& entry) {
             return db::get<tracked_file::product_name>(entry) == product
@@ -124,7 +122,7 @@ namespace frontend::commands {
                 cluster.bot.interaction_response_create(evnt.command.id, evnt.command.token, interactionResponse);
                 return;
             }
-            else if (eventOption.name == "filePath" && isInsertionCommand) {
+            else if (eventOption.name == "filepath" && isInsertionCommand) {
                 std::string optionValue = std::get<std::string>(eventOption.value);
                 if (optionValue.empty())
                     break;

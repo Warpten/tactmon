@@ -35,15 +35,15 @@ namespace libtactmon::tact::data {
         std::span<const uint8_t> tocHash = stream.Data<uint8_t>().subspan(0, checksumSize);
         stream.SkipRead(checksumSize);
 
-        uint8_t version = stream.Read<uint8_t>(std::endian::little);
-        uint8_t _11 = stream.Read<uint8_t>(std::endian::little);
-        uint8_t _12 = stream.Read<uint8_t>(std::endian::little);
-        uint8_t blockSizeKb = stream.Read<uint8_t>(std::endian::little);
-        uint8_t offsetBytes = stream.Read<uint8_t>(std::endian::little);
-        uint8_t sizeBytes = stream.Read<uint8_t>(std::endian::little);
-        _keySizeBytes = stream.Read<uint8_t>(std::endian::little);
-        stream.Read<uint8_t>(std::endian::little); // checksumSize, validate!
-        uint32_t numElements = stream.Read<uint32_t>(std::endian::little);
+        uint8_t version = stream.Read<uint8_t>();
+        uint8_t _11 = stream.Read<uint8_t>();
+        uint8_t _12 = stream.Read<uint8_t>();
+        uint8_t blockSizeKb = stream.Read<uint8_t>();
+        uint8_t offsetBytes = stream.Read<uint8_t>();
+        uint8_t sizeBytes = stream.Read<uint8_t>();
+        _keySizeBytes = stream.Read<uint8_t>();
+        stream.Read<uint8_t>(); // checksumSize, validate!
+        uint32_t numElements = stream.Read<uint32_t>();
         // We don't read the footer checksum (but probably should)
         // > footerChecksum is calculated over the footer beginning with version when footerChecksum is zeroed
         //   ????

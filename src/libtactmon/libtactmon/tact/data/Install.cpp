@@ -7,8 +7,8 @@ namespace libtactmon::tact::data {
             return std::nullopt;
 
         uint16_t signature = stream.Read<uint16_t>(std::endian::big);
-        uint8_t version = stream.Read<uint8_t>(std::endian::little);
-        uint8_t hashSize = stream.Read<uint8_t>(std::endian::little);
+        uint8_t version = stream.Read<uint8_t>();
+        uint8_t hashSize = stream.Read<uint8_t>();
         uint16_t numTags = stream.Read<uint16_t>(std::endian::big);
         uint32_t numEntries = stream.Read<uint32_t>(std::endian::big);
 

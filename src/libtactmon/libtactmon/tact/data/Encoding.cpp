@@ -20,20 +20,20 @@ namespace libtactmon::tact::data {
             return;
 
         Signature          = stream.Read<uint16_t>(std::endian::big);
-        Version            = stream.Read<uint8_t>(std::endian::little);
-        EncodingKeySize    = stream.Read<uint8_t>(std::endian::little);
-        ContentKeySize     = stream.Read<uint8_t>(std::endian::little);
+        Version            = stream.Read<uint8_t>();
+        EncodingKeySize    = stream.Read<uint8_t>();
+        ContentKeySize     = stream.Read<uint8_t>();
         CEKey.PageSize     = stream.Read<uint16_t>(std::endian::big) * 1024;
         EKeySpec.PageSize  = stream.Read<uint16_t>(std::endian::big) * 1024;
         CEKey.PageCount    = stream.Read<uint32_t>(std::endian::big);
         EKeySpec.PageCount = stream.Read<uint32_t>(std::endian::big);
-        uint8_t unknown    = stream.Read<uint8_t>(std::endian::little); // Asserted to be zero by agent.
+        uint8_t unknown    = stream.Read<uint8_t>(); // Asserted to be zero by agent.
         ESpecBlockSize     = stream.Read<uint32_t>(std::endian::big);
     }
 
     Encoding::CEKeyPageTable::CEKeyPageTable(io::IReadableStream& stream, Header const& header)
     {
-        _keyCount = stream.Read<uint8_t>(std::endian::little);
+        _keyCount = stream.Read<uint8_t>();
         _fileSize = ReadUInt40(stream, std::endian::big);
 
         _ckey.resize(header.ContentKeySize);
