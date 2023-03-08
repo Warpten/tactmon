@@ -40,18 +40,16 @@ namespace frontend::commands {
     }
 
     void TrackFileCommand::HandleSlashCommand(dpp::slashcommand_t const& evnt, frontend::Discord& cluster) {
-        dpp::command_interaction interaction = evnt.command.get_command_interaction();
-        dpp::command_data_option const& subcommand = interaction.options[0];
-
-        std::string product = std::get<std::string>(evnt.get_parameter("product"));
-        std::string filePath = std::get<std::string>(evnt.get_parameter("filepath"));
+        std::optional<std::monostate> isInsertionCommand = GetParameter<std::monostate>(evnt, "add");
+        std::string product = GetParameter<std::string>(evnt, "product").value();
+        std::string filePath = GetParameter<std::string>(evnt, "filepath").value();
 
         bool alreadyChecked = cluster.db.trackedFiles.Any([&](auto const& entry) {
             return db::get<tracked_file::product_name>(entry) == product
                 && db::get<tracked_file::file_path>(entry) == filePath;
         });
 
-        if (subcommand.name == "add") {
+        if (isInsertionCommand.has_value()) {
             if (alreadyChecked) {
                 evnt.edit_response(dpp::message().add_embed(
                     dpp::embed()
@@ -67,7 +65,7 @@ namespace frontend::commands {
                 ));
             }
         }
-        else if (subcommand.name == "remove") {
+        else {
             if (alreadyChecked) {
                 cluster.db.trackedFiles.Delete(product, filePath);
                 evnt.edit_response(dpp::message().add_embed(

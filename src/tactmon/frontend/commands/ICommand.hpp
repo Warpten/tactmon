@@ -52,6 +52,39 @@ namespace frontend::commands {
         bool OnSelectClick(dpp::select_click_t const& evnt, frontend::Discord& cluster);
 
     protected:
+        template <typename T>
+        static std::optional<T> GetParameter(dpp::slashcommand_t const& evnt, std::string const& name) {
+            // auto topLevelValue = evnt.get_parameter<T>(name);
+            // if (std::holds_alternative<T>(topLevelValue))
+            //     return std::get<T>(topLevelValue);
+            // 
+            dpp::command_interaction interaction = evnt.command.get_command_interaction();
+            for (dpp::command_data_option const& option : interaction.options) {
+                std::optional<T> childValue = GetParameter<T>(option, name);
+                if (childValue.has_value())
+                    return childValue;
+            }
+
+            return std::nullopt;
+        }
+
+        template <typename T>
+        static std::optional<T> GetParameter(dpp::command_data_option const& option, std::string const& name) {
+            if (option.name == name) {
+                if (std::holds_alternative<T>(option.value))
+                    return std::get<T>(option.value);
+                return std::nullopt;
+            }
+
+            for (dpp::command_data_option const& child : option.options) {
+                std::optional<T> childValue = GetParameter<T>(child, name);
+                if (childValue.has_value())
+                    return childValue;
+            }
+
+            return std::nullopt;
+        }
+
         /**
          * Handles Discord's autocomplete events.
          * 
