@@ -12,6 +12,26 @@ namespace frontend {
 }
 
 namespace frontend::commands {
+    struct AutocompletionContext final {
+        explicit AutocompletionContext(dpp::autocomplete_t const& evnt) : evnt(evnt) { }
+
+        dpp::autocomplete_t const& evnt;
+        std::unordered_map<std::string, dpp::command_value> values;
+
+        template <typename T>
+        std::optional<T> get(std::string const& name) {
+            auto itr = values.find(name);
+            if (itr != values.end() && std::holds_alternative<T>(itr->second))
+                return std::get<T>(itr->second);
+
+            return std::nullopt;
+        }
+
+        bool has(std::string token) {
+            return values.find(token) != values.end();
+        }
+    };
+
     struct ICommand {
         virtual ~ICommand() = default;
 
@@ -38,7 +58,12 @@ namespace frontend::commands {
          * @param[in] event The event sent by Discord.
          * @returns A boolean indicating wether or not the event was handled.
          */
-        virtual void HandleAutoCompleteEvent(dpp::autocomplete_t const& evnt, frontend::Discord& cluster) { }
+        void HandleAutoCompleteEvent(dpp::autocomplete_t const& evnt, frontend::Discord& cluster);
+
+        /**
+         * Handles Discord's autocomplete events.
+         */
+        virtual bool HandleAutoComplete(std::string const& name, dpp::command_value const& value, AutocompletionContext context, frontend::Discord& cluster);
 
         /**
          * Main entry point for a slash command. You usually want to persist the instance of this type

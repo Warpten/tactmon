@@ -57,7 +57,7 @@ namespace frontend {
 
         if (httpServer != nullptr)
             RegisterCommand<frontend::commands::DownloadCommand>(evnt.created->id);
-
+        
         RegisterCommand<frontend::commands::ProductStatusCommand>(evnt.created->id);
         RegisterCommand<frontend::commands::CacheStatusCommand>(evnt.created->id);
         RegisterCommand<frontend::commands::BindCommand>(evnt.created->id);

@@ -14,6 +14,7 @@ namespace libtactmon::tact::data {
 
         Install instance { };
 
+        instance._tags.reserve(numTags);
         for (int i = 0; i < numTags; ++i) {
             std::string name;
             stream.ReadCString(name);
@@ -25,6 +26,7 @@ namespace libtactmon::tact::data {
             );
         }
 
+        instance._entries.reserve(numEntries);
         for (size_t i = 0; i < numEntries; ++i) {
             std::string name;
             stream.ReadCString(name);

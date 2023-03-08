@@ -11,6 +11,5 @@ namespace frontend::commands {
         dpp::slashcommand GetRegistrationInfo(dpp::cluster& bot) const override;
 
         void HandleSlashCommand(dpp::slashcommand_t const& evnt, frontend::Discord& cluster) override;
-        void HandleAutoCompleteEvent(dpp::autocomplete_t const& evnt, frontend::Discord& cluster) override;
     };
 }
