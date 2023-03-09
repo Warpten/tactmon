@@ -48,6 +48,7 @@ namespace backend::db::entity::product {
 
         using Insert = db::PreparedStatement<"Products.Insert", db::insert::Query<
             Entity,
+            Ignore,
             name, sequence_id
         >>;
 

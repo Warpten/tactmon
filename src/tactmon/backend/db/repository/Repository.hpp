@@ -159,6 +159,14 @@ namespace backend::db::repository {
         }
 
         template <typename Callback>
+        void ForEach(Callback&& callback) const {
+            return repository_base::WithMutex_([&]() {
+                for (auto [k, v] : _storage)
+                    callback(v);
+            });
+        }
+
+        template <typename Callback>
         bool Any(Callback&& callback) const {
             return repository_base::WithMutex_([&]() {
                 for (auto [k, v] : _storage)

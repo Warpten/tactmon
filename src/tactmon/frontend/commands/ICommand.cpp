@@ -171,12 +171,13 @@ namespace frontend::commands {
                             continue;
                     }
 
+                    std::string const& displayName = db::get<tracked_file::display_name>(entry);
                     std::string const& filePath = db::get<tracked_file::file_path>(entry);
                     if (filePath.find(optionValue) == std::string::npos)
                         continue;
 
                     ++suggestionCount;
-                    interactionResponse.add_autocomplete_choice(dpp::command_option_choice(filePath, filePath));
+                    interactionResponse.add_autocomplete_choice(dpp::command_option_choice(displayName, filePath));
                     if (suggestionCount >= 100)
                         break;
                 }

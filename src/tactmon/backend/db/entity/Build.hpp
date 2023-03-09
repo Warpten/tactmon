@@ -93,6 +93,7 @@ namespace backend::db::entity::build {
         
         using Insert = db::PreparedStatement<"Builds.Insert", db::insert::Query<
             Entity,
+            Returning<Entity>,
             region, product_name, build_name, build_config, cdn_config, detected_at
         >>;
     }

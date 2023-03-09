@@ -23,8 +23,9 @@ namespace backend::db::repository {
          *
          * @param[in] productName The product for which this file should be tracked.
          * @param[in] filePath    The path to the file to track.
+         * @param[in] displayName A name to use to display this file when generating buttons for build pushes.
          */
-        void Insert(std::string const& productName, std::string const& filePath);
+        void Insert(std::string const& productName, std::string const& filePath, std::optional<std::string> displayName = std::nullopt);
 
         /**
          * Unregisters a file for tracking.

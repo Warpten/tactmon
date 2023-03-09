@@ -10,8 +10,8 @@ namespace backend::db::repository {
         entity::tracked_file::queries::Delete::Prepare(_connection, _logger);
     }
 
-    void TrackedFile::Insert(std::string const& productName, std::string const& filePath) {
-        Execute<entity::tracked_file::queries::Insert>(productName, filePath);
+    void TrackedFile::Insert(std::string const& productName, std::string const& filePath, std::optional<std::string> displayName) {
+        Execute<entity::tracked_file::queries::Insert>(productName, filePath, displayName.value_or(filePath));
     }
 
     void TrackedFile::Delete(std::string const& productName, std::string const& filePath) {

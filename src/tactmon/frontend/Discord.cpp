@@ -35,6 +35,7 @@ namespace frontend {
     {
         _logger = utility::logging::GetLogger("discord");
 
+        bot.on_ready(std::bind(&Discord::HandleReady, this, std::placeholders::_1));
         bot.on_guild_create(std::bind(&Discord::HandleGuildCreate, this, std::placeholders::_1));
         bot.on_slashcommand(std::bind(&Discord::HandleSlashCommand, this, std::placeholders::_1));
         bot.on_form_submit(std::bind(&Discord::HandleFormSubmitEvent, this, std::placeholders::_1));
@@ -49,19 +50,30 @@ namespace frontend {
 
     void Discord::Run() {
         bot.start(dpp::start_type::st_return);
+
+        if (httpServer != nullptr)
+            RegisterCommand<frontend::commands::DownloadCommand>();
+
+        RegisterCommand<frontend::commands::ProductStatusCommand>();
+        RegisterCommand<frontend::commands::CacheStatusCommand>();
+        RegisterCommand<frontend::commands::BindCommand>();
+        RegisterCommand<frontend::commands::TrackFileCommand>();
+    }
+
+    void Discord::HandleReady(dpp::ready_t const& evnt) {
+        // Housekeeping: delete any global command.
+        bot.global_bulk_command_create({ });
     }
 
     void Discord::HandleGuildCreate(dpp::guild_create_t const& evnt) {
         if (evnt.created == nullptr)
             return;
 
-        if (httpServer != nullptr)
-            RegisterCommand<frontend::commands::DownloadCommand>(evnt.created->id);
-        
-        RegisterCommand<frontend::commands::ProductStatusCommand>(evnt.created->id);
-        RegisterCommand<frontend::commands::CacheStatusCommand>(evnt.created->id);
-        RegisterCommand<frontend::commands::BindCommand>(evnt.created->id);
-        RegisterCommand<frontend::commands::TrackFileCommand>(evnt.created->id);
+        std::vector<dpp::slashcommand> commands;
+        for (std::shared_ptr<commands::ICommand> command : _commands)
+            commands.push_back(command->GetRegistrationInfo(bot));
+
+        bot.guild_bulk_command_create(commands, evnt.created->id);
     }
 
     void Discord::HandleLogEvent(dpp::log_t const& evnt) {
@@ -85,10 +97,10 @@ namespace frontend {
 
             evnt.reply(dpp::message().add_embed(
                 dpp::embed()
-                .set_color(0x00FF0000u)
-                .set_title("An error occured.")
-                .set_description("No command handler found for this command.")
-                .set_footer(dpp::embed_footer()
+                    .set_color(0x00FF0000u)
+                    .set_title("An error occured.")
+                    .set_description("No command handler found for this command.")
+                    .set_footer(dpp::embed_footer()
                     .set_text("How the hell did you manage to trigger this?")
                 )
             ));

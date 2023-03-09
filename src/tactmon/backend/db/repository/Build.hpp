@@ -40,6 +40,6 @@ namespace backend::db::repository {
          */
         std::optional<entity::build::dto::BuildStatistics> GetStatisticsForProduct(std::string const& productName) const;
 
-        void Insert(std::string const& region, std::string const& productName, std::string const& buildName, std::string const& buildConfig, std::string const& cdnConfig);
+        std::optional<entity::build::Entity> Insert(std::string const& region, std::string const& productName, std::string const& buildName, std::string const& buildConfig, std::string const& cdnConfig);
     };
 }

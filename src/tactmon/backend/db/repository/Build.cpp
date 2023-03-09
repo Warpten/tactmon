@@ -26,11 +26,11 @@ namespace backend::db::repository {
         return ExecuteOne<entity::build::queries::SelStatistics>(productName);
     }
 
-    void Build::Insert(std::string const& region, std::string const& productName, std::string const& buildName, std::string const& buildConfig, std::string const& cdnConfig) {
+    std::optional<entity::build::Entity> Build::Insert(std::string const& region, std::string const& productName, std::string const& buildName, std::string const& buildConfig, std::string const& cdnConfig) {
         using namespace std::chrono;
         using clock = system_clock;
 
-        ExecuteOne<entity::build::queries::Insert>(region, productName, buildName, buildConfig, cdnConfig,
+        return ExecuteOne<entity::build::queries::Insert>(region, productName, buildName, buildConfig, cdnConfig,
             static_cast<uint64_t>(duration_cast<seconds>(clock::now().time_since_epoch()).count())
         );
     }

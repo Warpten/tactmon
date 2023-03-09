@@ -170,6 +170,8 @@ namespace backend::db {
      */
     template <typename COMPONENT> struct PartitionBy { };
 
+    template <typename ENTITY> struct Returning { };
+
     /**
      * Represents a compound result set ordering clause.
      * 

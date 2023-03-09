@@ -4,8 +4,6 @@
 
 #include <boost/range/adaptor/map.hpp>
 
-using namespace std::chrono_literals;
-
 namespace backend {
     ProductCache::ProductCache(boost::asio::any_io_executor executor)
         : _cacheExpiryTimer(executor)
@@ -34,14 +32,14 @@ namespace backend {
         });
     }
 
-    bool ProductCache::LoadConfiguration(std::string productName, db::entity::build::Entity const& configuration, std::function<void(Product&)> handler) {
+    bool ProductCache::LoadConfiguration(std::string productName, db::entity::build::Entity const& configuration, std::function<void(Product&)> handler, std::chrono::high_resolution_clock::duration lifetime) {
         for (std::shared_ptr<Record> loadedProduct : _products) {
             db::entity::build::Entity const& loadedConfiguration = loadedProduct->product.GetLoadedBuild();
             if (db::get<db::entity::build::id>(loadedConfiguration) != db::get<db::entity::build::id>(configuration))
                 continue;
 
             // Reinitialize expiry timer if this build is requested
-            loadedProduct->expirationTimer = std::chrono::high_resolution_clock::now() + 15min;
+            loadedProduct->expirationTimer = std::chrono::high_resolution_clock::now() + lifetime;
 
             handler(loadedProduct->product);
             return true;

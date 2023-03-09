@@ -12,8 +12,9 @@ namespace backend::db::entity::tracked_file {
     using id = db::Column<"id", uint32_t>;
     using product_name = db::Column<"product_name", std::string>;
     using file_path = db::Column<"file_path", std::string>;
+    using display_name = db::Column<"display_name", std::string>;
 
-    using Entity = db::Entity<"tracked_files", "public", id, product_name, file_path>;
+    using Entity = db::Entity<"tracked_files", "public", id, product_name, file_path, display_name>;
 
     namespace queries {
         /**
@@ -26,7 +27,8 @@ namespace backend::db::entity::tracked_file {
 
         using Insert = db::PreparedStatement<"TrackedFiles.Insert", db::insert::Query<
             Entity,
-            product_name, file_path
+            Ignore,
+            product_name, file_path, display_name
         >>;
 
         using Delete = db::PreparedStatement<"TrackedFiles.Delete", db::del::Query<

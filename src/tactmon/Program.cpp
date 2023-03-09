@@ -15,12 +15,7 @@
 #include <thread>
 #include <utility>
 
-#include <fmt/format.h>
-#include <fmt/chrono.h>
-
-#include <libtactmon/ribbit/Commands.hpp>
-#include <libtactmon/ribbit/types/Versions.hpp>
-#include <libtactmon/tact/data/product/wow/Product.hpp>
+#include <assert.hpp>
 
 #include <boost/program_options.hpp>
 #include <boost/asio/executor_work_guard.hpp>
@@ -28,6 +23,14 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/asio/thread_pool.hpp>
+
+#include <fmt/chrono.h>
+#include <fmt/format.h>
+#include <fmt/ranges.h>
+
+#include <libtactmon/ribbit/Commands.hpp>
+#include <libtactmon/ribbit/types/Versions.hpp>
+#include <libtactmon/tact/data/product/wow/Product.hpp>
 
 void Execute(boost::program_options::variables_map vm);
 
@@ -37,6 +40,10 @@ namespace po = boost::program_options;
 namespace asio = boost::asio;
 
 namespace db = backend::db;
+using namespace db::entity;
+
+namespace tact = libtactmon::tact;
+namespace ribbit = libtactmon::ribbit;
 
 int main(int argc, char** argv) {
     po::options_description desc("Options");
@@ -144,21 +151,22 @@ void Execute(boost::program_options::variables_map vm) {
     frontend::Discord bot { vm["discord-thread-count"].as<uint16_t>(), vm["discord-token"].as<std::string>(), productCache, database, proxyServer };
     bot.Run();
 
+    struct NewBuild {
+        std::vector<std::string> Regions;
+        std::optional<build::Entity> Configuration;
+    };
+    std::vector<NewBuild> newBuilds;
+
     // 8. Create listener for ribbit
     monitor.RegisterListener([&](std::string const& productName, uint64_t sequenceID, backend::RibbitMonitor::ProductState state)
     {
         if (!productCache.IsAwareOf(productName))
             return;
 
-        namespace tact = libtactmon::tact;
-        namespace ribbit = libtactmon::ribbit;
-
         auto versions = ribbit::Versions<>::Execute(threadPool.executor(), nullptr, ribbit::Region::US, productName);
         auto cdns = ribbit::CDNs<>::Execute(threadPool.executor(), nullptr, ribbit::Region::US, productName);
         if (!versions.has_value() || !cdns.has_value())
             return;
-
-        std::vector<dpp::embed> embeds;
 
         for (ribbit::types::versions::Record const& version : versions->Records) {
             tact::data::product::ResourceResolver resolver(threadPool.executor(), localCache);
@@ -171,31 +179,108 @@ void Execute(boost::program_options::variables_map vm) {
             if (!buildConfig.has_value())
                 continue;
 
-            if (!database.builds.GetByBuildName(buildConfig->BuildName, version.Region).has_value())
-                database.builds.Insert(version.Region, productName, buildConfig->BuildName, version.BuildConfig, version.CDNConfig);
+            std::optional<build::Entity> databaseRecord = [&]() -> std::optional<build::Entity> {
+                auto existingRow = database.builds.GetByBuildName(buildConfig->BuildName, version.Region);
+                if (!existingRow.has_value())
+                    return database.builds.Insert(version.Region, productName, buildConfig->BuildName, version.BuildConfig, version.CDNConfig);
 
-            dpp::embed embed;
-            embed.set_title(fmt::format("`{}` ({})", buildConfig->BuildName, version.Region));
-            embed.add_field("Build Configuration", fmt::format("`{}`", version.BuildConfig), true);
-            embed.add_field("CDN Configuration", fmt::format("`{}`", version.CDNConfig), true);
-            embed.set_color(0x00FF0000u);
+                return std::nullopt;
+            }();
 
-            embeds.emplace_back(std::move(embed));
+            if (!databaseRecord.has_value())
+                continue;
+
+            auto itr = std::find_if(newBuilds.begin(), newBuilds.end(), [&](NewBuild const& build) {
+                DEBUG_ASSERT(build.Configuration.has_value());
+
+                // Fast path: check ID PK for speed.
+                if (db::get<build::id>(build.Configuration.value()) == db::get<build::id>(databaseRecord.value()))
+                    return true;
+
+                return db::get<build::build_name>(build.Configuration.value()) == buildConfig->BuildName
+                    && db::get<build::cdn_config>(build.Configuration.value()) == version.CDNConfig
+                    && db::get<build::build_config>(build.Configuration.value()) == version.BuildConfig;
+            });
+
+            if (itr == newBuilds.end()) {
+                NewBuild& record = newBuilds.emplace_back();
+                record.Regions.push_back(version.Region);
+                record.Configuration = databaseRecord;
+            } else
+                itr->Regions.push_back(version.Region);
+        }
+
+        // If the HTTP proxy server is active, load the configuration; it'll be used to generate links to each file
+        // and then be immediately unloaded.
+        using namespace std::chrono_literals;
+
+        if (proxyServer != nullptr) {
+            for (NewBuild& newBuild : newBuilds) {
+                productCache.LoadConfiguration(productName, newBuild.Configuration.value(), [&](backend::Product& product) {
+                    // Iterate over each channel the bot is bound to and publish the links;
+                    // do this only for the channels that are used to track a given product.
+                    database.boundChannels.ForEach([&](auto boundChannel) {
+                        if (db::get<bound_channel::product_name>(boundChannel) != productName)
+                            return;
+
+                        uint64_t channelID = db::get<bound_channel::channel_id>(boundChannel);
+
+                        dpp::message msg {
+                            dpp::snowflake { channelID },
+                            fmt::format("Downloads for `{}`.", db::get<build::build_name>(newBuild.Configuration.value()))
+                        };
+
+                        database.trackedFiles.ForEach(
+                            [&](auto trackedFile) {
+                                std::filesystem::path trackedFilePath { db::get<tracked_file::file_path>(trackedFile) };
+
+                                std::optional<tact::data::FileLocation> fileKey = product->FindFile(trackedFilePath.string());
+                                if (!fileKey.has_value() || fileKey->keyCount() == 0)
+                                    return;
+
+                                // Use the first key.
+                                std::optional<tact::data::ArchiveFileLocation> fileLocation = product->FindArchive((*fileKey)[0]);
+                                if (!fileLocation.has_value())
+                                    return;
+
+                                std::string remoteAdress = proxyServer->GenerateAdress(productName, fileLocation.value(),
+                                    trackedFilePath.filename().string(), fileLocation->fileSize());
+
+                                msg.add_component(dpp::component()
+                                    .set_type(dpp::cot_button)
+                                    .set_label(trackedFilePath.filename().string())
+                                    .set_url(remoteAdress)
+                                );
+                            }
+                        );
+
+                        bot.bot.message_create(msg);
+                    });
+                }, 2min);
+            }
         }
 
         database.boundChannels.WithValues([&](auto entries) {
-            for (db::entity::bound_channel::Entity::as_projection const& entity : entries) {
-                if (db::get<db::entity::bound_channel::product_name>(entity) != productName)
+            for (bound_channel::Entity::as_projection const& entity : entries) {
+                if (db::get<bound_channel::product_name>(entity) != productName)
                     continue;
 
-                uint64_t channelID = db::get<db::entity::bound_channel::channel_id>(entity);
+                uint64_t channelID = db::get<bound_channel::channel_id>(entity);
 
                 dpp::message message {
                     dpp::snowflake{ channelID },
                     fmt::format("Builds update for product `{0}` has been detected (**{1:%Y-%m-%d}** at **{1:%H:%M:%S}**).", productName, std::chrono::system_clock::now()),
                 };
-                for (auto&& embed : embeds)
+
+                for (NewBuild const& newBuild : newBuilds) {
+                    dpp::embed embed;
+                    embed.set_title(fmt::format("`{}` ({})", db::get<build::build_name>(newBuild.Configuration.value()), fmt::join(newBuild.Regions, ", ")))
+                        .add_field("Build Configuration", fmt::format("`{}`", db::get<build::build_config>(newBuild.Configuration.value())))
+                        .add_field("CDN Configuration", fmt::format("`{}`", db::get<build::cdn_config>(newBuild.Configuration.value())))
+                        .set_color(0x00FFFF00u);
+
                     message.add_embed(embed);
+                }
 
                 bot.bot.message_create(message);
             }

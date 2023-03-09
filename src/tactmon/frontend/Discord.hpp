@@ -28,18 +28,20 @@ namespace frontend {
         void Run();
 
     private:
-        template <typename T>
-        void RegisterCommand(dpp::snowflake const& guildID) {
-            auto command = _commands.emplace_back(std::make_shared<T>());
-            bot.guild_command_create(command->GetRegistrationInfo(bot), guildID);
+        template <typename T, typename... Args>
+        auto RegisterCommand()
+            -> std::enable_if_t<std::is_constructible_v<T, Args...>>
+        {
+            _commands.emplace_back(std::make_shared<T>());
         }
 
-        void HandleGuildCreate(dpp::guild_create_t const& event);
-        void HandleSlashCommand(dpp::slashcommand_t const& event);
-        void HandleFormSubmitEvent(dpp::form_submit_t const& event);
-        void HandleLogEvent(dpp::log_t const& event);
-        void HandleSelectClickEvent(dpp::select_click_t const& event);
-        void HandleAutoCompleteEvent(dpp::autocomplete_t const& event);
+        void HandleReady(dpp::ready_t const& evnt);
+        void HandleGuildCreate(dpp::guild_create_t const& evnt);
+        void HandleSlashCommand(dpp::slashcommand_t const& evnt);
+        void HandleFormSubmitEvent(dpp::form_submit_t const& evnt);
+        void HandleLogEvent(dpp::log_t const& evnt);
+        void HandleSelectClickEvent(dpp::select_click_t const& evnt);
+        void HandleAutoCompleteEvent(dpp::autocomplete_t const& evnt);
 
     private:
         template <typename T>

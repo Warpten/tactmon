@@ -23,6 +23,7 @@ namespace frontend::commands {
                         dpp::command_option(dpp::co_sub_command, "add", "Tracks a specific file for a given product.")
                             .add_option(dpp::command_option(dpp::co_string, "product", "The name of the product.", true).set_auto_complete(true))
                             .add_option(dpp::command_option(dpp::co_string, "filepath", "Absolute path to the file.", true))
+                            .add_option(dpp::command_option(dpp::co_string, "displayname", "Name to display for this file.", false))
                     )
                     .add_option(
                         dpp::command_option(dpp::co_sub_command, "remove", "Removes a file from the list of track files for a specific product.")
@@ -43,6 +44,7 @@ namespace frontend::commands {
         std::optional<std::monostate> isInsertionCommand = GetParameter<std::monostate>(evnt, "add");
         std::string product = GetParameter<std::string>(evnt, "product").value();
         std::string filePath = GetParameter<std::string>(evnt, "filepath").value();
+        std::optional<std::string> displayName = GetParameter<std::string>(evnt, "displayname");
 
         bool alreadyChecked = cluster.db.trackedFiles.Any([&](auto const& entry) {
             return db::get<tracked_file::product_name>(entry) == product
@@ -57,7 +59,7 @@ namespace frontend::commands {
                 ));
             }
             else {
-                cluster.db.trackedFiles.Insert(product, filePath);
+                cluster.db.trackedFiles.Insert(product, filePath, displayName);
                 evnt.edit_response(dpp::message().add_embed(
                     dpp::embed()
                         .set_description(fmt::format("File `{}` is now tracked for product `{}`.", filePath, product))

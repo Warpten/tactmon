@@ -37,7 +37,7 @@ namespace backend::db {
 
         };
         
-        template <typename ENTITY, typename... COMPONENTS>
+        template <typename ENTITY, typename RETURNING, typename... COMPONENTS>
         struct Query {
             using transaction_type = pqxx::work;
             using projection_type = ENTITY;
@@ -110,12 +110,14 @@ namespace backend::db {
         static auto Render(std::ostream& strm, Proxy<PartitionBy<COMPONENT>>, utility::Constant<PARAMETER> p);
         template <size_t PARAMETER, typename COMPONENT>
         static auto Render(std::ostream& strm, Proxy<insert::Value<COMPONENT>>, utility::Constant<PARAMETER> p);
+        template <size_t PARAMETER, typename ENTITY>
+        static auto Render(std::ostream& strm, Proxy<Returning<ENTITY>>, utility::Constant<PARAMETER> p);
 
         template <size_t PARAMETER, typename PROJECTION, typename ENTITY, typename CRITERIA, typename ORDER, typename LIMIT>
         static auto Render(std::ostream& strm, Proxy<select::Query<PROJECTION, ENTITY, CRITERIA, ORDER, LIMIT>>, utility::Constant<PARAMETER> p);
 
-        template <size_t PARAMETER, typename ENTITY, typename... COMPONENTS>
-        static auto Render(std::ostream& strm, Proxy<insert::Query<ENTITY, COMPONENTS...>>, utility::Constant<PARAMETER> p);
+        template <size_t PARAMETER, typename ENTITY, typename RETURNING, typename... COMPONENTS>
+        static auto Render(std::ostream& strm, Proxy<insert::Query<ENTITY, RETURNING, COMPONENTS...>>, utility::Constant<PARAMETER> p);
 
         template <size_t PARAMETER, typename ENTITY, typename CRITERIA, typename... COMPONENTS>
         static auto Render(std::ostream& strm, Proxy<update::Query<ENTITY, CRITERIA, COMPONENTS...>>, utility::Constant<PARAMETER> p);
@@ -237,23 +239,28 @@ namespace backend::db {
             return limitOffset;
         }
 
+        template <size_t PARAMETER, typename ENTITY>
+        static auto Render(std::ostream& strm, Proxy<Returning<ENTITY>>, utility::Constant<PARAMETER> p) {
+            strm << "RETURNING ";
+            return Render(strm, Proxy<typename SelectProjection<ENTITY>::type> { }, p);
+        }
+
         template <size_t PARAMETER, typename PROJECTION>
         static auto Render(std::ostream& strm, Proxy<insert::Value<PROJECTION>>, utility::Constant<PARAMETER> p) {
             strm << "$" << PARAMETER;
             return utility::Constant<PARAMETER + 1> { };
         }
 
-        template <size_t PARAMETER, typename PROJECTION, typename... COMPONENTS>
-        static auto Render(std::ostream& strm, Proxy<insert::Query<PROJECTION, COMPONENTS...>>, utility::Constant<PARAMETER> p) {
+        template <size_t PARAMETER, typename ENTITY, typename RETURNING, typename... COMPONENTS>
+        static auto Render(std::ostream& strm, Proxy<insert::Query<ENTITY, RETURNING, COMPONENTS...>>, utility::Constant<PARAMETER> p) {
             strm << "INSERT INTO ";
-            auto entityOffset = Render(strm, Proxy<PROJECTION> { }, p);
+            auto entityOffset = Render(strm, Proxy<ENTITY> { }, p);
             strm << " (";
             auto componentOffset = RenderVaradic<", ">(strm, entityOffset, utility::Constant<0> { }, detail::type_list<COMPONENTS...> { });
             strm << ") VALUES (";
             auto valuesOffset = RenderVaradic<", ">(strm, componentOffset, utility::Constant<0> { }, detail::type_list<insert::Value<COMPONENTS>...> { });
             strm << ')';
-
-            return valuesOffset;
+            return Render(strm, Proxy<RETURNING> { }, valuesOffset);
         }
 
         template <size_t PARAMETER, typename ENTITY, typename CRITERIA, typename... COMPONENTS>
@@ -319,10 +326,10 @@ namespace backend::db {
         return ss.str();
     }
 
-    template <typename ENTITY, typename... COMPONENTS>
-    std::string insert::Query<ENTITY, COMPONENTS...>::Render() {
+    template <typename ENTITY, typename RETURNING, typename... COMPONENTS>
+    std::string insert::Query<ENTITY, RETURNING, COMPONENTS...>::Render() {
         std::stringstream ss;
-        renderer::Render(ss, renderer::Proxy<insert::Query<ENTITY, COMPONENTS...>> { }, utility::Constant<1> { });
+        renderer::Render(ss, renderer::Proxy<insert::Query<ENTITY, RETURNING, COMPONENTS...>> { }, utility::Constant<1> { });
         return ss.str();
     }
 

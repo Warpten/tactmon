@@ -27,6 +27,7 @@ namespace backend::db::entity::bound_channel {
 
         using Insert = db::PreparedStatement<"BoundChannels.Insert", db::insert::Query<
             Entity,
+            Ignore,
             guild_id, channel_id, product_name
         >>;
 
