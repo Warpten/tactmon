@@ -211,14 +211,16 @@ void Execute(boost::program_options::variables_map vm) {
         }
 
         // If the HTTP proxy server is active, load the configuration; it'll be used to generate links to each file
-        // and then be immediately unloaded.
-        using namespace std::chrono_literals;
-
+        // and then be immediately unloaded (immediately being ~2 minutes, everything here is eventually consistent)
         if (proxyServer != nullptr) {
+            using namespace std::chrono_literals;
+
             for (NewBuild& newBuild : newBuilds) {
                 productCache.LoadConfiguration(productName, newBuild.Configuration.value(), [&](backend::Product& product) {
                     // Iterate over each channel the bot is bound to and publish the links;
                     // do this only for the channels that are used to track a given product.
+                    // TODO: Generate links once for each file; just a small optimization
+                    //       even though generating links isn't terribly expensive.
                     database.boundChannels.ForEach([&](auto boundChannel) {
                         if (db::get<bound_channel::product_name>(boundChannel) != productName)
                             return;
@@ -227,32 +229,54 @@ void Execute(boost::program_options::variables_map vm) {
 
                         dpp::message msg {
                             dpp::snowflake { channelID },
-                            fmt::format("Downloads for `{}`.", db::get<build::build_name>(newBuild.Configuration.value()))
+                            fmt::format("Download links of tracked files for `{}` (`{}`).",
+                                db::get<build::build_name>(newBuild.Configuration.value()),
+                                db::get<build::build_config>(newBuild.Configuration.value())
+                            )
                         };
 
-                        database.trackedFiles.ForEach(
-                            [&](auto trackedFile) {
-                                std::filesystem::path trackedFilePath { db::get<tracked_file::file_path>(trackedFile) };
+                        dpp::component currentRow;
+                        database.trackedFiles.ForEach([&](auto trackedFile) {
+                            std::filesystem::path trackedFilePath { db::get<tracked_file::file_path>(trackedFile) };
 
-                                std::optional<tact::data::FileLocation> fileKey = product->FindFile(trackedFilePath.string());
-                                if (!fileKey.has_value() || fileKey->keyCount() == 0)
-                                    return;
+                            std::optional<tact::data::FileLocation> fileKey = product->FindFile(trackedFilePath.string());
+                            if (!fileKey.has_value() || fileKey->keyCount() == 0)
+                                return;
 
-                                // Use the first key.
-                                std::optional<tact::data::ArchiveFileLocation> fileLocation = product->FindArchive((*fileKey)[0]);
-                                if (!fileLocation.has_value())
-                                    return;
+                            // Use the first key.
+                            std::optional<tact::data::ArchiveFileLocation> fileLocation = product->FindArchive((*fileKey)[0]);
+                            if (!fileLocation.has_value())
+                                return;
 
-                                std::string remoteAdress = proxyServer->GenerateAdress(productName, fileLocation.value(),
-                                    trackedFilePath.filename().string(), fileLocation->fileSize());
+                            std::string remoteAdress = proxyServer->GenerateAdress(productName, fileLocation.value(),
+                                trackedFilePath.filename().string(), fileLocation->fileSize());
 
-                                msg.add_component(dpp::component()
-                                    .set_type(dpp::cot_button)
-                                    .set_label(trackedFilePath.filename().string())
-                                    .set_url(remoteAdress)
-                                );
+                            currentRow.add_component(dpp::component()
+                                .set_type(dpp::cot_button)
+                                .set_label(trackedFilePath.filename().string())
+                                .set_url(remoteAdress)
+                            );
+
+                            if (currentRow.components.size() == 5) {
+                                msg.add_component(currentRow);
+                                currentRow = { }; // Reset the row
                             }
-                        );
+
+                            if (msg.components.size() == 5) {
+                                dpp::message createdMessage = bot.bot.message_create_sync(msg);
+                                // Create a new message.
+                                msg = dpp::message {
+                                    dpp::snowflake { channelID },
+                                    fmt::format("Download links (cont.) of tracked files for `{}` (`{}`).",
+                                        db::get<build::build_name>(newBuild.Configuration.value()),
+                                        db::get<build::build_config>(newBuild.Configuration.value())
+                                    )
+                                }.set_reference(createdMessage.id);
+                            }
+                        });
+
+                        if (currentRow.components.size() > 0)
+                            msg.add_component(currentRow);
 
                         bot.bot.message_create(msg);
                     });
@@ -260,30 +284,29 @@ void Execute(boost::program_options::variables_map vm) {
             }
         }
 
-        database.boundChannels.WithValues([&](auto entries) {
-            for (bound_channel::Entity::as_projection const& entity : entries) {
-                if (db::get<bound_channel::product_name>(entity) != productName)
-                    continue;
+        // Immediately post Ribbit update notifications to subscribed channels.
+        database.boundChannels.ForEach([&](auto entity) {
+            if (db::get<bound_channel::product_name>(entity) != productName)
+                return;
 
-                uint64_t channelID = db::get<bound_channel::channel_id>(entity);
+            uint64_t channelID = db::get<bound_channel::channel_id>(entity);
 
-                dpp::message message {
-                    dpp::snowflake{ channelID },
-                    fmt::format("Builds update for product `{0}` has been detected (**{1:%Y-%m-%d}** at **{1:%H:%M:%S}**).", productName, std::chrono::system_clock::now()),
-                };
+            dpp::message message {
+                dpp::snowflake{ channelID },
+                fmt::format("Builds update for product `{0}` has been detected (**{1:%Y-%m-%d}** at **{1:%H:%M:%S}**).", productName, std::chrono::system_clock::now()),
+            };
 
-                for (NewBuild const& newBuild : newBuilds) {
-                    dpp::embed embed;
-                    embed.set_title(fmt::format("`{}` ({})", db::get<build::build_name>(newBuild.Configuration.value()), fmt::join(newBuild.Regions, ", ")))
-                        .add_field("Build Configuration", fmt::format("`{}`", db::get<build::build_config>(newBuild.Configuration.value())))
-                        .add_field("CDN Configuration", fmt::format("`{}`", db::get<build::cdn_config>(newBuild.Configuration.value())))
-                        .set_color(0x00FFFF00u);
+            for (NewBuild const& newBuild : newBuilds) {
+                dpp::embed embed;
+                embed.set_title(fmt::format("`{}` ({})", db::get<build::build_name>(newBuild.Configuration.value()), fmt::join(newBuild.Regions, ", ")))
+                    .add_field("Build Configuration", fmt::format("`{}`", db::get<build::build_config>(newBuild.Configuration.value())))
+                    .add_field("CDN Configuration", fmt::format("`{}`", db::get<build::cdn_config>(newBuild.Configuration.value())))
+                    .set_color(0x00FFFF00u);
 
-                    message.add_embed(embed);
-                }
-
-                bot.bot.message_create(message);
+                message.add_embed(embed);
             }
+
+            bot.bot.message_create(message);
         });
     });
 
