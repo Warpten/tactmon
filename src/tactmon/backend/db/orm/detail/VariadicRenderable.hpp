@@ -1,6 +1,6 @@
 #pragma once
 
-#include "backend/db/orm/concepts/Concepts.hpp"
+#include "backend/db/orm/Concepts.hpp"
 #include "utility/Literal.hpp"
 #include "utility/Tuple.hpp"
 
@@ -8,7 +8,7 @@
 #include <ostream>
 #include <type_traits>
 
-namespace backend::db::orm {
+namespace backend::db::orm::detail {
     /**
      * An utility type that provides variadic rendering.
      *

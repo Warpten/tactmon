@@ -1,6 +1,6 @@
 #pragma once
 
-#include "backend/db/orm/concepts/Concepts.hpp"
+#include "backend/db/orm/Concepts.hpp"
 #include "utility/Tuple.hpp"
 
 #include <ostream>
@@ -40,7 +40,7 @@ namespace backend::db::orm {
         template <size_t PARAMETER>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, PARAMETER> p) {
             ss << '(';
-            auto predicateOffset = VariadicRenderable<" AND ", COMPONENTS...>::render_to(ss, p);
+            auto predicateOffset = detail::VariadicRenderable<" AND ", COMPONENTS...>::render_to(ss, p);
             ss << ')';
             return predicateOffset;
         }
@@ -56,7 +56,7 @@ namespace backend::db::orm {
         template <size_t PARAMETER>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, PARAMETER> p) {
             ss << '(';
-            auto predicateOffset = VariadicRenderable<" OR ", COMPONENTS...>::render_to(ss, p);
+            auto predicateOffset = detail::VariadicRenderable<" OR ", COMPONENTS...>::render_to(ss, p);
             ss << ')';
             return predicateOffset;
         }
@@ -171,7 +171,7 @@ namespace backend::db::orm {
         template <size_t I>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
             ss << "ORDER BY ";
-            return VariadicRenderable<", ", COMPONENTS...>::render_to(ss, p);
+            return detail::VariadicRenderable<", ", COMPONENTS...>::render_to(ss, p);
         }
     };
 
@@ -185,7 +185,7 @@ namespace backend::db::orm {
         template <size_t I>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
             ss << "GROUP BY ";
-            return VariadicRenderable<", ", COMPONENTS...>::render_to(ss, p);
+            return detail::VariadicRenderable<", ", COMPONENTS...>::render_to(ss, p);
         }
     };
 }

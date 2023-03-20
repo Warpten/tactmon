@@ -1,31 +1,12 @@
 #pragma once
 
-#include "backend/db/orm/concepts/Concepts.hpp"
-#include "backend/db/orm/VariadicRenderable.hpp"
+#include "backend/db/orm/Concepts.hpp"
+#include "backend/db/orm/detail/VariadicRenderable.hpp"
+#include "backend/db/orm/update/Set.hpp"
 
 namespace backend::db::orm::update {
-    /**
-     * The SET component of an UPDATE query.
-     *
-     * @tparam ASSIGNMENTS... Assignment expression components for each column of the table that is to be modified by this query.
-     */
-    template <concepts::StreamRenderable... ASSIGNMENTS>
-    struct Set final {
-        template <size_t PARAMETER>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, PARAMETER> p) {
-            ss << "SET ";
-            return VariadicRenderable<", ", ASSIGNMENTS...>::render_to(ss, p);
-        }
-    };
-
     namespace concepts {
-        namespace detail {
-            template <typename T> struct IsSet : std::false_type { };
-            template <typename... ASSIGNMENTS...> struct IsSet<Set<ASSIGNMENTS...>> : std::true_type { };
-        }
-
-        template <typename T>
-        concept IsSet = detail::IsSet<T>::value;
+        using namespace orm::concepts;
     }
 
     template <concepts::StreamRenderable ENTITY, concepts::IsSet SET>

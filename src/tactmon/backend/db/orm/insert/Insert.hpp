@@ -1,8 +1,8 @@
 #pragma once
 
-#include "backend/db/orm/concepts/Concepts.hpp"
+#include "backend/db/orm/Concepts.hpp"
 #include "backend/db/orm/Selectors.hpp"
-#include "backend/db/orm/VariadicRenderable.hpp"
+#include "backend/db/orm/detail/VariadicRenderable.hpp"
 #include "utility/Literal.hpp"
 
 #include <ostream>
@@ -63,7 +63,7 @@ namespace backend::db::orm::insert {
         template <size_t P>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, P> p) {
             ss << "UPDATE SET ";
-            auto setOffset = VariadicRenderable<", ", Equals<COMPONENTS, typename COMPONENTS::Bind<Excluded>>...>::render_to(ss, p);
+            auto setOffset = detail::VariadicRenderable<", ", Equals<COMPONENTS, typename COMPONENTS::Bind<Excluded>>...>::render_to(ss, p);
             ss << " WHERE ";
             return Equals<PK, typename PK::Bind<Excluded>>::render_to(ss, setOffset);
         }
@@ -134,7 +134,7 @@ namespace backend::db::orm::insert {
         ss << "INSERT INTO ";
         auto projectionOffset = ENTITY::render_to(ss, std::integral_constant<size_t, 1> { });
         ss << " (";
-        auto componentsOffset = VariadicRenderable<", ", COLUMNS...>::render_to(ss, projectionOffset);
+        auto componentsOffset = detail::VariadicRenderable<", ", COLUMNS...>::render_to(ss, projectionOffset);
         ss << ") VALUES (";
         // TODO: $1, $2, ..., $N
         ss << ")";

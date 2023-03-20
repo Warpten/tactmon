@@ -1,7 +1,7 @@
 #pragma once
 
-#include "backend/db/orm/concepts/Concepts.hpp"
-#include "backend/db/orm/VariadicRenderable.hpp"
+#include "backend/db/orm/Concepts.hpp"
+#include "backend/db/orm/detail/VariadicRenderable.hpp"
 #include "utility/Tuple.hpp"
 
 #include <ostream>
@@ -67,7 +67,7 @@ namespace backend::db::orm {
 
         template <size_t P>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, P> p) {
-            return VariadicRenderable<", ", COLUMNS...>::render_to(ss, p);
+            return detail::VariadicRenderable<", ", COLUMNS...>::render_to(ss, p);
         }
 
     public:

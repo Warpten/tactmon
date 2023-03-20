@@ -1,6 +1,6 @@
 #pragma once
 
-#include "backend/db/orm/concepts/Concepts.hpp"
+#include "backend/db/orm/Concepts.hpp"
 #include "utility/Literal.hpp"
 
 #include <ostream>

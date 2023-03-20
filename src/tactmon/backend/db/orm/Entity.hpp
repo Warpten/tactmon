@@ -1,6 +1,6 @@
 #pragma once
 
-#include "backend/db/orm/concepts/Concepts.hpp"
+#include "backend/db/orm/Concepts.hpp"
 #include "backend/db/orm/Column.hpp"
 #include "backend/db/orm/Projection.hpp"
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "backend/db/orm/concepts/Concepts.hpp"
-#include "backend/db/orm/VariadicRenderable.hpp"
+#include "backend/db/orm/Concepts.hpp"
+#include "backend/db/orm/detail/VariadicRenderable.hpp"
 
 namespace backend::db::orm {
     /**
@@ -18,7 +18,7 @@ namespace backend::db::orm {
         template <size_t PARAMETER>
         static auto render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p) {
             stream << NAME.Value << '(';
-            auto result = VariadicRenderable<", ", COMPONENTS...>::render_to(stream, p);
+            auto result = detail::VariadicRenderable<", ", COMPONENTS...>::render_to(stream, p);
             stream << ')';
             return result;
         }

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "backend/db/orm/concepts/Concepts.hpp"
+#include "backend/db/orm/Concepts.hpp"
 #include "backend/db/orm/select/Concepts.hpp"
-#include "backend/db/orm/VariadicRenderable.hpp"
+#include "backend/db/orm/detail/VariadicRenderable.hpp"
 #include "utility/Literal.hpp"
 #include "utility/Tuple.hpp"
 
@@ -39,7 +39,7 @@ namespace backend::db::orm::select {
          *          declared in the CTE first. That is, parameters in the main query should be specializations of @p BoundParameter.
          */
         template <concepts::StreamRenderable... EXPRESSIONS>
-        struct With {
+        struct With final {
             static_assert((IsCTE<EXPRESSIONS> && ...), "One of the components of a WITH statement is not a CTE");
 
             template <size_t I>
@@ -64,7 +64,7 @@ namespace backend::db::orm::select {
 
         if constexpr (sizeof...(COMPONENTS) > 0)
             ss << ' ';
-        return VariadicRenderable<" ", COMPONENTS...>::render_to(ss, entityOffset);
+        return detail::VariadicRenderable<" ", COMPONENTS...>::render_to(ss, entityOffset);
     }
 
     template <concepts::StreamRenderable PROJECTION, concepts::StreamRenderable ENTITY, concepts::StreamRenderable... COMPONENTS>
@@ -80,7 +80,7 @@ namespace backend::db::orm::select {
     template <size_t I>
     /* static */ auto Query<PROJECTION, ENTITY, COMPONENTS...>::With<EXPRESSIONS...>::render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
         ss << "WITH ";
-        auto cteOffset = VariadicRenderable<", ", EXPRESSIONS...>::render_to(ss, p);
+        auto cteOffset = detail::VariadicRenderable<", ", EXPRESSIONS...>::render_to(ss, p);
         ss << ' ';
         return Query<PROJECTION, ENTITY, COMPONENTS...>::render_to(ss, cteOffset);
     }
