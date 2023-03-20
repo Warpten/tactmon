@@ -16,6 +16,8 @@ namespace backend::db::orm::select {
      */
     template <utility::Literal ALIAS, bool RECURSIVE, concepts::StreamRenderable QUERY>
     struct CTE final {
+        using parameter_types = typename QUERY::parameter_types;
+
         template <size_t I>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, I>);
     };

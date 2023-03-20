@@ -58,6 +58,9 @@ namespace backend::db::orm {
      */
     template <concepts::StreamRenderable... COLUMNS>
     class Projection final {
+        using parameter_types = decltype(utility::tuple_cat(
+            std::declval<typename COLUMNS::parameter_types>()...
+        ));
         using column_tuple = detail::column_tuple<detail::column_storage<COLUMNS>...>;
 
     public:

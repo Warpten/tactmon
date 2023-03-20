@@ -11,6 +11,8 @@ namespace backend::db::orm::update {
 
     template <concepts::StreamRenderable ENTITY, concepts::IsSet SET>
     struct Query final {
+        using parameter_types = typename ENTITY::parameter_types;
+
         static std::string render();
 
         template <size_t I>

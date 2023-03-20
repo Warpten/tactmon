@@ -1,5 +1,7 @@
 #pragma once
 
+#include "utility/Tuple.hpp"
+
 #include <concepts>
 #include <cstdint>
 #include <ostream>
@@ -17,5 +19,13 @@ namespace backend::db::orm {
         concept Renderable = requires () {
             { T::render(std::integral_constant<size_t, 1> { }) } -> std::same_as<std::string>;
         };
+
+        namespace detail {
+            template <typename T> struct IsTuple : std::false_type { };
+            template <typename... Ts> struct IsTuple<utility::tuple<Ts...>> : std::true_type { };
+        }
+
+        template <typename T>
+        concept IsParameterized = detail::IsTuple<typename T::parameter_types>;
     }
 }

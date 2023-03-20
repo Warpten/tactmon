@@ -2,6 +2,7 @@
 
 #include "backend/db/orm/Concepts.hpp"
 #include "utility/Literal.hpp"
+#include "utility/Tuple.hpp"
 
 #include <ostream>
 #include <type_traits>
@@ -15,6 +16,7 @@ namespace backend::db::orm {
      */
     template <utility::Literal NAME, typename TYPE>
     struct Column {
+        using parameter_types = utility::tuple<>;
         using value_type = TYPE;
 
         template <size_t PARAMETER>
@@ -28,6 +30,7 @@ namespace backend::db::orm {
          */
         template <concepts::StreamRenderable PROJECTION>
         struct Of {
+            using parameter_types = utility::tuple<>;
             using value_type = TYPE;
 
             template <size_t PARAMETER>

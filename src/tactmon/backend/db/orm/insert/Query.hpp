@@ -4,6 +4,7 @@
 #include "backend/db/orm/Selectors.hpp"
 #include "backend/db/orm/detail/VariadicRenderable.hpp"
 #include "utility/Literal.hpp"
+#include "utility/Tuple.hpp"
 
 #include <ostream>
 #include <sstream>
@@ -13,6 +14,8 @@
 namespace backend::db::orm::insert {
     template <utility::Literal NAME>
     struct OnConstraint {
+        using parameter_types = utility::tuple<>;
+
         template <size_t I>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
             ss << "ON CONSTRAINT " << NAME.Value;
@@ -30,8 +33,15 @@ namespace backend::db::orm::insert {
      */
     template <concepts::StreamRenderable ENTITY, concepts::StreamRenderable... COLUMNS>
     class Query final {
+        using parameter_types = decltype(utility::tuple_cat(
+            std::declval<typename ENTITY::parameter_types>(),
+            std::declval<typename COLUMNS::parameter_types>()...
+        ));
+
         template <size_t I>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, I>);
+
+        using parameter_types = decltype(utility::tuple_cat(std::declval<typename COLUMNS::parameter_types>()...));
 
     public:
         static std::string render();
@@ -43,6 +53,12 @@ namespace backend::db::orm::insert {
          */
         template <typename COMPONENT>
         struct OnConflict final {
+            using parameter_types = decltype(utility::tuple_cat(
+                std::declval<typename ENTITY::parameter_types>(),
+                std::declval<typename COLUMNS::parameter_types>()...,
+                std::declval<typename COMPONENT::parameter_types>()
+            ));
+
             static std::string render();
 
             template <size_t I>
@@ -59,6 +75,12 @@ namespace backend::db::orm::insert {
      */
     template <concepts::StreamRenderable ENTITY, concepts::StreamRenderable PK, concepts::StreamRenderable... COMPONENTS>
     struct UpdateFromExcluded final {
+        using parameter_types = decltype(utility::tuple_cat(
+            std::declval<typename ENTITY::parameter_types>(),
+            std::declval<typename PK::parameter_types>(),
+            std::declval<typename COMPONENTS::parameter_types>()...
+        ));
+
         // Generates a sensible ON CONFLICT DO UPDATE query that fixes the conflicting record to the given parameters.
         template <size_t P>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, P> p) {
@@ -73,6 +95,8 @@ namespace backend::db::orm::insert {
      * A conflict handling clause that does effectively nothing except silence the error.
      */
     struct DoNothing final {
+        using parameter_types = utility::tuple<>;
+
         template <size_t I>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, I>) {
             ss << "NOTHING";

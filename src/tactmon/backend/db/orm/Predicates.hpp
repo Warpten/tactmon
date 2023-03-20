@@ -17,13 +17,16 @@ namespace backend::db::orm {
          */
         template <utility::Literal TOKEN, concepts::StreamRenderable COMPONENT, concepts::StreamRenderable PARAMETER>
         struct BinaryCriteria {
-            using parameter_type = typename PARAMETER::template Bind<typename COMPONENT::value_type>;
+            using parameter_types = decltype(utility::tuple_cat(
+                std::declval<typename COMPONENT::parameter_types>(),
+                std::declval<typename PARAMETER::parameter_types>()
+            ));
 
             template <size_t P>
             static auto render_to(std::ostream& ss, std::integral_constant<size_t, P> p) {
                 auto componentOffset = COMPONENT::render_to(ss, p);
                 ss << TOKEN.Value;
-                return parameter_type::render_to(ss, componentOffset);
+                return typename PARAMETER::template Bind<typename COMPONENT::value_type>::render_to(ss, componentOffset);
             }
         };
 
@@ -32,7 +35,7 @@ namespace backend::db::orm {
          */
         template <utility::Literal BEGIN, utility::Literal END, concepts::StreamRenderable CRITERIA>
         struct UnaryCriteria {
-            using parameter_type = typename CRITERIA::parameter_type;
+            using parameter_types = typename CRITERIA::parameter_types;
 
             template <size_t P>
             static auto render_to(std::ostream& ss, std::integral_constant<size_t, P> p) {

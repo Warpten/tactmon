@@ -33,6 +33,10 @@ namespace backend::db::orm {
      */
     template <utility::Literal NAME, utility::Literal SCHEMA, concepts::StreamRenderable... COMPONENTS>
     struct Entity final {
+        using parameter_types = decltype(utility::tuple_cat(
+            std::declval<typename COMPONENTS::parameter_types>()...
+        ));
+
         template <size_t PARAMETER>
         static auto render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p) {
             stream << SCHEMA.Value << '.' << NAME.Value;

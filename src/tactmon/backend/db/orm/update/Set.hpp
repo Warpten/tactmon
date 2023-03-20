@@ -14,6 +14,10 @@ namespace backend::db::orm::update {
      */
     template <concepts::StreamRenderable... ASSIGNMENTS>
     struct Set final {
+        using parameter_types = decltype(utility::tuple_cat(
+            std::declval<typename ASSIGNMENTS::parameter_types>()...
+        ));
+
         template <size_t PARAMETER>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, PARAMETER> p) {
             ss << "SET ";

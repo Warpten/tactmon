@@ -24,6 +24,13 @@ namespace backend::db::orm::select {
      */
     template <concepts::StreamRenderable PROJECTION, concepts::StreamRenderable ENTITY, concepts::StreamRenderable... COMPONENTS>
     struct Query final {
+        using parameter_types = decltype(utility::tuple_cat(
+            std::declval<typename PROJECTION::parameter_types>(),
+            std::declval<typename ENTITY::parameter_types>(),
+            std::declval<typename COMPONENTS::parameter_types>()...
+        ));
+
+    public:
         static std::string render();
 
         template <size_t I>
@@ -38,9 +45,14 @@ namespace backend::db::orm::select {
          * @remarks This implementation is a bit backwards; if your CTEs include positional parameters from the main query, they need to be
          *          declared in the CTE first. That is, parameters in the main query should be specializations of @p BoundParameter.
          */
-        template <concepts::StreamRenderable... EXPRESSIONS>
+        template <concepts::IsCTE... EXPRESSIONS>
         struct With final {
-            static_assert((IsCTE<EXPRESSIONS> && ...), "One of the components of a WITH statement is not a CTE");
+            using parameter_types = decltype(utility::tuple_cat(
+                std::declval<typename PROJECTION::parameter_types>(),
+                std::declval<typename ENTITY::parameter_types>(),
+                std::declval<typename COMPONENTS::parameter_types>()...,
+                std::declval<typename EXPRESSIONS::parameter_types>()...
+            ));
 
             template <size_t I>
             static auto render_to(std::ostream& ss, std::integral_constant<size_t, I>);
@@ -68,7 +80,7 @@ namespace backend::db::orm::select {
     }
 
     template <concepts::StreamRenderable PROJECTION, concepts::StreamRenderable ENTITY, concepts::StreamRenderable... COMPONENTS>
-    template <concepts::StreamRenderable... EXPRESSIONS>
+    template <concepts::IsCTE... EXPRESSIONS>
     /* static */ std::string Query<PROJECTION, ENTITY, COMPONENTS...>::With<EXPRESSIONS...>::render() {
         std::stringstream ss;
         render_to(ss, std::integral_constant<size_t, 1> { });
@@ -76,7 +88,7 @@ namespace backend::db::orm::select {
     }
 
     template <concepts::StreamRenderable PROJECTION, concepts::StreamRenderable ENTITY, concepts::StreamRenderable... COMPONENTS>
-    template <concepts::StreamRenderable... EXPRESSIONS>
+    template <concepts::IsCTE... EXPRESSIONS>
     template <size_t I>
     /* static */ auto Query<PROJECTION, ENTITY, COMPONENTS...>::With<EXPRESSIONS...>::render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
         ss << "WITH ";

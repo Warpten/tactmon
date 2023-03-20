@@ -12,6 +12,6 @@ namespace backend::db::orm::select {
         }
 
         template <typename T>
-        concept IsCTE = detail::IsCTE<T>::value;
+        concept IsCTE = detail::IsCTE<T>::value && orm::concepts::StreamRenderable<T>;
     }
 }

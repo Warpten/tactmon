@@ -73,6 +73,8 @@ namespace backend::db::orm {
         struct Bind {
             using argument_type = T;
 
+            using parameter_types = utility::tuple<T>;
+
             template <size_t I>
             static auto render_to(std::ostream& ss, std::integral_constant<size_t, I>) {
                 ss << '$' << I;
@@ -91,6 +93,8 @@ namespace backend::db::orm {
     struct BoundParameter {
         template <typename T>
         struct Bind {
+            using parameter_types = utility::tuple<>;
+
             template <size_t X>
             static auto render_to(std::ostream& ss, std::integral_constant<size_t, X> p) {
                 static_assert(I < X, "Unable to bind to a position parameter prior to its first use.");
@@ -109,6 +113,8 @@ namespace backend::db::orm {
      */
     template <auto V>
     struct Constant {
+        using parameter_types = utility::tuple<>;
+
         template <size_t I>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
             ss << V;
@@ -121,6 +127,8 @@ namespace backend::db::orm {
      */
     template <typename COMPONENT>
     struct Offset {
+        using parameter_types = typename COMPONENT::parameter_types;
+
         template <size_t I>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
             ss << "OFFSET ";
@@ -133,6 +141,8 @@ namespace backend::db::orm {
      */
     template <concepts::StreamRenderable COMPONENT>
     struct Limit {
+        using parameter_types = typename COMPONENT::parameter_types;
+
         template <size_t I>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
             ss << "LIMIT ";
@@ -145,6 +155,8 @@ namespace backend::db::orm {
      */
     template <concepts::StreamRenderable COMPONENT, bool ASCENDING = true>
     struct OrderClause final {
+        using parameter_types = typename COMPONENT::parameter_types;
+
         template <size_t PARAMETER>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, PARAMETER> p) {
             auto componentOffset = COMPONENT::render_to(ss, p);
@@ -168,6 +180,8 @@ namespace backend::db::orm {
      */
     template <concepts::StreamRenderable... COMPONENTS>
     struct OrderBy final {
+        using parameter_types = decltype(utility::tuple_cat(std::declval<typename COMPONENTS::parameter_types>()...));
+
         template <size_t I>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
             ss << "ORDER BY ";
@@ -182,6 +196,8 @@ namespace backend::db::orm {
      */
     template <concepts::StreamRenderable... COMPONENTS>
     struct GroupBy final {
+        using parameter_types = decltype(utility::tuple_cat(std::declval<typename COMPONENTS::parameter_types>()...));
+
         template <size_t I>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
             ss << "GROUP BY ";

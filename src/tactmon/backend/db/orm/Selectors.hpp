@@ -13,6 +13,8 @@ namespace backend::db::orm {
      */
     template <typename TYPE, utility::Literal NAME, concepts::StreamRenderable... COMPONENTS>
     struct Function final {
+        using parameter_types = decltype(utility::tuple_cat(std::declval<typename COMPONENTS::parameter_types>()...));
+
         using value_type = TYPE;
 
         template <size_t PARAMETER>
@@ -35,6 +37,8 @@ namespace backend::db::orm {
      */
     template <utility::Literal TOKEN, concepts::StreamRenderable COMPONENT>
     struct Selector {
+        using parameter_types = typename COMPONENT::parameter_types;
+
         using value_type = typename COMPONENT::value_type;
 
         template <size_t I>
@@ -74,6 +78,7 @@ namespace backend::db::orm {
      */
     template <utility::Literal TOKEN, concepts::StreamRenderable COMPONENT>
     struct Alias {
+        using parameter_types = typename COMPONENT::parameter_types;
         using value_type = typename COMPONENT::value_type;
 
         template <size_t I>
@@ -87,6 +92,8 @@ namespace backend::db::orm {
          * A reference to the alias.
          */
         struct Reference {
+            using parameter_types = utility::tuple<>;
+
             template <size_t I>
             static auto render_to(std::ostream& stream, std::integral_constant<size_t, I> p) {
                 stream << TOKEN.Value;
