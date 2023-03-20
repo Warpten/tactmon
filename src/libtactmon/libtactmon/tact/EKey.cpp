@@ -25,18 +25,20 @@ namespace libtactmon::tact {
 
     EKey::EKey() : _data(nullptr), _size(0) { }
 
-    EKey::EKey(std::span<uint8_t> data) {
+    EKey::EKey(std::span<uint8_t const> data) {
         _data = std::make_unique<uint8_t[]>(data.size());
         _size = data.size();
 
         std::copy_n(data.data(), _size, _data.get());
     }
 
-    EKey::EKey(std::span<uint8_t const> data) {
-        _data = std::make_unique<uint8_t[]>(data.size());
-        _size = data.size();
+    EKey::EKey(EKey const& other) : _data(std::make_unique<uint8_t[]>(other._size)), _size(other._size) {
+        std::copy_n(other._data.get(), other._size, _data.get());
+    }
 
-        std::copy_n(data.data(), _size, _data.get());
+
+    EKey::EKey(EKey&& other) noexcept : _size(other._size), _data(std::move(other._data)) {
+        other._size = 0;
     }
 
     std::string EKey::ToString() const {
@@ -47,6 +49,22 @@ namespace libtactmon::tact {
         boost::algorithm::to_lower(value);
 
         return value;
+    }
+
+    EKey& EKey::operator = (EKey&& other) noexcept {
+        _data = std::move(other._data);
+        _size = other._size;
+
+        other._size = 0;
+        return *this;
+    }
+
+    EKey& EKey::operator = (EKey const& other) {
+        _data = std::make_unique<uint8_t[]>(other._size);
+        _size = other._size;
+
+        std::copy_n(other._data.get(), other._size, _data.get());
+        return *this;
     }
 
     bool operator == (EKey const& left, EKey const& right) noexcept {

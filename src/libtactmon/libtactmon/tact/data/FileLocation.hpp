@@ -12,7 +12,7 @@ namespace libtactmon::tact::data {
      * Describes the location of a given file, according to one or many encoding keys.
      */
     struct FileLocation final {
-        explicit FileLocation(size_t fileSize, size_t keyCount, std::span<uint8_t> keys);
+        explicit FileLocation(size_t fileSize, size_t keyCount, std::span<const uint8_t> keys);
 
         /**
          * Returns the decompressed size of this file.
@@ -32,7 +32,7 @@ namespace libtactmon::tact::data {
     private:
         size_t _fileSize;
         size_t _keyCount;
-        std::span<uint8_t> _keys;
+        std::span<const uint8_t> _keys;
     };
 
     /**

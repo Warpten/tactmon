@@ -29,12 +29,11 @@ namespace libtactmon::tact {
 
         EKey();
 
-        /**
-         * Constructs a content key, copying the contents of the memory range provided.
-         * 
-         * @param[in] data A range of bytes.
-         */
-        explicit EKey(std::span<uint8_t> data);
+        EKey(EKey const& other);
+        EKey(EKey&& other) noexcept;
+
+        EKey& operator = (EKey const& other);
+        EKey& operator = (EKey&& other) noexcept;
 
         /**
          * Constructs a content key, copying the contents of the memory range provided.

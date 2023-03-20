@@ -25,16 +25,11 @@ namespace libtactmon::tact {
         static bool TryParse(std::string_view value, CKey& target);
 
         CKey();
+        CKey(CKey&& other) noexcept;
         CKey(CKey const& other);
 
+        CKey& operator = (CKey&& other) noexcept;
         CKey& operator = (CKey const& other);
-
-        /**
-         * Constructs a content key, copying the contents of the memory range provided.
-         * 
-         * @param[in] data A range of bytes.
-         */
-        explicit CKey(std::span<uint8_t> data);
 
         /**
         * Constructs a content key, copying the contents of the memory range provided.

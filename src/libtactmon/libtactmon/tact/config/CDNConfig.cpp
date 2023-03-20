@@ -25,7 +25,7 @@ namespace libtactmon::tact::config {
                 continue;
 
             static const char Separators[] = { ' ', '=' };
-            std::vector<std::string_view> tokens = detail::Tokenize(line, std::span{ Separators }, true);
+            std::vector<std::string_view> tokens = detail::Tokenize(line, std::span { Separators }, true);
 
             if (tokens[0] == "archives") {
                 config.archives.resize(tokens.size() - 1);

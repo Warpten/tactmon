@@ -35,6 +35,10 @@ namespace libtactmon::tact::config {
          * Archives associated with this file.
          */
         std::vector<Archive> archives;
+
+        /**
+         * An index that is specific to unarchived files.
+         */
         std::optional<CDNConfig::Archive> fileIndex;
     };
 }

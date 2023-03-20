@@ -4,6 +4,8 @@
 #include <array>
 #include <memory>
 
+#include <assert.hpp>
+
 namespace libtactmon::tact::data {
     uint64_t ReadUInt40(io::IReadableStream& stream, std::endian endianness) {
         std::array<uint8_t, 5> bytes;
@@ -28,6 +30,7 @@ namespace libtactmon::tact::data {
         CEKey.PageCount    = stream.Read<uint32_t>(std::endian::big);
         EKeySpec.PageCount = stream.Read<uint32_t>(std::endian::big);
         uint8_t unknown    = stream.Read<uint8_t>(); // Asserted to be zero by agent.
+        DEBUG_ASSERT(unknown == 0, "Encoding header unknown has to be zero");
         ESpecBlockSize     = stream.Read<uint32_t>(std::endian::big);
     }
 
@@ -45,16 +48,21 @@ namespace libtactmon::tact::data {
         }
     }
 
-    Encoding::CEKeyPageTable::CEKeyPageTable(CEKeyPageTable&& other) noexcept 
-        : _fileSize(other._fileSize),
+    Encoding::CEKeyPageTable::CEKeyPageTable(CEKeyPageTable&& other) noexcept : _fileSize(other._fileSize),
         _ckey(std::move(other._ckey)), _ekeys(std::move(other._ekeys)), _keyCount(other._keyCount)
-    { }
+    {
+        other._keyCount = 0;
+        other._fileSize = 0;
+    }
 
     Encoding::CEKeyPageTable& Encoding::CEKeyPageTable::operator = (Encoding::CEKeyPageTable&& other) noexcept {
         _fileSize = other._fileSize;
         _ckey = std::move(other._ckey);
         _ekeys = std::move(other._ekeys);
         _keyCount = other._keyCount;
+
+        other._keyCount = 0;
+        other._fileSize = 0;
 
         return *this;
     }
@@ -94,7 +102,7 @@ namespace libtactmon::tact::data {
     }
 
     Encoding::EKeySpecPageTable::operator bool() const {
-        return _ekey.size() != 0;
+        return !_ekey.empty();
     }
 
     Encoding::EKeySpecPageTable::EKeySpecPageTable(io::IReadableStream& stream, Header const& header) {

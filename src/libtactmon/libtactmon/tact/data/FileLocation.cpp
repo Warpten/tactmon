@@ -3,7 +3,7 @@
 #include <assert.hpp>
 
 namespace libtactmon::tact::data {
-    FileLocation::FileLocation(size_t fileSize, size_t keyCount, std::span<uint8_t> keys)
+    FileLocation::FileLocation(size_t fileSize, size_t keyCount, std::span<const uint8_t> keys)
         : _fileSize(fileSize), _keyCount(keyCount), _keys(keys)
     { }
 
