@@ -56,9 +56,13 @@ namespace backend::db::insert {
             ss << " (";
             auto componentsOffset = detail::VariadicRenderable<", ", COLUMNS...>::render_to(ss, projectionOffset);
             ss << ") VALUES (";
-            // TODO: $1, $2, ..., $N
+
+            // TODO: There are cases where values inserted will be derived from joins
+            //       This needs to be fixed to handle such values as it'll break otherwise.
+            for (size_t i = 0; i < sizeof...(COLUMNS); ++i)
+                ss << '$' << (I + i);
             ss << ")";
-            return componentsOffset;
+            return std::integral_constant<size_t, I + sizeof...(COLUMNS)> { };
         }
 
     public:
