@@ -1,6 +1,7 @@
 #pragma once
 
 #include "backend/db/orm/Concepts.hpp"
+#include "backend/db/orm/Query.hpp"
 #include "backend/db/orm/detail/VariadicRenderable.hpp"
 #include "backend/db/orm/update/Set.hpp"
 #include "backend/db/orm/update/Concepts.hpp"
@@ -13,31 +14,20 @@ namespace backend::db::update {
     }
 
     template <typename ENTITY, concepts::IsSet SET>
-    struct Query final {
-        using parameter_types = typename ENTITY::parameter_types;
-        using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
-        using result_type = void;
-
-        static std::string render() {
-            std::stringstream ss;
-            render_to(ss, std::integral_constant<size_t, 1> { });
-            return ss.str();
-        }
+    class Query final : public IQuery<Query<ENTITY, SET>> {
+        friend struct IQuery<Query<ENTITY, SET>>;
 
         template <size_t I>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, I>);
 
-        template <typename CRITERIA>
-        struct Where final {
-            using parameter_types = decltype(utility::tuple_cat(
-                std::declval<typename ENTITY::parameter_types>(),
-                std::declval<typename SET::parameter_types>(),
-                std::declval<typename CRITERIA::parameter_types>()
-            ));
-            using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
-            using result_type = void;
+    public:
+        using parameter_types = typename ENTITY::parameter_types;
+        using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
+        using result_type = void;
 
-            static std::string render();
+        template <typename CRITERIA>
+        class Where final : public IQuery<Where<CRITERIA>> {
+            friend struct IQuery<Where<CRITERIA>>;
 
             template <size_t I>
             static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
@@ -45,16 +35,17 @@ namespace backend::db::update {
                 ss << " WHERE ";
                 return CRITERIA::render_to(ss, queryOffset);
             }
+
+        public:
+            using parameter_types = decltype(utility::tuple_cat(
+                std::declval<typename ENTITY::parameter_types>(),
+                std::declval<typename SET::parameter_types>(),
+                std::declval<typename CRITERIA::parameter_types>()
+            ));
+            using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
+            using result_type = void;
         };
     };
-
-    template <typename ENTITY, concepts::IsSet SET>
-    template <typename CRITERIA>
-    /* static */ std::string Query<ENTITY, SET>::Where<CRITERIA>::render() {
-        std::stringstream ss;
-        render_to(ss, std::integral_constant<size_t, 1> { });
-        return ss.str();
-    }
 
     template <typename ENTITY, concepts::IsSet SET>
     template <size_t I>
