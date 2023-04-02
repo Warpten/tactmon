@@ -6,7 +6,7 @@
 #include <ostream>
 #include <utility>
 
-namespace backend::db::orm::select {
+namespace backend::db::select {
     /**
      * A common table expression.
      *
@@ -14,7 +14,7 @@ namespace backend::db::orm::select {
      * @tparam RECURSIVE Indicates wether or not this CTE is recursive.
      * @tparam QUERY     The query if this CTE.
      */
-    template <utility::Literal ALIAS, bool RECURSIVE, concepts::StreamRenderable QUERY>
+    template <utility::Literal ALIAS, bool RECURSIVE, typename QUERY>
     struct CTE final {
         using parameter_types = typename QUERY::parameter_types;
 
@@ -22,7 +22,7 @@ namespace backend::db::orm::select {
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, I>);
     };
 
-    template <utility::Literal ALIAS, bool RECURSIVE, concepts::StreamRenderable QUERY>
+    template <utility::Literal ALIAS, bool RECURSIVE, typename QUERY>
     template <size_t I>
     /* static */ auto CTE<ALIAS, RECURSIVE, QUERY>::render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
         if constexpr (RECURSIVE)

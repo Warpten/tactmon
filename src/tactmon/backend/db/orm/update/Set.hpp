@@ -6,13 +6,13 @@
 #include <cstdint>
 #include <utility>
 
-namespace backend::db::orm::update {
+namespace backend::db::update {
     /**
      * The SET component of an UPDATE query.
      *
      * @tparam ASSIGNMENTS... Assignment expression components for each column of the table that is to be modified by this query.
      */
-    template <concepts::StreamRenderable... ASSIGNMENTS>
+    template <typename... ASSIGNMENTS>
     struct Set final {
         using parameter_types = decltype(utility::tuple_cat(
             std::declval<typename ASSIGNMENTS::parameter_types>()...

@@ -3,6 +3,7 @@
 #include "backend/db/entity/Build.hpp"
 
 #include <atomic>
+#include <functional>
 #include <list>
 #include <memory>
 #include <string>
@@ -30,9 +31,14 @@ namespace backend {
 
         bool IsLoading() const { return _loading.load(); }
 
+        void AddListener(std::function<void(Product&)> handler) {
+            _loadListeners.push_back(handler);
+        }
+
     private:
         db::entity::build::Entity _currentBuild;
         std::shared_ptr<libtactmon::tact::data::product::Product> _product;
+        std::vector<std::function<void(Product&)>> _loadListeners;
 
         std::atomic_bool _loading;
     };

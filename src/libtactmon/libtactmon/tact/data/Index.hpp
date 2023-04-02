@@ -23,15 +23,15 @@ namespace libtactmon::tact::data {
             Entry(io::IReadableStream& stream, size_t sizeBytes, size_t offsetBytes, size_t keyOffset);
 
         public:
-            uint64_t size() const { return _size; }
-            uint64_t offset() const { return _offset; }
+            size_t size() const { return _size; }
+            size_t offset() const { return _offset; }
 
             std::span<const uint8_t> key(Index const& index) const;
 
         private:
             size_t _keyOffset = 0;
-            uint64_t _size = 0;
-            uint64_t _offset = 0;
+            size_t _size = 0;
+            size_t _offset = 0;
         };
 
         const Entry* operator [] (tact::EKey const& key) const;

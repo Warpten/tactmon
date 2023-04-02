@@ -1,9 +1,14 @@
 #ifndef BACKEND_DB_ENTITY_TRAKCED_FILE_HPP__
 #define BACKEND_DB_ENTITY_TRAKCED_FILE_HPP__
 
-#include "backend/db/DSL.hpp"
-#include "backend/db/PreparedStatement.hpp"
-#include "backend/db/Queries.hpp"
+#include "backend/db/orm/Column.hpp"
+#include "backend/db/orm/Entity.hpp"
+#include "backend/db/orm/Shared.hpp"
+#include "backend/db/orm/PreparedStatement.hpp"
+#include "backend/db/orm/delete/Query.hpp"
+#include "backend/db/orm/insert/Query.hpp"
+#include "backend/db/orm/select/Query.hpp"
+#include "backend/db/orm/update/Query.hpp"
 
 #include <cstdint>
 #include <string>
@@ -22,21 +27,20 @@ namespace backend::db::entity::tracked_file {
         */
         using Select = db::PreparedStatement<"TrackedFiles.Select", db::select::Query<
             Entity,
-            db::From<Entity>
+            Entity
         >>;
 
         using Insert = db::PreparedStatement<"TrackedFiles.Insert", db::insert::Query<
             Entity,
-            Ignore,
             product_name, file_path, display_name
         >>;
 
         using Delete = db::PreparedStatement<"TrackedFiles.Delete", db::del::Query<
             Entity,
             db::Where<
-                db::And<
-                    db::Equals<product_name>,
-                    db::Equals<file_path>
+                db::Conjunction<
+                    db::Equals<product_name, db::Parameter>,
+                    db::Equals<file_path, db::Parameter>
                 >
             >
         >>;

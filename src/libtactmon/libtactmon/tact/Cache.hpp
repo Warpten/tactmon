@@ -1,6 +1,7 @@
 #pragma once
 
 #include "libtactmon/io/FileStream.hpp"
+#include "libtactmon/utility/FunctionRef.hpp"
 
 #include <filesystem>
 #include <functional>
@@ -16,9 +17,13 @@ namespace libtactmon::tact {
 
         /**
          * Resolves a resource on disk.
+         *
+         * @param[in] resourcePath Relative path to the resource.
+         * @param[in] handler      A Callable that will attempt to parse the resource.
          */
-        template <typename T>
-        std::optional<T> Resolve(std::string_view resourcePath, std::function<std::optional<T>(io::FileStream&)> handler) {
+        template <typename T, typename Handler>
+        requires std::is_same_v<std::optional<T>, std::invoke_result_t<Handler, io::FileStream&>>
+        std::optional<T> Resolve(std::string_view resourcePath, Handler handler) {
             std::filesystem::path fullResourcePath = GetAbsolutePath(resourcePath);
 
             if (!std::filesystem::is_regular_file(fullResourcePath))

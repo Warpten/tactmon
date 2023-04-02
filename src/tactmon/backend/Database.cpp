@@ -20,6 +20,7 @@ namespace backend {
         , products(_threadPool, _connection, logger)
         , boundChannels(_threadPool, _connection, logger)
         , trackedFiles(_threadPool, _connection, logger)
+        , commandStates(_connection, logger)
     {
     }
 }

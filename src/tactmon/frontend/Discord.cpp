@@ -20,6 +20,7 @@
 #include <spdlog/spdlog.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/functional/hash.hpp>
 #include <boost/range/adaptor/filtered.hpp>
 
 #include <fmt/format.h>
@@ -28,6 +29,7 @@ namespace frontend {
     namespace db = backend::db;
     namespace entity = db::entity;
     namespace build = entity::build;
+    namespace command_state = entity::command_state;
 
     Discord::Discord(size_t threadCount, std::string const& token,
         backend::ProductCache& productManager, backend::Database& database, std::shared_ptr<net::Server> proxyServer)
@@ -48,8 +50,58 @@ namespace frontend {
         bot.shutdown();
     }
 
+    size_t Discord::Hash(dpp::slashcommand const& command) const {
+        size_t hash = 0;
+        boost::hash_combine(hash, command.name);
+        boost::hash_combine(hash, command.description);
+        auto hashOption = [&hash](dpp::command_option const& opt, auto self) -> void {
+            boost::hash_combine(hash, opt.name);
+            boost::hash_combine(hash, opt.type);
+            boost::hash_combine(hash, opt.description);
+            boost::hash_combine(hash, opt.required);
+            boost::hash_combine(hash, opt.autocomplete);
+
+            for (dpp::command_option const& subOption : opt.options)
+                self(subOption, self);
+        };
+
+        for (dpp::command_option const& option : command.options)
+            hashOption(option, hashOption);
+
+        return hash;
+    }
+
+    std::tuple<bool, size_t, uint32_t> Discord::RequiresSynchronization(dpp::slashcommand const& command) const {
+        std::optional<command_state::Entity> databaseRecord = db.commandStates.FindCommand(command.name);
+
+        // Compute the command's unversioned hash.
+        size_t baseHash = Hash(command);
+
+        // If the command doesn't have a record, it's a new one; always update and publish to Discord's backend.
+        if (!databaseRecord.has_value())
+            return std::tuple { true, baseHash, 1 };
+
+        // Retrieve the command version and append it to the hash function.
+        uint32_t commandVersion = db::get<command_state::version>(databaseRecord.value());
+
+        size_t versionedHash = baseHash;
+        boost::hash_combine(versionedHash, commandVersion);
+
+        // And finally return relevant information.
+        return std::tuple {
+            static_cast<uint64_t>(versionedHash) != db::get<command_state::hash>(databaseRecord.value()),
+            baseHash,
+            commandVersion + 1
+        };
+    }
+
     void Discord::Run() {
         bot.start(dpp::start_type::st_return);
+    }
+
+    void Discord::HandleReady(dpp::ready_t const& evnt) {
+        // Housekeeping: delete any global command.
+        bot.global_bulk_command_create({ });
 
         if (httpServer != nullptr)
             RegisterCommand<frontend::commands::DownloadCommand>();
@@ -60,18 +112,22 @@ namespace frontend {
         RegisterCommand<frontend::commands::TrackFileCommand>();
     }
 
-    void Discord::HandleReady(dpp::ready_t const& evnt) {
-        // Housekeeping: delete any global command.
-        bot.global_bulk_command_create({ });
-    }
-
     void Discord::HandleGuildCreate(dpp::guild_create_t const& evnt) {
         if (evnt.created == nullptr)
             return;
 
         std::vector<dpp::slashcommand> commands;
-        for (std::shared_ptr<commands::ICommand> command : _commands)
-            commands.push_back(command->GetRegistrationInfo(bot));
+        for (std::shared_ptr<commands::ICommand> command : _commands) {
+            dpp::slashcommand registrationInfo = command->GetRegistrationInfo(bot);
+            auto [needsUpdate, hash, newVersion] = RequiresSynchronization(registrationInfo);
+            if (needsUpdate) {
+                // Compute final updated hash and update the database with it.
+                boost::hash_combine(hash, newVersion);
+                db.commandStates.InsertOrUpdate(registrationInfo.name, hash, newVersion);
+
+                commands.emplace_back(std::move(registrationInfo));
+            }
+        }
 
         bot.guild_bulk_command_create(commands, evnt.created->id);
     }

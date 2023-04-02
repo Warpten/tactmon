@@ -13,15 +13,16 @@ namespace backend::db::repository {
         entity::product::queries::Update::Prepare(_connection, _logger);
     }
 
-    std::optional<entity::product::Entity> Product::GetByName(std::string const& buildName) const {
-        return ExecuteOne<entity::product::queries::SelByName>(buildName);
+    std::optional<entity::product::Entity> Product::GetByName(std::string buildName) const {
+        entity::product::queries::SelByName::ExecuteOne(_connection, std::move(buildName));
+        return { };
     }
 
-    void Product::Insert(std::string const& productName, uint64_t sequenceID) {
-        ExecuteOne<entity::product::queries::Insert>(productName, sequenceID);
+    void Product::Insert(std::string productName, uint64_t sequenceID) {
+        entity::product::queries::Insert::ExecuteOne(_connection, std::move(productName), sequenceID);
     }
 
-    void Product::Update(std::string const& productName, uint64_t sequenceID) {
-        ExecuteOne<entity::product::queries::Update>(sequenceID, productName);
+    void Product::Update(std::string productName, uint64_t sequenceID) {
+        entity::product::queries::Update::ExecuteOne(_connection, sequenceID, std::move(productName));
     }
 }

@@ -8,7 +8,7 @@
 #include <string>
 #include <utility>
 
-namespace backend::db::orm {
+namespace backend::db {
     namespace concepts {
         template <typename T>
         concept StreamRenderable = requires () {
@@ -23,6 +23,7 @@ namespace backend::db::orm {
         namespace detail {
             template <typename T> struct IsTuple : std::false_type { };
             template <typename... Ts> struct IsTuple<utility::tuple<Ts...>> : std::true_type { };
+            template <> struct IsTuple<utility::tuple<>> : std::false_type { };
         }
 
         template <typename T>

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "backend/db/orm/Concepts.hpp"
+#include "backend/db/orm/Predicates.hpp"
 #include "backend/db/orm/Selectors.hpp"
 #include "backend/db/orm/detail/VariadicRenderable.hpp"
 #include "utility/Literal.hpp"
@@ -11,7 +12,9 @@
 #include <string>
 #include <utility>
 
-namespace backend::db::orm::insert {
+#include <pqxx/transaction>
+
+namespace backend::db::insert {
     template <utility::Literal NAME>
     struct OnConstraint {
         using parameter_types = utility::tuple<>;
@@ -23,7 +26,7 @@ namespace backend::db::orm::insert {
         }
     };
 
-    using Excluded = orm::Alias<"EXCLUDED">;
+    using Excluded = db::Raw<utility::Literal { "EXCLUDED" }>;
 
     /**
      * An INSERT query.
@@ -31,20 +34,60 @@ namespace backend::db::orm::insert {
      * @tparam ENTITY The entity for which a record will be inserted.
      * @tparam COLUMNS... The columns that need to be assigned.
      */
-    template <concepts::StreamRenderable ENTITY, concepts::StreamRenderable... COLUMNS>
-    class Query final {
+    template <typename ENTITY, typename... COLUMNS>
+    struct Query final {
         using parameter_types = decltype(utility::tuple_cat(
-            std::declval<typename ENTITY::parameter_types>(),
-            std::declval<typename COLUMNS::parameter_types>()...
+            std::declval<utility::tuple<typename COLUMNS::value_type>>()...
         ));
+        using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
+        using result_type = ENTITY;
 
+        template <typename PROJECTION>
+        friend struct Returning;
+
+        template <typename COMPONENT>
+        friend struct OnConflict;
+
+    private:
         template <size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I>);
-
-        using parameter_types = decltype(utility::tuple_cat(std::declval<typename COLUMNS::parameter_types>()...));
+        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+            ss << "INSERT INTO ";
+            auto projectionOffset = ENTITY::render_to(ss, p);
+            ss << " (";
+            auto componentsOffset = detail::VariadicRenderable<", ", COLUMNS...>::render_to(ss, projectionOffset);
+            ss << ") VALUES (";
+            // TODO: $1, $2, ..., $N
+            ss << ")";
+            return componentsOffset;
+        }
 
     public:
         static std::string render();
+
+        template <typename PROJECTION>
+        struct Returning {
+            using parameter_types = decltype(utility::tuple_cat(
+                std::declval<utility::tuple<typename COLUMNS::value_type>>()...,
+                std::declval<typename PROJECTION::parameter_types>()
+            ));
+            using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
+            using result_type = ENTITY;
+
+        private:
+            template <size_t I>
+            static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+                auto queryOffset = Query<ENTITY, COLUMNS...>::render_to(ss, p);
+                ss << " RETURNING ";
+                return PROJECTION::render_to(ss, queryOffset);
+            }
+
+        public:
+            static std::string render() {
+                std::stringstream ss;
+                render_to(ss, std::integral_constant<size_t, 1> { });
+                return ss.str();
+            }
+        };
 
         /**
          * An INSERT query with an ON CONFLICT clause.
@@ -54,15 +97,21 @@ namespace backend::db::orm::insert {
         template <typename COMPONENT>
         struct OnConflict final {
             using parameter_types = decltype(utility::tuple_cat(
-                std::declval<typename ENTITY::parameter_types>(),
-                std::declval<typename COLUMNS::parameter_types>()...,
+                std::declval<utility::tuple<typename COLUMNS::value_type>>()...,
                 std::declval<typename COMPONENT::parameter_types>()
             ));
+            using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
+            using result_type = ENTITY;
 
             static std::string render();
 
             template <size_t I>
             static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p);
+
+            template <typename PROJECTION>
+            struct Returning {
+
+            };
         };
     };
 
@@ -73,7 +122,7 @@ namespace backend::db::orm::insert {
      * @tparam PK            A column of @p ENTITY that will serve as the identifier for the UPDATE clause.
      * @tparam COMPONENTS... The components to update.
      */
-    template <concepts::StreamRenderable ENTITY, concepts::StreamRenderable PK, concepts::StreamRenderable... COMPONENTS>
+    template <typename ENTITY, typename PK, typename... COMPONENTS>
     struct UpdateFromExcluded final {
         using parameter_types = decltype(utility::tuple_cat(
             std::declval<typename ENTITY::parameter_types>(),
@@ -85,9 +134,15 @@ namespace backend::db::orm::insert {
         template <size_t P>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, P> p) {
             ss << "UPDATE SET ";
-            auto setOffset = detail::VariadicRenderable<", ", Equals<COMPONENTS, typename COMPONENTS::Bind<Excluded>>...>::render_to(ss, p);
+            auto setOffset = detail::VariadicRenderable<
+                ", ",
+                Equals<
+                    COMPONENTS,
+                    typename COMPONENTS::template Bind<Excluded>
+                >...
+            >::render_to(ss, p);
             ss << " WHERE ";
-            return Equals<PK, typename PK::Bind<Excluded>>::render_to(ss, setOffset);
+            return Equals<PK, typename PK::template Bind<Excluded>>::render_to(ss, setOffset);
         }
     };
 
@@ -110,7 +165,7 @@ namespace backend::db::orm::insert {
      * @tparam ENTITY     The entity to be inserted or updated.
      * @tparam COLUMNS... The columns being set.
      */
-    template <concepts::StreamRenderable ENTITY, concepts::StreamRenderable... COLUMNS>
+    template <typename ENTITY, typename... COLUMNS>
     using Replace = Query<ENTITY, COLUMNS...>::OnConflict<UpdateFromExcluded<ENTITY, typename ENTITY::primary_key, COLUMNS...>>;
 
     namespace detail {
@@ -128,39 +183,27 @@ namespace backend::db::orm::insert {
         }
     }
 
-    template <concepts::StreamRenderable ENTITY, concepts::StreamRenderable... COLUMNS>
+    template <typename ENTITY, typename... COLUMNS>
     template <typename COMPONENT>
-    /* static */ std::string Query<ENTITY, COLUMNS...>::OnConflict<COMPONENT>::render_to() {
+    /* static */ std::string Query<ENTITY, COLUMNS...>::OnConflict<COMPONENT>::render() {
         std::stringstream ss;
         render_to(ss, std::integral_constant<size_t, 1> { });
         return ss.str();
     }
 
-    template <concepts::StreamRenderable ENTITY, concepts::StreamRenderable... COLUMNS>
-    template <concepts::StreamRenderable COMPONENT>
+    template <typename ENTITY, typename... COLUMNS>
+    template <typename COMPONENT>
     template <size_t I>
     static auto Query<ENTITY, COLUMNS...>::OnConflict<COMPONENT>::render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
-        auto queryOffset = Query<ENTITY>::render_to(ss, p);
+        auto queryOffset = Query<ENTITY, COLUMNS...>::render_to(ss, p);
         ss << " ON CONFLICT DO";
         return detail::render_conflict_clause(ss, queryOffset, COMPONENT{ });
     }
 
-    template <concepts::StreamRenderable ENTITY, concepts::StreamRenderable... COLUMNS>
+    template <typename ENTITY, typename... COLUMNS>
     /* static */ std::string Query<ENTITY, COLUMNS...>::render() {
         std::stringstream ss;
         render_to(ss, std::integral_constant<size_t, 1> { });
         return ss.str();
-    }
-
-    template <concepts::StreamRenderable ENTITY, concepts::StreamRenderable... COLUMNS>
-    template <size_t I>
-    /* static */ auto Query<ENTITY. COLUMNS...>::render_to(std::ostream& ss, std::integral_constant<size_t, I>) {
-        ss << "INSERT INTO ";
-        auto projectionOffset = ENTITY::render_to(ss, std::integral_constant<size_t, 1> { });
-        ss << " (";
-        auto componentsOffset = detail::VariadicRenderable<", ", COLUMNS...>::render_to(ss, projectionOffset);
-        ss << ") VALUES (";
-        // TODO: $1, $2, ..., $N
-        ss << ")";
     }
 }

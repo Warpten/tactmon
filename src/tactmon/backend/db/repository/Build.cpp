@@ -14,23 +14,26 @@ namespace backend::db::repository {
         entity::build::queries::Insert::Prepare(_connection, _logger);
     }
 
-    std::optional<entity::build::Entity> Build::GetByBuildName(std::string const& buildName, std::string const& region) const {
-        return ExecuteOne<entity::build::queries::SelByName>(buildName, region);
+    std::optional<entity::build::Entity> Build::GetByBuildName(std::string buildName, std::string region) const {
+        return entity::build::queries::SelByName::ExecuteOne(_connection, std::move(buildName), std::move(region));
     }
 
-    std::vector<entity::build::dto::BuildName> Build::GetByProductName(std::string const& productName) const {
-        return Execute<entity::build::queries::SelByProduct>(productName);
+    std::vector<entity::build::dto::BuildName> Build::GetByProductName(std::string productName) const {
+        return entity::build::queries::SelByProduct::Execute(_connection, std::move(productName));
     }
 
-    std::optional<entity::build::dto::BuildStatistics> Build::GetStatisticsForProduct(std::string const& productName) const {
-        return ExecuteOne<entity::build::queries::SelStatistics>(productName);
+    std::optional<entity::build::dto::BuildStatistics> Build::GetStatisticsForProduct(std::string productName) const {
+        return entity::build::queries::SelStatistics::ExecuteOne(_connection, std::move(productName));
     }
 
-    std::optional<entity::build::Entity> Build::Insert(std::string const& region, std::string const& productName, std::string const& buildName, std::string const& buildConfig, std::string const& cdnConfig) {
+    std::optional<entity::build::Entity> Build::Insert(std::string region, std::string productName,
+        std::string buildName, std::string buildConfig, std::string cdnConfig)
+    {
         using namespace std::chrono;
         using clock = system_clock;
 
-        return ExecuteOne<entity::build::queries::Insert>(region, productName, buildName, buildConfig, cdnConfig,
+        return entity::build::queries::Insert::ExecuteOne(_connection, std::move(region), std::move(productName),
+            std::move(buildName), std::move(buildConfig), std::move(cdnConfig),
             static_cast<uint64_t>(duration_cast<seconds>(clock::now().time_since_epoch()).count())
         );
     }

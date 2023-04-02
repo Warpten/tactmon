@@ -73,7 +73,7 @@ namespace libtactmon::tact::data::product {
             for (ribbit::types::cdns::Record const& cdn : cdns) {
                 std::string relativePath{ fmt::format(fmt::runtime(formatString), cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
 
-                std::optional<T> cachedValue = _localCache.Resolve(relativePath, parser);
+                std::optional<T> cachedValue = _localCache.Resolve<T>(relativePath, parser);
                 if (cachedValue.has_value())
                     return cachedValue;
 

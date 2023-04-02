@@ -3,7 +3,7 @@
 #include "backend/db/orm/Concepts.hpp"
 #include "backend/db/orm/detail/VariadicRenderable.hpp"
 
-namespace backend::db::orm {
+namespace backend::db {
     /**
      * Base implementation of a SQL function.
      *
@@ -11,7 +11,7 @@ namespace backend::db::orm {
      * @tparam NAME          The name of the function.
      * @tparam COMPONENTS... Components describing the arguments passed to the function.
      */
-    template <typename TYPE, utility::Literal NAME, concepts::StreamRenderable... COMPONENTS>
+    template <typename TYPE, utility::Literal NAME, typename... COMPONENTS>
     struct Function final {
         using parameter_types = decltype(utility::tuple_cat(std::declval<typename COMPONENTS::parameter_types>()...));
 
@@ -26,16 +26,16 @@ namespace backend::db::orm {
         }
     };
 
-    template <concepts::StreamRenderable COMPONENT> using Count = Function<uint64_t, "COUNT", COMPONENT>;
-    template <concepts::StreamRenderable COMPONENT> using Max = Function<typename COMPONENT::value_type, "MAX", COMPONENT>;
-    template <concepts::StreamRenderable COMPONENT> using Min = Function<typename COMPONENT::value_type, "MIN", COMPONENT>;
-    template <concepts::StreamRenderable COMPONENT> using Any = Function<typename COMPONENT::value_type, "ANY", COMPONENT>;
-    template <concepts::StreamRenderable COMPONENT> using Sum = Function<typename COMPONENT::value_type, "SUM", COMPONENT>;
+    template <typename COMPONENT> using Count = Function<uint64_t, "COUNT", COMPONENT>;
+    template <typename COMPONENT> using Max = Function<typename COMPONENT::value_type, "MAX", COMPONENT>;
+    template <typename COMPONENT> using Min = Function<typename COMPONENT::value_type, "MIN", COMPONENT>;
+    template <typename COMPONENT> using Any = Function<typename COMPONENT::value_type, "ANY", COMPONENT>;
+    template <typename COMPONENT> using Sum = Function<typename COMPONENT::value_type, "SUM", COMPONENT>;
 
     /**
      * Basic implementation of mutators on a given component. See below for use cases.
      */
-    template <utility::Literal TOKEN, concepts::StreamRenderable COMPONENT>
+    template <utility::Literal TOKEN, typename COMPONENT>
     struct Selector {
         using parameter_types = typename COMPONENT::parameter_types;
 
@@ -51,12 +51,12 @@ namespace backend::db::orm {
     /**
      * Implements the DISTINCT column_name concept.
      */
-    template <concepts::StreamRenderable COMPONENT>
+    template <typename COMPONENT>
     struct Distinct : Selector<"DISTINCT", COMPONENT> {
         /**
          * Special case of DISTINCT where the uniquity column differs from the column returned.
          */
-        template <concepts::StreamRenderable CRITERIA>
+        template <typename CRITERIA>
         struct On {
             using value_type = typename COMPONENT::value_type;
 
@@ -76,7 +76,7 @@ namespace backend::db::orm {
      * @tparam TOKEN     The aliased name applied to a component.
      * @tparam COMPONENT A component that will be aliased to a name.
      */
-    template <utility::Literal TOKEN, concepts::StreamRenderable COMPONENT>
+    template <utility::Literal TOKEN, typename COMPONENT>
     struct Alias {
         using parameter_types = typename COMPONENT::parameter_types;
         using value_type = typename COMPONENT::value_type;
@@ -100,5 +100,61 @@ namespace backend::db::orm {
                 return p;
             }
         };
+    };
+
+    namespace detail {
+        template <utility::Literal KEYWORD>
+        struct RawLiteral {
+            template <size_t I>
+            static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+                ss << KEYWORD.Value;
+                return p;
+            }
+        };
+
+        template <auto V>
+        struct Raw {
+            template <size_t I>
+            static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+                ss << V;
+                return p;
+            }
+        };
+    }
+
+    template <auto KEYWORD>
+    using Raw = std::conditional_t<
+        utility::concepts::IsLiteral<KEYWORD>,
+        detail::RawLiteral<KEYWORD>,
+        detail::Raw<KEYWORD>
+    >;
+
+    template <typename COMPONENT, typename PARTITION>
+    struct Over final {
+        using value_type = typename COMPONENT::value_type;
+        using parameter_types = decltype(utility::tuple_cat(
+            std::declval<typename COMPONENT::parameter_types>(),
+            std::declval<typename PARTITION::parameter_types>()
+        ));
+
+        template <size_t I>
+        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+            auto componentOffset = COMPONENT::render_to(ss, p);
+            ss << " OVER (";
+            auto result = PARTITION::render_to(ss, componentOffset);
+            ss << ')';
+            return result;
+        }
+    };
+
+    template <typename COMPONENT>
+    struct PartitionBy final {
+        using parameter_types = typename COMPONENT::parameter_types;
+
+        template <size_t I>
+        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+            ss << "PARTITION BY ";
+            return COMPONENT::render_to(ss, p);
+        }
     };
 }

@@ -8,22 +8,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace backend::db::orm {
-    /*namespace detail {
-        template <typename T>
-        struct BindComponent {
-            template <typename ENTITY>
-            using ToProjection = T;
-        };
-
-        template <utility::Literal NAME, typename T>
-        struct BindComponent<Column<NAME, T>>
-        {
-            template <typename ENTITY>
-            using ToProjection = typename Column<NAME, T>::template Of<ENTITY>;
-        };
-    }*/
-
+namespace backend::db {
     /**
      * Describes a database table.
      *
@@ -31,17 +16,11 @@ namespace backend::db::orm {
      * @tparam SCHEMA        The schema holding the table.
      * @tparam COMPONENTS... Specializations of Column that this entity holds.
      */
-    template <utility::Literal NAME, utility::Literal SCHEMA, concepts::StreamRenderable... COMPONENTS>
+    template <utility::Literal NAME, utility::Literal SCHEMA, typename... COMPONENTS>
     struct Entity final {
         using parameter_types = decltype(utility::tuple_cat(
             std::declval<typename COMPONENTS::parameter_types>()...
         ));
-
-        template <size_t PARAMETER>
-        static auto render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p) {
-            stream << SCHEMA.Value << '.' << NAME.Value;
-            return p;
-        }
 
         /**
         * Interprets this entity as a bound projection to itself.
@@ -52,6 +31,18 @@ namespace backend::db::orm {
         * The primary key associated with this entity.
         */
         using primary_key_type = utility::tuple_element_t<0, utility::tuple<COMPONENTS...>>;
+
+        constexpr static const auto Name = NAME;
+
+    public:
+        Entity() : _proj() { }
+        Entity(pqxx::row const& row) : _proj(row) { }
+
+        template <size_t PARAMETER>
+        static auto render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p) {
+            stream << SCHEMA.Value << '.' << NAME.Value;
+            return p;
+        }
 
     public:
         /**
@@ -120,11 +111,11 @@ namespace backend::db::orm {
 
 // Structured bindings requirement
 template <utility::Literal NAME, utility::Literal SCHEMA, typename... COMPONENTS>
-struct std::tuple_size<backend::db::orm::Entity<NAME, SCHEMA, COMPONENTS...>> {
+struct std::tuple_size<backend::db::Entity<NAME, SCHEMA, COMPONENTS...>> {
     constexpr static const size_t value = sizeof...(COMPONENTS);
 };
 
 template <size_t I, utility::Literal NAME, utility::Literal SCHEMA, typename... COMPONENTS>
-struct std::tuple_element<I, backend::db::orm::Entity<NAME, SCHEMA, COMPONENTS...>> {
-    using type = decltype(std::declval<backend::db::orm::Entity<NAME, SCHEMA, COMPONENTS...>>().template get<I>());
+struct std::tuple_element<I, backend::db::Entity<NAME, SCHEMA, COMPONENTS...>> {
+    using type = decltype(std::declval<backend::db::Entity<NAME, SCHEMA, COMPONENTS...>>().template get<I>());
 };

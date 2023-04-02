@@ -24,22 +24,23 @@ namespace backend::db::repository {
          * @param[in] buildName The name of the build to retrieve information for.
          * @param[in] region    The name of the region.
          */
-        std::optional<entity::build::Entity> GetByBuildName(std::string const& buildName, std::string const& region) const;
+        std::optional<entity::build::Entity> GetByBuildName(std::string buildName, std::string region) const;
 
         /**
          * Returns the name and the ID of all builds matching a specific product name.
          * 
          * @param[in] productName The name of the product.
          */
-        std::vector<entity::build::dto::BuildName> GetByProductName(std::string const& productName) const;
+        std::vector<entity::build::dto::BuildName> GetByProductName(std::string productName) const;
 
         /**
          * Returns various informations about a specific product.
          * 
          * @param[in] productName The name of the product.
          */
-        std::optional<entity::build::dto::BuildStatistics> GetStatisticsForProduct(std::string const& productName) const;
+        std::optional<entity::build::dto::BuildStatistics> GetStatisticsForProduct(std::string productName) const;
 
-        std::optional<entity::build::Entity> Insert(std::string const& region, std::string const& productName, std::string const& buildName, std::string const& buildConfig, std::string const& cdnConfig);
+        std::optional<entity::build::Entity> Insert(std::string region, std::string productName, std::string buildName,
+            std::string buildConfig, std::string cdnConfig);
     };
 }

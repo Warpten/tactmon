@@ -6,9 +6,11 @@
 #include "frontend/commands/ICommand.hpp"
 #include "net/Server.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <string_view>
+#include <tuple>
 
 #include <boost/asio/io_context_strand.hpp>
 #include <boost/asio/post.hpp>
@@ -44,6 +46,18 @@ namespace frontend {
         void HandleAutoCompleteEvent(dpp::autocomplete_t const& evnt);
 
     private:
+        size_t Hash(dpp::slashcommand const& command) const;
+
+        /**
+         * Returns a tuple describing if and how a command should be resynchronized with Discord.
+         *
+         * @returns A tuple for which values are the following:
+         *          [0] Indicates if the command requires resynchronization with Discord's servers.
+         *          [1] The command's new versioned hash.
+         *          [2] The command's new version.
+         */
+        std::tuple<bool, size_t, uint32_t> RequiresSynchronization(dpp::slashcommand const& command) const;
+
         template <typename T>
         void RunAsync(T&& value) {
             _threadPool.PostWork(value);

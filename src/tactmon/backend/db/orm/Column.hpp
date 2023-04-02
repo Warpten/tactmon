@@ -7,7 +7,7 @@
 #include <ostream>
 #include <type_traits>
 
-namespace backend::db::orm {
+namespace backend::db {
     /**
      * Associates a column name and a type.
      *
@@ -28,13 +28,15 @@ namespace backend::db::orm {
         /**
          * Binds a column to a projection (or an entity).
          */
-        template <concepts::StreamRenderable PROJECTION>
+        template <typename PROJECTION>
         struct Of {
             using parameter_types = utility::tuple<>;
             using value_type = TYPE;
 
             template <size_t PARAMETER>
             static auto render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p);
+
+            template <typename> using Bind = Of<PROJECTION>;
         };
 
         template <typename PROJECTION>
@@ -42,9 +44,9 @@ namespace backend::db::orm {
     };
 
     template <utility::Literal NAME, typename TYPE>
-    template <concepts::StreamRenderable PROJECTION>
+    template <typename PROJECTION>
     template <size_t PARAMETER>
-    static auto Column<NAME, TYPE>::Of<PROJECTION>::render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p) {
+    /* static */ auto Column<NAME, TYPE>::Of<PROJECTION>::render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p) {
         auto projectionOffset = PROJECTION::render_to(stream, p);
         stream << '.' << NAME.Value;
         return projectionOffset;

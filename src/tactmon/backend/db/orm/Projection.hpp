@@ -10,7 +10,7 @@
 
 #include <pqxx/row>
 
-namespace backend::db::orm {
+namespace backend::db {
     namespace detail {
         // Specific storage for a projection component
         template <typename COMPONENT>
@@ -30,7 +30,7 @@ namespace backend::db::orm {
             column_tuple() : columns_() { }
 
             template <size_t... Is>
-            column_tuple(std::index_sequence<Is...>, pqxx::row& row) : columns_(row[Is].as<typename COLUMNS::value_type>()...)
+            column_tuple(std::index_sequence<Is...>, pqxx::row const& row) : columns_(row[Is].as<typename COLUMNS::value_type>()...)
             { }
 
             utility::tuple<COLUMNS...> columns_;
@@ -56,17 +56,14 @@ namespace backend::db::orm {
      *
      * @tparam COLUMNS... Types describing elements of the projection.
      */
-    template <concepts::StreamRenderable... COLUMNS>
-    class Projection final {
+    template <typename... COLUMNS>
+    struct Projection final {
         using parameter_types = decltype(utility::tuple_cat(
             std::declval<typename COLUMNS::parameter_types>()...
         ));
-        using column_tuple = detail::column_tuple<detail::column_storage<COLUMNS>...>;
 
-    public:
-        
         Projection() : _columns() { }
-        Projection(pqxx::row& row) : _columns(std::make_index_sequence<sizeof...(COLUMNS)> { }, row) { }
+        explicit Projection(pqxx::row const& row) : _columns(std::make_index_sequence<sizeof...(COLUMNS)> { }, row) { }
 
         template <size_t P>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, P> p) {
@@ -124,11 +121,11 @@ namespace backend::db::orm {
 
 // Structured bindings requirement
 template <typename... COMPONENTS>
-struct std::tuple_size<backend::db::orm::Projection<COMPONENTS...>> {
+struct std::tuple_size<backend::db::Projection<COMPONENTS...>> {
     constexpr static const size_t value = sizeof...(COMPONENTS);
 };
 
 template <size_t I, typename... COMPONENTS>
-struct std::tuple_element<I, backend::db::orm::Projection<COMPONENTS...>> {
-    using type = decltype(std::declval<backend::db::orm::Projection<COMPONENTS...>>().template get<I>());
+struct std::tuple_element<I, backend::db::Projection<COMPONENTS...>> {
+    using type = decltype(std::declval<backend::db::Projection<COMPONENTS...>>().template get<I>());
 };

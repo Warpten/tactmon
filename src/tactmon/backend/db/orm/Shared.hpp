@@ -15,14 +15,16 @@
  * 4. Parameters
  */
 
-namespace backend::db::orm {
+namespace backend::db {
     /**
      * A WHERE clause.
      *
      * @tparam COMPONENT A predicate to use in a query.
      */
-    template <concepts::StreamRenderable COMPONENT>
+    template <typename COMPONENT>
     struct Where {
+        using parameter_types = typename COMPONENT::parameter_types;
+
         template <size_t I>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
             ss << "WHERE ";
@@ -35,8 +37,12 @@ namespace backend::db::orm {
      *
      * @tparam COMPONENTS... All predicates conjoined in this predicate.
      */
-    template <concepts::StreamRenderable... COMPONENTS>
-    class Conjunction final {
+    template <typename... COMPONENTS>
+    struct Conjunction final {
+        using parameter_types = decltype(utility::tuple_cat(
+            std::declval<typename COMPONENTS::parameter_types>()...
+        ));
+
         template <size_t PARAMETER>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, PARAMETER> p) {
             ss << '(';
@@ -51,8 +57,12 @@ namespace backend::db::orm {
     *
     * @tparam COMPONENTS... All predicates disjoined in this predicate.
     */
-    template <concepts::StreamRenderable... COMPONENTS>
-    class Disjunction final {
+    template <typename... COMPONENTS>
+    struct Disjunction final {
+        using parameter_types = decltype(utility::tuple_cat(
+            std::declval<typename COMPONENTS::parameter_types>()...
+        ));
+
         template <size_t PARAMETER>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, PARAMETER> p) {
             ss << '(';
@@ -69,11 +79,9 @@ namespace backend::db::orm {
         /**
          * Do not use this type directly; it will be automatically used when using the parent type inside of criteria declaration.
          */
-        template <typename T>
+        template <typename COMPONENT>
         struct Bind {
-            using argument_type = T;
-
-            using parameter_types = utility::tuple<T>;
+            using parameter_types = utility::tuple<typename COMPONENT::value_type>;
 
             template <size_t I>
             static auto render_to(std::ostream& ss, std::integral_constant<size_t, I>) {
@@ -91,7 +99,7 @@ namespace backend::db::orm {
      */
     template <size_t I>
     struct BoundParameter {
-        template <typename T>
+        template <typename COMPONENT>
         struct Bind {
             using parameter_types = utility::tuple<>;
 
@@ -139,7 +147,7 @@ namespace backend::db::orm {
     /**
      * An SQL LIMIT statement. Limits the amount of rows returned by the query as specified by the provided component.
      */
-    template <concepts::StreamRenderable COMPONENT>
+    template <typename COMPONENT>
     struct Limit {
         using parameter_types = typename COMPONENT::parameter_types;
 
@@ -153,7 +161,7 @@ namespace backend::db::orm {
     /**
      * An element of an ORDER BY clause. Specifies the ordering based on a specific component.
      */
-    template <concepts::StreamRenderable COMPONENT, bool ASCENDING = true>
+    template <typename COMPONENT, bool ASCENDING = true>
     struct OrderClause final {
         using parameter_types = typename COMPONENT::parameter_types;
 
@@ -178,7 +186,7 @@ namespace backend::db::orm {
      *
      * @tparam COMPONENTS...
      */
-    template <concepts::StreamRenderable... COMPONENTS>
+    template <typename... COMPONENTS>
     struct OrderBy final {
         using parameter_types = decltype(utility::tuple_cat(std::declval<typename COMPONENTS::parameter_types>()...));
 
@@ -194,7 +202,7 @@ namespace backend::db::orm {
      *
      * @tparam COMPONENTS... Components that specify the grouping criterias.
      */
-    template <concepts::StreamRenderable... COMPONENTS>
+    template <typename... COMPONENTS>
     struct GroupBy final {
         using parameter_types = decltype(utility::tuple_cat(std::declval<typename COMPONENTS::parameter_types>()...));
 

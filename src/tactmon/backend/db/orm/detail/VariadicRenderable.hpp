@@ -8,14 +8,14 @@
 #include <ostream>
 #include <type_traits>
 
-namespace backend::db::orm::detail {
+namespace backend::db::detail {
     /**
      * An utility type that provides variadic rendering.
      *
      * @tparam TOKEN         A separator to be printed between individual components.
      * @tparam COMPONENTS... A sequence of components to be printed.
      */
-    template <utility::Literal TOKEN, concepts::StreamRenderable... COMPONENTS>
+    template <utility::Literal TOKEN, typename... COMPONENTS>
     struct VariadicRenderable final {
         template <size_t PARAMETER>
         static auto render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p) {

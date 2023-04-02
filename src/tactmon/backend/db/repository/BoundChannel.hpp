@@ -25,7 +25,7 @@ namespace backend::db::repository {
          * @param[in] channelID   The ID of the channel to which we are binding product push announcements to.
          * @param[in] productName The product we are unbinding from a channel.
          */
-        void Insert(uint64_t guildID, uint64_t channelID, std::string const& productName);
+        void Insert(uint64_t guildID, uint64_t channelID, std::string productName);
 
         /**
          * Unbinds from a channel.
@@ -33,6 +33,6 @@ namespace backend::db::repository {
          * @param[in] channelID   The ID of the channel to which we are unbinding product push announcements to.
          * @param[in] productName The product we are unbinding from a channel.
          */
-        void Delete(uint64_t channelID, std::string const& productName);
+        void Delete(uint64_t channelID, std::string productName);
     };
 }

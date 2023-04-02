@@ -23,7 +23,7 @@ namespace backend::db::repository {
         * 
         * @param[in] buildName The name of the build to retrieve information for.
         */
-        std::optional<entity::product::Entity> GetByName(std::string const& productName) const;
+        std::optional<entity::product::Entity> GetByName(std::string productName) const;
 
         /**
          * Registers a new product.
@@ -31,7 +31,7 @@ namespace backend::db::repository {
          * @param[in] productName The name of the product.
          * @param[in] sequenceID  The product's current sequence ID.
          */
-        void Insert(std::string const& productName, uint64_t sequenceID);
+        void Insert(std::string productName, uint64_t sequenceID);
 
         /**
          * Updates a product's sequence ID.
@@ -39,6 +39,6 @@ namespace backend::db::repository {
          * @param[in] productName The name of the product.
          * @param[in] sequenceID  The product's new sequence ID.
          */
-        void Update(std::string const& productName, uint64_t sequenceID);
+        void Update(std::string productName, uint64_t sequenceID);
     };
 }

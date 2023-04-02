@@ -95,7 +95,7 @@ namespace frontend::commands {
             size_t suggestionCount = 0;
             dpp::interaction_response interactionResponse{ dpp::ir_autocomplete_reply };
             cluster.db.products.WithValues([&interactionResponse, &suggestionCount, &optionValue](auto entries) {
-                for (entity::product::Entity::as_projection const& entry : entries) {
+                for (entity::product::Entity const& entry : entries) {
                     std::string productName = db::get<product::name>(entry);
                     if (productName.find(optionValue) == std::string::npos)
                         continue;
@@ -122,7 +122,7 @@ namespace frontend::commands {
             dpp::interaction_response interactionResponse{ dpp::ir_autocomplete_reply };
             std::unordered_set<std::string> uniqueBuildNames;
             cluster.db.builds.WithValues([&](auto entries) {
-                for (entity::build::Entity::as_projection const& entry : entries) {
+                for (entity::build::Entity const& entry : entries) {
                     std::string buildName = db::get<build::build_name>(entry);
                     if (buildName.find(optionValue) == std::string::npos)
                         continue;
@@ -164,7 +164,7 @@ namespace frontend::commands {
             size_t suggestionCount = 0;
             dpp::interaction_response interactionResponse{ dpp::ir_autocomplete_reply };
             cluster.db.trackedFiles.WithValues([&](auto entries) {
-                for (tracked_file::Entity::as_projection const& entry : entries) {
+                for (tracked_file::Entity const& entry : entries) {
                     if (productFilter.has_value()) {
                         std::string productName = db::get<tracked_file::product_name>(entry);
                         if (productName.find(productFilter.value()) == std::string::npos)

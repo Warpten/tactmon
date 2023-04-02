@@ -1,299 +1,333 @@
 #pragma once
 
-/**
-* Provides a non-recursive implementation of a tuple.
-*/
+#include <boost/mp11/algorithm.hpp>
 
 #include <array>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 
+#ifndef TACTMON_NO_UNIQUE_ADDRESS
+# if _WIN32
+#  if _MSC_VER >= 1929 
+#   define TACTMON_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#  else
+#   define TACTMON_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#  endif
+# else
+#  define TACTMON_NO_UNIQUE_ADDRESS [[no_unique_address]]
+# endif
+#endif // TACTMON_NO_UNIQUE_ADDRESS
+
 namespace utility {
-    template <std::size_t N> struct Constant { constexpr static const auto value = N; };
-
-    /**
-    * Forward declarations.
-    */
-    template <typename... Ts> class tuple;
-    template <typename T> struct tuple_size;
-
-    namespace detail {
-        /**
-        * Stores a value of type T.
-        */
-        template <std::size_t I, typename T>
-        struct tuple_base_item {
-            tuple_base_item() : value_() { }
-            explicit tuple_base_item(T&& value) : value_(value) { }
-
-            tuple_base_item(tuple_base_item const&) = default;
-            tuple_base_item(tuple_base_item&&) noexcept = default;
-
-            tuple_base_item& operator = (tuple_base_item const&) = default;
-            tuple_base_item& operator = (tuple_base_item&&) = default;
-
-            constexpr static const std::size_t index = I;
-            using value_type = T;
-            using const_value_type = std::add_const_t<value_type>;
-            using reference_type = std::add_lvalue_reference_t<value_type>;
-            using const_reference_type = std::add_lvalue_reference_t<const_value_type>;
-
-            T value_;
-        };
-
-        /**
-        * Actual implementation of a tuple. The first template type is an index sequence, and the second one
-        * is the individual storage types for values.
-        */
-        template <typename, typename...> struct tuple_base;
-
-        template <std::size_t... Is, typename... Ts>
-        struct tuple_base<std::index_sequence<Is...>, Ts...> : tuple_base_item<Is, Ts>... {
-            tuple_base() : tuple_base_item<Is, Ts>()... { }
-            explicit tuple_base(Ts&&... args) : tuple_base_item<Is, Ts>(std::forward<Ts>(args))... { }
-
-            tuple_base(tuple_base const&) = default;
-            tuple_base(tuple_base&&) = default;
-            tuple_base& operator=(tuple_base const& rhs) = default;
-            tuple_base& operator=(tuple_base&&) = default;
-        };
-
-        template <>
-        struct tuple_base<std::index_sequence<>> {
-            tuple_base() { }
-
-            tuple_base(tuple_base const&) = default;
-            tuple_base(tuple_base&&) = default;
-            tuple_base& operator=(tuple_base const& rhs) = default;
-            tuple_base& operator=(tuple_base&&) = default;
-        };
-
-        /**
-         * Helper trait to obtain elements of a tuple by index. This works via slicing and template parameter deduction in function calls.
-         */
-        class select_base_by_index final {
-            template <size_t I> struct index_out_of_range;
-
-            template <std::size_t I, typename T>
-            static auto select_base_impl(tuple_base_item<I, T>) -> tuple_base_item<I, T>;
-            template <std::size_t I, typename T>
-            static auto select_impl(tuple_base_item<I, T>) -> T;
-
-            template <size_t I>
-            static auto select_impl(...) -> index_out_of_range<I>;
-            template <size_t I>
-            static auto select_base_impl(...) -> index_out_of_range<I>;
-
-            template <std::size_t I, typename... Ts>
-            static auto select_(tuple<Ts...> t) {
-                return select_impl<I>(t);
-            };
-
-            template <std::size_t I, typename... Ts>
-            static auto select_base_(tuple<Ts...> t) {
-                return select_base_impl<I>(t);
-            }
-
-        public:
-            template <std::size_t I, typename Tuple>
-            using type = decltype(select_<I>(std::declval<Tuple>()));
-
-            template <std::size_t I, typename Tuple>
-            using base_type = decltype(select_base_<I>(std::declval<Tuple>()));
-        };
-
-        /**
-         * Helper trait to obtain elements of a tuple by type. This works via slicing and template parameter deduction in function calls.
-         */
-        class select_base_by_type final {
-            template <typename T> struct type_not_in_tuple;
-
-            template <typename T, std::size_t I>
-            static auto select_base_impl(tuple_base_item<I, T>) -> tuple_base_item<I, T>;
-            template <typename T, std::size_t I> static auto select_impl(tuple_base_item<I, T>) -> T;
-
-            template <typename T>
-            static auto select_base_impl(...) -> type_not_in_tuple<T>;
-            template <typename T>
-            static auto select_impl(...) -> type_not_in_tuple<T>;
-
-            template <typename T, typename... Ts>
-            static auto select_(tuple<Ts...> t) -> decltype(select_impl<T>(t));
-            template <typename T, typename... Ts>
-            static auto select_base_(tuple<Ts...> t) -> decltype(select_base_impl<T>(t));
-
-        public:
-            template <typename T, typename Tuple>
-            using type = decltype(select_<T>(std::declval<Tuple>()));
-
-            template <typename T, typename Tuple>
-            using base_type = decltype(select_base_<T>(std::declval<Tuple>()));
-        };
-
-        // is_tuple_impl
-
-        template <typename> struct is_tuple_impl : std::false_type {};
-
-        template <std::size_t... Is, typename... Ts>
-        struct is_tuple_impl<tuple_base<std::index_sequence<Is...>, Ts...>> : std::true_type { };
-
-        // tuple_cat
-
-        template <std::size_t... Inner, std::size_t... Outer, typename Tuples>
-        constexpr static auto tuple_cat(std::index_sequence<Inner...>, std::index_sequence<Outer...>, Tuples&& ts);
-
-        template <typename... Ts, std::size_t... Is>
-        constexpr static auto tuple_cat(std::index_sequence<Is...>, Ts&&... tuples);
-    }
-
     template <typename...> class tuple;
 
-    /**
-     * An implementation of a tuple. It uses multiple inheritance instead of recursive inheritance. This is not a 1:1 copy of the standard-provided tuple, especially in
-     * how it can be initialized.
-     */
+    namespace detail {
+        namespace mp = boost::mp11;
+
+        template <std::size_t Internal, std::size_t Interface, typename T>
+        struct tuple_leaf {
+            constexpr static const auto class_layout_index = Internal;
+            constexpr static const auto interface_index = Interface;
+
+            constexpr tuple_leaf() noexcept (std::is_nothrow_constructible_v<T>) 
+                : _value() { }
+
+            tuple_leaf(tuple_leaf const&) = default;
+            tuple_leaf(tuple_leaf&&) noexcept = default;
+            tuple_leaf& operator = (tuple_leaf const&) = default;
+            tuple_leaf& operator = (tuple_leaf&&) noexcept = default;
+
+            template <typename U>
+            requires (std::is_constructible_v<T, U>)
+            explicit constexpr tuple_leaf(U&& value) noexcept (std::is_nothrow_constructible_v<T, U>)
+                : _value(std::forward<U>(value)) { }
+
+            constexpr void swap(tuple_leaf&& other) noexcept(std::is_nothrow_swappable_v<T>) {
+                using std::swap;
+                swap(_value, other._value);
+            }
+
+            TACTMON_NO_UNIQUE_ADDRESS T _value;
+        };
+
+        template <std::size_t I, typename T> struct indexed { };
+
+        // Plug alignment_of with std::alignment_of and overload indexed<I, T> specialization
+        template <typename T> struct alignment_of {
+            constexpr static const std::size_t value = std::alignment_of<T>::value;
+        };
+        template <std::size_t I, typename T> struct alignment_of<indexed<I, T>> {
+            constexpr static const std::size_t value = std::alignment_of<T>::value;
+        };
+
+        // Max alignment of all types in a list
+        template <typename> struct max_alignment_of;
+        template <typename... Ts> struct max_alignment_of<mp::mp_list<Ts...>> {
+            constexpr static const std::size_t value = std::max({ alignment_of<Ts>::value... });
+        };
+
+        template <typename L, typename R>
+        using sort_pred = std::bool_constant<(alignment_of<L>::value >= alignment_of<R>::value)>;
+
+        template <typename T, typename C> using make_indexed = indexed<C::value, T>;
+
+        // given a length L, produces a mp_list_c of said length starting from 0.
+        template <typename> struct make_mp_list_c;
+        template <std::size_t... Is> struct make_mp_list_c<std::index_sequence<Is...>> {
+            using type = mp::mp_list_c<std::size_t, Is...>;
+        };
+        template <std::size_t L>
+        using make_mp_list_c_t = typename make_mp_list_c<std::make_index_sequence<L>>::type;
+
+        // Sorts the input type list and indexes it
+        template <typename Ins>
+        using indexed_sort = mp::mp_transform<
+            make_indexed,
+            mp::mp_sort<Ins, sort_pred>,
+            make_mp_list_c_t<mp::mp_size<Ins>::value>
+        >;
+
+        // Given Is... & Ts..., yields type_list<indexed<Is, Ts>...>
+        template <typename, typename> struct indexer;
+        template <std::size_t... Is, typename... Ts>
+        struct indexer<std::index_sequence<Is...>, mp::mp_list<Ts...>> {
+            using type = mp::mp_list<indexed<Is, Ts>...>;
+        };
+
+        // given ...Ts, yields type_list<indexed<I (calculated), T>...>
+        template <typename... Ts>
+        using indexed_types = typename indexer<std::index_sequence_for<Ts...>, mp::mp_list<Ts...>>::type;
+
+        // Pair of indices (storage <-> interface)
+        template <std::size_t Out, std::size_t In> struct mapping { };
+
+        template <typename> struct tuple_storage;
+        template <std::size_t... Outs, std::size_t... Ins, typename... Ts>
+        class tuple_storage<
+            mp::mp_list<
+                indexed<
+                    Outs,
+                    indexed<Ins, Ts>
+                >...
+            >
+        > : public tuple_leaf<Outs, Ins, Ts>... {
+            template <std::size_t I, std::size_t O, typename T>
+            constexpr static auto select_leaf_front(tuple_leaf<O, I, T>) -> tuple_leaf<O, I, T>;
+
+            template <std::size_t O, std::size_t I, typename T>
+            constexpr static auto select_leaf_back(tuple_leaf<O, I, T>) -> tuple_leaf<O, I, T>;
+
+            template <std::size_t I>
+            using leaf_for_front = decltype(select_leaf_front<I>(std::declval<tuple_storage>()));
+
+            template <std::size_t I>
+            using leaf_for_back = decltype(select_leaf_back<I>(std::declval<tuple_storage>()));
+        public:
+            /**
+             * Maps internal and external indices.
+             */
+            using indices_map = mp::mp_list<mapping<Outs, Ins>...>;
+
+            /**
+             * Constructs a new storage if std::is_constructible_v<Ts[I], Us[I]> for all Is.
+             *
+             * @tparam ...Is An index sequence for each leaf
+             * @tparam ...Us Argument types.
+             */
+            template <std::size_t... Is, typename... Us>
+            requires (sizeof...(Is) == sizeof...(Us))
+            constexpr tuple_storage(std::index_sequence<Is...>, Us&&... args)
+                noexcept((std::is_nothrow_constructible_v<leaf_for_front<Is>, Us> && ...))
+                : leaf_for_front<Is>(std::forward<Us>(args))...
+            { }
+
+            constexpr void swap(tuple_storage&& other)
+                noexcept((std::is_nothrow_swappable_v<Ts> && ...))
+            {
+                (tuple_leaf<Outs, Ins, Ts>::swap(std::forward<tuple_leaf<Outs, Ins, Ts>>(other)), ...);
+            }
+        };
+
+        template <typename... Ts>
+        using make_tuple_storage = tuple_storage<indexed_sort<indexed_types<Ts...>>>;
+
+        // Resolves tuple_leaf for an I over tuple_storage
+        template <std::size_t I>
+        struct select_base_impl_i {
+            template <std::size_t O, typename T>
+            constexpr static auto select_impl_(detail::tuple_leaf<O, I, T> leaf) { return leaf; }
+
+            template <typename... Ts>
+            constexpr static auto select_(tuple<Ts...>);
+
+#define GET_IMPL(QUALIFIERS)                                                                \
+            template <typename... Ts>                                                       \
+            static constexpr auto&& get(tuple<Ts...> QUALIFIERS tpl) noexcept {             \
+                using selected_base_type = decltype(select_(std::declval<tuple<Ts...>>())); \
+                return static_cast<selected_base_type QUALIFIERS>(tpl)._value;              \
+            }
+
+            GET_IMPL(&&)
+            GET_IMPL(&)
+            GET_IMPL(const &)
+            GET_IMPL(const &&)
+#undef GET_IMPL
+        };
+
+        template <std::size_t I, typename T>
+        using select_base_i = decltype(select_base_impl_i<I>::template select_(std::declval<T>()));
+
+        // Resolve tuple_leaf for a T over tuple_storage
+        template <typename T>
+        struct select_base_impl_t {
+            template <std::size_t I, std::size_t O>
+            constexpr static auto select_impl_(detail::tuple_leaf<I, O, T> leaf) { return leaf; }
+
+            template <typename... Ts>
+            constexpr static auto select_(tuple<Ts...>);
+
+#define GET_IMPL(QUALIFIERS)                                                                \
+            template <typename... Ts>                                                       \
+            static constexpr auto&& get(tuple<Ts...> QUALIFIERS tpl) noexcept {             \
+                using selected_base_type = decltype(select_(std::declval<tuple<Ts...>>())); \
+                return static_cast<selected_base_type QUALIFIERS>(tpl)._value;              \
+            }
+
+            GET_IMPL(&&)
+            GET_IMPL(&)
+            GET_IMPL(const &)
+            GET_IMPL(const &&)
+#undef GET_IMPL
+        };
+
+        template <typename T, typename Tuple>
+        using select_base_t = decltype(select_base_impl_t<T>::template select_(std::declval<Tuple>()));
+    }
+
+    template <typename... Ts> tuple<Ts&&...> forward_as_tuple(Ts&&... args) noexcept;
+
     template <typename... Ts>
-    class tuple : private detail::tuple_base<std::index_sequence_for<Ts...>, Ts...> {
-        // Not exposed; needed by many internal traits to bypass private inheritance
-        using base_t = detail::tuple_base<std::index_sequence_for<Ts...>, Ts...>;
+    class tuple final : private detail::make_tuple_storage<Ts...> {
+        using storage_t = detail::make_tuple_storage<Ts...>;
 
-        friend class detail::select_base_by_index;
-        friend class detail::select_base_by_type;
-
-        // Type-based accessors
-
-        template <typename T, typename... Us>
-        friend auto get(tuple<Us...>&) -> T&;
-
-        template <typename T, typename... Us>
-        friend auto get(tuple<Us...> const&) -> T const&;
-
-        template <typename T, typename... Us>
-        friend auto get(tuple<Us...>&&) -> T&&;
-
-        template <typename T, typename... Us>
-        friend auto get(const tuple<Us...>&&) -> const T&&;
-
-        // Index-based accessors
-
-        template <std::size_t I, typename... Us>
-        friend auto get(tuple<Us...>&)
-            -> typename detail::select_base_by_index::type<I, tuple<Us...>>&;
-
-        template <std::size_t I, typename... Us>
-        friend auto get(tuple<Us...> const&)
-            -> typename detail::select_base_by_index::type<I, tuple<Us...>> const&;
-
-        template <std::size_t I, typename... Us>
-        friend auto get(tuple<Us...>&&)
-            -> typename detail::select_base_by_index::type<I, tuple<Us...>>&&;
-
-        template <std::size_t I, typename... Us>
-        friend auto get(tuple<Us...> const&&)
-            -> typename detail::select_base_by_index::type<I, tuple<Us...>> const&&;
-
-        // Tuple cat implementation
-
-        template <typename... Xs, std::size_t... Is>
-        friend constexpr auto detail::tuple_cat(std::index_sequence<Is...>, Xs&&...);
+        template <std::size_t I> friend struct detail::select_base_impl_i;
+        template <typename T> friend struct detail::select_base_impl_t;
 
     public:
-        /**
-        * Construct a tuple with the given values. 
-        */
-        tuple(Ts&&... args) : base_t(std::forward<Ts>(args)...) { };
+        template <typename... Us>
+        explicit constexpr tuple(Us&&... args)
+            : storage_t(std::index_sequence_for<Us...> { }, std::forward<Us>(args)...)
+        { }
 
-        template <std::size_t I = sizeof...(Ts), typename = std::enable_if_t<(I > 0)>> tuple() { };
+        constexpr void swap(tuple&& other) noexcept((std::is_nothrow_swappable_v<Ts> && ...)) {
+            storage_t::swap(std::forward<storage_t>(other));
+        }
 
-        tuple(tuple const&) = default;
-        tuple(tuple&&) noexcept = default;
+        template <typename... Us>
+        requires ((std::is_copy_assignable_v<Ts> && ...) && (std::is_same_v<Ts, Us> && ...))
+        constexpr tuple& operator = (tuple<Us...> const& other)
+        {
+            static_cast<storage_t&>(*this) = static_cast<const storage_t&>(*other);
+            return *this;
+        }
 
-        tuple& operator = (tuple const&) = default;
-        tuple& operator = (tuple&&) = default;
+#if __cplusplus > 202002L // C++23 only
+        template <typename... Us>
+        requires ((std::is_copy_assignable_v<const Ts> && ...) && (std::is_same_v<Ts, Us> && ...))
+        constexpr const tuple& operator = (tuple<Us...> const& other ) const
+        {
+            static_cast<const storage_t&>(*this) = static_cast<const storage_t&>(*other);
+            return *this;
+        }
+#endif
 
-        /**
-        * Get type of element of tuple at index I.
-        */
-        template <std::size_t I>
-        using at_offset = typename detail::select_base_by_index::template type<I, tuple<Ts...>>;
-
-        /**
-        * Get type of tuple element storage at index I.
-        */
-        template <std::size_t I>
-        using base_at_offset = typename detail::select_base_by_index::template base_type<I, tuple<Ts...>>;
-
-        /**
-        * Get element of tuple of type T.
-        */
-        template <typename T>
-        using of_type = typename detail::select_base_by_type::template type<T, tuple<Ts...>>;
-
-        /**
-        * Get tuple element storage of type T of tuple.
-        */
-        template <typename T>
-        using base_of_type = typename detail::select_base_by_type::template base_type<T, tuple<Ts...>>;
+        template <typename... Us>
+        requires ((std::is_move_assignable_v<Ts> && ...) && (std::is_same_v<Ts, Us> && ...))
+        constexpr tuple& operator = (tuple<Us...>&& other) noexcept {
+            static_cast<storage_t&>(*this) = static_cast<storage_t&&>(*other);
+            return *this;
+        }
     };
 
-    /**
-     * Metafunction returning the type of the element of the tuple at index I.
-     */
-    template <std::size_t I, typename Tuple> struct tuple_element {
-        using type = typename Tuple::template at_offset<I>;
+    template <typename... Ts> tuple<Ts&&...> forward_as_tuple(Ts&&... args) noexcept {
+        return tuple<Ts&&...> { std::forward<Ts>(args)... };
+    }
+
+    static_assert(sizeof(tuple<>) == 1);
+
+    // ^^^ tuple / tuple_size(_v) vvv
+
+    template <typename> struct tuple_size;
+    template <typename... Ts> struct tuple_size<tuple<Ts...>> {
+        constexpr static const std::size_t value = sizeof...(Ts);
     };
-
-    template <std::size_t I, typename Tuple>
-    using tuple_element_t = typename tuple_element<I, Tuple>::type;
-
-    /**
-     * Metafunction returning the size of a tuple.
-     */
-    template <typename... Ts> struct tuple_size<tuple<Ts...>> { enum { value = sizeof...(Ts) }; };
+    template <typename T> struct tuple_size<T&> : tuple_size<T> { };
+    template <typename T> struct tuple_size<T const&> : tuple_size<T> { };
     template <typename T> constexpr static const std::size_t tuple_size_v = tuple_size<T>::value;
 
-    /**
-     * Metafunction returning the index of the given type in the tuple.
-     */
+    // ^^^ tuple_size(_v) / tuple_element(_t) vvv
+
+    template <std::size_t, typename> class tuple_element;
+    template <std::size_t I, typename T> class tuple_element<I, T&> : public tuple_element<I, T> { };
+    template <std::size_t I, typename T> class tuple_element<I, T&&> : public tuple_element<I, T> { };
+    template <std::size_t I, typename T> class tuple_element<I, T const&> : public tuple_element<I, T> { };
+    template <std::size_t I, typename... Ts> class tuple_element<I, tuple<Ts...>> {
+        template <std::size_t O, typename T>
+        constexpr static auto select_(detail::tuple_leaf<O, I, T>) -> T;
+
+    public:
+        using type = decltype(select_(std::declval<detail::make_tuple_storage<Ts...>>()));
+    };
+
+    template <std::size_t I, typename T>
+    using tuple_element_t = typename tuple_element<I, T>::type;
+
+    // ^^^ tuple_element(_t) / get vvv
+
+    template <std::size_t I>
+    template <typename... Ts>
+    constexpr auto detail::select_base_impl_i<I>::select_(tuple<Ts...> tpl) {
+        return select_impl_(tpl);
+    }
+
+    template <typename T>
+    template <typename... Ts>
+    constexpr auto detail::select_base_impl_t<T>::select_(tuple<Ts...> tpl) {
+        return select_impl_(tpl);
+    }
+
+    template <std::size_t I, typename Tuple>
+    constexpr auto&& get(Tuple&& tpl) {
+        return detail::select_base_impl_i<I>::get(std::forward<Tuple>(tpl));
+    }
+
     template <typename T, typename Tuple>
-    constexpr static const std::size_t tuple_index_v = Tuple::template base_of_type<T>::index;
-
-#define DECLARE_GET_TYPE_IMPL(QUALIFIERS)                                                            \
-    template <typename T, typename... Ts>                                                            \
-    auto get(tuple<Ts...> QUALIFIERS tpl) -> T QUALIFIERS {                                          \
-        using selected_base_type = typename detail::select_base_by_type::base_type<T, tuple<Ts...>>; \
-        return static_cast<selected_base_type QUALIFIERS>(tpl).value_;                               \
+    constexpr auto&& get(Tuple&& tpl) {
+        return detail::select_base_impl_t<T>::get(std::forward<Tuple>(tpl));
     }
 
-        DECLARE_GET_TYPE_IMPL(&)
-        DECLARE_GET_TYPE_IMPL(&&)
-        DECLARE_GET_TYPE_IMPL(const&)
-        DECLARE_GET_TYPE_IMPL(const&&)
-#undef DECLARE_GET_TYPE_IMPL
+    // ^^^ get / ignore vvv
 
-#define DECLARE_GET_INDEX_IMPL(QUALIFIERS)                                                            \
-    template <std::size_t I, typename... Ts>                                                          \
-    auto get(tuple<Ts...> QUALIFIERS tpl)                                                             \
-        -> typename detail::select_base_by_index::type<I, tuple<Ts...>> QUALIFIERS                    \
-    {                                                                                                 \
-        using selected_base_type = typename detail::select_base_by_index::base_type<I, tuple<Ts...>>; \
-        return static_cast<selected_base_type QUALIFIERS>(tpl).value_;                                \
+    namespace detail {
+        struct ignore_t final {
+            template <typename T>
+            constexpr void operator = (T&&) const noexcept { }
+        };
     }
 
-        DECLARE_GET_INDEX_IMPL(&)
-        DECLARE_GET_INDEX_IMPL(&&)
-        DECLARE_GET_INDEX_IMPL(const&)
-        DECLARE_GET_INDEX_IMPL(const&&)
-#undef DECLARE_GET_INDEX_IMPL
+    inline constexpr detail::ignore_t ignore;
 
-        /**
-         * Implementation of tuple_cat. Inspired by Stefan T. Lavavej's approach to tuple_cat.
-         *
-         * The basic idea revolves around creating a tuple of tuples and mapping out the sequence pair for said tuple.
-         * Given tuple<int, float> and tuple<const char*, double, std::string>, the indice pairs work out to be { { 0, 0 }, { 0, 1 }, { 1, 0 }, { 1, 1 }, { 1, 2 } }.
-         * The outer sequence is thus { 0, 0, 1, 1, 1 } and the inner sequence is thus { 0, 1, 0, 1, 2 }.
-         */
-        namespace detail {
+    // ^^^ ignore / tie vvv
+
+    template <typename... Args>
+    constexpr tuple<Args&...> tie(Args&... args) noexcept {
+        return tuple { args... };
+    }
+
+    // ^^^ tie / tuple_cat vvv
+
+    namespace detail {
         template <typename... Tuples>
         constexpr static auto tuple_cat_index_gen() {
             constexpr const std::size_t elem_count = (tuple_size_v<Tuples> + ... + 0);
@@ -316,44 +350,36 @@ namespace utility {
             return std::pair { inner, outer };
         }
 
-        template <std::size_t... Inner, std::size_t... Outer, typename Tuples>
-        constexpr auto tuple_cat(std::index_sequence<Inner...>, std::index_sequence<Outer...>, Tuples&& ts) {
-            return tuple { get<Outer>(get<Inner>(ts))... };
+        template <std::size_t... Inner, std::size_t... Outer, typename... Ts>
+        constexpr auto tuple_cat_impl(std::index_sequence<Inner...> is, std::index_sequence<Outer...> os, tuple<Ts...>&& ts) {
+            return tuple<
+                tuple_element_t<
+                    Outer,
+                    tuple_element_t<
+                        Inner,
+                        tuple<Ts...>
+                    >
+                >...
+            > { get<Outer>(get<Inner>(ts))... };
         }
 
         template <typename... Ts, std::size_t... Is>
-        constexpr auto tuple_cat(std::index_sequence<Is...>, Ts&&... tuples) {
-            // Note: investigate why && is always false ??
-            if constexpr (sizeof...(Is) == 0 || sizeof...(Ts) == 0) {
-                return tuple<> { };
-            } else {
-                constexpr const auto index_pairs = tuple_cat_index_gen<Ts...>();
-                return tuple_cat(std::index_sequence<index_pairs.first[Is]...> { },
-                    std::index_sequence<index_pairs.second[Is]...> { },
-                    tuple<Ts...> { std::forward<Ts>(tuples)... });
-            }
+        constexpr auto tuple_cat_impl(std::index_sequence<Is...>, Ts... tuples) {
+            constexpr const auto index_pairs = tuple_cat_index_gen<Ts...>();
+            return tuple_cat_impl(std::index_sequence<index_pairs.first[Is]...> { },
+                std::index_sequence<index_pairs.second[Is]...> { },
+                tuple<Ts...> { std::forward<Ts>(tuples)... });
         }
     }
 
     template <typename... Ts>
     auto tuple_cat(Ts&&... tuples) {
         constexpr static const std::size_t elem_count = (tuple_size_v<Ts> + ... + 0);
-        return detail::tuple_cat(std::make_index_sequence<elem_count> { }, std::forward<Ts&&>(tuples)...);
+        if constexpr (elem_count == 0)
+            return tuple<> { };
+        else
+            return detail::tuple_cat_impl(std::make_index_sequence<elem_count> { }, std::forward<Ts>(tuples)...);
     }
-
-    /**
-     * Implementation of std::tie.
-     */
-    template <typename... Ts>
-    tuple<Ts&...> tie(Ts&... elements) {
-        return tuple<Ts&...> { elements... };
-    }
-
-    /**
-     * Utility type to discard assignments through tie(...).
-     */
-    static struct ignore_t {
-        template <typename T> ignore_t& operator = (T&&) { return *this; }
-    } _;
 }
 
+#undef TACTMON_NO_UNIQUE_ADDRESS

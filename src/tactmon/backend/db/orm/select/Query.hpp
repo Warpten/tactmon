@@ -10,9 +10,11 @@
 #include <string>
 #include <utility>
 
-namespace backend::db::orm::select {
+#include <pqxx/transaction>
+
+namespace backend::db::select {
     namespace concepts {
-        using namespace orm::concepts;
+        using namespace db::concepts;
     }
 
     /**
@@ -22,13 +24,16 @@ namespace backend::db::orm::select {
      * @tparam ENTITY        The main entity being queried.
      * @tparam COMPONENTS... Extraneous components used to generate the query.
      */
-    template <concepts::StreamRenderable PROJECTION, concepts::StreamRenderable ENTITY, concepts::StreamRenderable... COMPONENTS>
+    template <typename PROJECTION, typename ENTITY, typename... COMPONENTS>
     struct Query final {
+        using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_only>;
+
         using parameter_types = decltype(utility::tuple_cat(
             std::declval<typename PROJECTION::parameter_types>(),
             std::declval<typename ENTITY::parameter_types>(),
             std::declval<typename COMPONENTS::parameter_types>()...
         ));
+        using result_type = PROJECTION;
 
     public:
         static std::string render();
@@ -61,14 +66,14 @@ namespace backend::db::orm::select {
         };
     };
 
-    template <concepts::StreamRenderable PROJECTION, concepts::StreamRenderable ENTITY, concepts::StreamRenderable... COMPONENTS>
+    template <typename PROJECTION, typename ENTITY, typename... COMPONENTS>
     /* static */ std::string Query<PROJECTION, ENTITY, COMPONENTS...>::render() {
         std::stringstream ss;
         render_to(ss, std::integral_constant<size_t, 1> { });
         return ss.str();
     }
 
-    template <concepts::StreamRenderable PROJECTION, concepts::StreamRenderable ENTITY, concepts::StreamRenderable... COMPONENTS>
+    template <typename PROJECTION, typename ENTITY, typename... COMPONENTS>
     template <size_t I>
     /* static */ auto Query<PROJECTION, ENTITY, COMPONENTS...>::render_to(std::ostream& ss, std::integral_constant<size_t, I>) {
         ss << "SELECT "; auto projectionOffset = PROJECTION::render_to(ss, std::integral_constant<size_t, 1> { });
@@ -79,7 +84,7 @@ namespace backend::db::orm::select {
         return detail::VariadicRenderable<" ", COMPONENTS...>::render_to(ss, entityOffset);
     }
 
-    template <concepts::StreamRenderable PROJECTION, concepts::StreamRenderable ENTITY, concepts::StreamRenderable... COMPONENTS>
+    template <typename PROJECTION, typename ENTITY, typename... COMPONENTS>
     template <concepts::IsCTE... EXPRESSIONS>
     /* static */ std::string Query<PROJECTION, ENTITY, COMPONENTS...>::With<EXPRESSIONS...>::render() {
         std::stringstream ss;
@@ -87,7 +92,7 @@ namespace backend::db::orm::select {
         return ss.str();
     }
 
-    template <concepts::StreamRenderable PROJECTION, concepts::StreamRenderable ENTITY, concepts::StreamRenderable... COMPONENTS>
+    template <typename PROJECTION, typename ENTITY, typename... COMPONENTS>
     template <concepts::IsCTE... EXPRESSIONS>
     template <size_t I>
     /* static */ auto Query<PROJECTION, ENTITY, COMPONENTS...>::With<EXPRESSIONS...>::render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {

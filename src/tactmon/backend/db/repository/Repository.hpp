@@ -1,6 +1,6 @@
 #pragma once
 
-#include "backend/db/DSL.hpp"
+#include "backend/db/orm/PreparedStatement.hpp"
 #include "utility/ThreadPool.hpp"
 
 #include <chrono>
@@ -35,8 +35,7 @@ namespace backend::db::repository {
 
         template <> struct repository_base<true> {
             repository_base(utility::ThreadPool& threadPool, std::chrono::seconds refreshInterval)
-                // TODO: Not **quite** sure why I need to use the pool executor here; sounds like an antipattern that needs to be fixed
-                : _threadPool(threadPool), _refreshTimer(threadPool.pool_executor()), _refreshInterval(refreshInterval)
+                : _refreshTimer(threadPool.pool_executor()), _refreshInterval(refreshInterval)
             { }
 
             // io_context::strand is immovable?
@@ -64,7 +63,6 @@ namespace backend::db::repository {
             }
 
         private:
-            utility::ThreadPool& _threadPool;
             boost::asio::high_resolution_timer _refreshTimer;
             std::chrono::seconds _refreshInterval;
             mutable std::mutex _storageMutex;
@@ -74,14 +72,13 @@ namespace backend::db::repository {
             repository_base() = default;
 
         protected:
-            template <typename T> void Refresh_(boost::system::error_code const& ec) { }
+            template <typename T> void Refresh_(boost::system::error_code const& ec, T* self) { }
 
             template <typename Callback> decltype(auto) WithMutex_(Callback callback) const { return callback(); }
         };
     }
 
     template <typename ENTITY, typename LOAD_STATEMENT, typename PRIMARY_KEY, bool CACHING = false>
-    // requires std::is_same_v<ENTITY, typename LOAD_STATEMENT::entity_type>
     struct Repository : private detail::repository_base<CACHING> {
         template <bool> friend struct detail::repository_base;
 
@@ -108,6 +105,7 @@ namespace backend::db::repository {
             LoadFromDB_();
         }
 
+    public:
         explicit Repository(Repository&& other) noexcept = delete;
         Repository& operator = (Repository&& other) noexcept = delete;
 
@@ -122,35 +120,26 @@ namespace backend::db::repository {
             });
         }
 
-        size_t size() const { return _storage.size(); }
-        auto values() const { return boost::adaptors::values(_storage); }
+        /**
+         * Returns the amount of cached entries.
+         *
+         * @return The amount of cached entries.
+         */
+        [[nodiscard]] size_t size() const { return _storage.size(); }
 
         /**
-         * Executes a given prepared statement.
+         * Returns a range over the cached entries. This function is not thread-safe.
+         *
+         * @return A range over the cached entries.
          */
-        template <typename PREPARED_STATEMENT, typename... Args>
-        auto ExecuteOne(Args... args) const
-            -> std::optional<typename PREPARED_STATEMENT::projection_type> 
-        {
-            using transaction_type = typename PREPARED_STATEMENT::transaction_type;
-
-            transaction_type transaction { _connection };
-            return PREPARED_STATEMENT::ExecuteOne(transaction, _logger, std::tuple<Args...> { args... });
-        }
+        [[nodiscard]] auto values() const { return boost::adaptors::values(_storage); }
 
         /**
-         * Executes a given prepared statement
+         * Executes a callback on the cachedd entries.
+         *
+         * @tparam Callback A @p Callable type.
+         * @param callback The @p Callable to which a range over the cached entries will be provided.
          */
-        template <typename PREPARED_STATEMENT, typename... Args>
-        auto Execute(Args... args) const
-            -> std::vector<typename PREPARED_STATEMENT::projection_type>
-        {
-            using transaction_type = typename PREPARED_STATEMENT::transaction_type;
-
-            transaction_type transaction { _connection };
-            return PREPARED_STATEMENT::Execute(transaction, _logger, std::tuple<Args...> { args... });
-        }
-
         template <typename Callback>
         void WithValues(Callback&& callback) const {
             repository_base::WithMutex_([&]() {
@@ -158,6 +147,12 @@ namespace backend::db::repository {
             });
         }
 
+        /**
+         * Executes a callback on each cached entry.
+         *
+         * @tparam Callback A @p Callable type.
+         * @param callback A @p Callable to which each of the cached entries will be provided.
+         */
         template <typename Callback>
         void ForEach(Callback&& callback) const {
             return repository_base::WithMutex_([&]() {
@@ -166,6 +161,12 @@ namespace backend::db::repository {
             });
         }
 
+        /**
+         * Executes a callback on each cached entry, early aborting if any invocation if said callable returns @p true.
+         * @tparam Callback A @p Callable type.
+         * @param callback A @p Callable to which each of the cached entries will be provided.
+         * @return @p true if any execution of @p callback returned @p true.
+         */
         template <typename Callback>
         bool Any(Callback&& callback) const {
             return repository_base::WithMutex_([&]() {
@@ -179,7 +180,9 @@ namespace backend::db::repository {
 
     private:
         /**
-         * Reloads cached data from the database. This function automatically executes every minute.
+         * Reloads cached data from the database.
+         *
+         * This function automatically executes every minute.
          */
         void LoadFromDB_() {
             namespace chrono = std::chrono;
@@ -188,7 +191,7 @@ namespace backend::db::repository {
 
             spdlog::stopwatch sw { };
 
-            std::vector<ENTITY> storage = Execute<LOAD_STATEMENT>();
+            std::vector<ENTITY> storage = LOAD_STATEMENT::Execute(_connection);
 
             _logger.debug("Loaded {} db::{} entries from database in {}.",
                 storage.size(), ENTITY::Name.Value, chrono::duration_cast<chrono::milliseconds>(sw.elapsed()));
@@ -198,7 +201,7 @@ namespace backend::db::repository {
             repository_base::WithMutex_([this, &storage]() {
                 this->_storage.clear();
                 for (auto&& entity : storage)
-                    this->_storage.emplace(db::get<PRIMARY_KEY>(entity), entity);
+                    this->_storage.emplace(entity.template get<PRIMARY_KEY>(), entity);
             });
 
             _logger.debug("Cache for db::{} filled in {}.",
