@@ -29,7 +29,7 @@ namespace libtactmon::net {
      * @tparam Body The type of HTTP body to be used by Boost.Beast when processing the server's response.
      * @tparam R    The result type as returned by this task.
      */
-    template <typename Body, typename R>
+    template <typename T, typename Body, typename R>
     struct DownloadTask {
         using BodyType = Body;
         using ValueType = typename Body::value_type;
@@ -57,8 +57,8 @@ namespace libtactmon::net {
             _size = length;
         }
 
-        virtual boost::system::error_code Initialize(ValueType& body) = 0;
-        virtual std::optional<R> TransformMessage(MessageType& body) = 0;
+        // virtual boost::system::error_code Initialize(ValueType& body) = 0;
+        // virtual std::optional<R> TransformMessage(MessageType& body) = 0;
 
         /**
          * Executes this task.
@@ -112,7 +112,7 @@ namespace libtactmon::net {
             http::response_parser<Body> res;
             res.body_limit({ });
 
-            ec = Initialize(res.get().body());
+            ec = static_cast<T*>(this)->Initialize(res.get().body());
             if (ec.failed()) {
                 if (logger != nullptr)
                     logger->error("An error occured while downloading {} from {}: {}.", _resourcePath, host, ec.message());
@@ -133,7 +133,7 @@ namespace libtactmon::net {
             }
 
             stream.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-            return TransformMessage(res.get());
+            return static_cast<T*>(this)->TransformMessage(res.get());
         }
 
     protected:

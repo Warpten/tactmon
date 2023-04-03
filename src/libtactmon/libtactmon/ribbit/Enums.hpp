@@ -53,3 +53,22 @@ struct LIBTACTMON_API fmt::formatter<libtactmon::ribbit::Region> {
         return ctx.out();
     }
 };
+
+template <>
+struct fmt::formatter<libtactmon::ribbit::Version> {
+    template <typename ParseContext>
+    constexpr auto parse(ParseContext& ctx) {
+        return ctx.begin();
+    }
+
+    template <typename FormatContext>
+    auto format(libtactmon::ribbit::Version version, FormatContext& ctx) {
+        switch (version) {
+            case libtactmon::ribbit::Version::V1: return fmt::format_to(ctx.out(), "v1");
+            case libtactmon::ribbit::Version::V2: return fmt::format_to(ctx.out(), "v2");
+        }
+
+        DEBUG_ASSERT(false, "Unknown version type");
+        return ctx.out();
+    }
+};

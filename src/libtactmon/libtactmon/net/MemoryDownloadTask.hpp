@@ -12,10 +12,10 @@ namespace libtactmon::net {
     /**
      * A download task that loads a resource to system memory.
      */
-    struct MemoryDownloadTask : DownloadTask<boost::beast::http::dynamic_body, io::GrowableMemoryStream> {
+    struct MemoryDownloadTask : DownloadTask<MemoryDownloadTask, boost::beast::http::dynamic_body, io::GrowableMemoryStream> {
         using DownloadTask::DownloadTask;
 
-        boost::system::error_code Initialize(ValueType& body) override;
-        std::optional<io::GrowableMemoryStream> TransformMessage(MessageType& body) override;
+        boost::system::error_code Initialize(ValueType& body);
+        std::optional<io::GrowableMemoryStream> TransformMessage(MessageType& body);
     };
 }

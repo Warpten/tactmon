@@ -18,7 +18,7 @@ namespace libtactmon::net {
     /**
      * A download task for a file that writes the result to the disk.
      */
-    struct FileDownloadTask final : DownloadTask<boost::beast::http::file_body, io::FileStream> {
+    struct FileDownloadTask final : DownloadTask<FileDownloadTask, boost::beast::http::file_body, io::FileStream> {
         FileDownloadTask(std::string_view resourcePath, tact::Cache& localCache) noexcept
             : DownloadTask(resourcePath), _localCache(localCache)
         { }
@@ -27,8 +27,8 @@ namespace libtactmon::net {
             : DownloadTask(resourcePath, offset, length), _localCache(localCache)
         { }
 
-        boost::system::error_code Initialize(ValueType& body) override;
-        std::optional<io::FileStream> TransformMessage(MessageType& body) override;
+        boost::system::error_code Initialize(ValueType& body);
+        std::optional<io::FileStream> TransformMessage(MessageType& body);
 
     private:
         tact::Cache& _localCache;
