@@ -28,6 +28,9 @@ namespace boost::beast::user {
 
                     _headerSize = _ms.Read<uint32_t>(std::endian::big);
 
+                    _engine.UpdateData(signature);
+                    _engine.UpdateData(utility::byteswap(_headerSize));
+
                     _step = Step::ChunkHeaders;
                     break;
                 }
@@ -37,6 +40,7 @@ namespace boost::beast::user {
                         return size;
 
                     uint32_t flagsChunkCount = _ms.Read<uint32_t>(std::endian::big);
+                    _engine.UpdateData(utility::byteswap(flagsChunkCount));
 
                     uint8_t flags = (flagsChunkCount & 0xFF000000) >> 24;
                     uint32_t chunkCount = flagsChunkCount & 0x00FFFFFF;
@@ -51,7 +55,16 @@ namespace boost::beast::user {
                         _chunks[i].compressedSize = _ms.Read<uint32_t>(std::endian::big) - 1;
                         _chunks[i].decompressedSize = _ms.Read<uint32_t>(std::endian::big);
                         _ms.Read(_chunks[i].checksum, std::endian::little);
+
+                        _engine.UpdateData(utility::byteswap(_chunks[i].compressedSize));
+                        _engine.UpdateData(utility::byteswap(_chunks[i].decompressedSize));
+                        _engine.UpdateData(_chunks[i].checksum);
                     }
+
+                    _engine.Finalize();
+                    crypto::MD5::Digest engineDigest = _engine.GetDigest();
+
+                    // Validate header checksum against EKey
 
                     _step = Step::DataBlocks;
                     break;
@@ -65,12 +78,26 @@ namespace boost::beast::user {
                     if (!_ms.CanRead(chunkInfo.compressedSize))
                         return size;
 
+                    // Compute chunk MD5 and validate
+                    crypto::MD5::Digest chunkDigest = [&]() {
+                        crypto::MD5 chunkEngine;
+                        chunkEngine.UpdateData(_ms.Data().subspan(0, chunkInfo.compressedSize));
+                        chunkEngine.Finalize();
+
+                        return chunkEngine.GetDigest();
+                    }();
+
+                    // Validate chunkDigest against checksum
+                    if (chunkDigest != chunkInfo[i].checksum) {
+                        ec = boost::beast::http::error::body_limit;
+                        return size;
+                    }
+
                     uint8_t encodingMode = _ms.Read<uint8_t>(std::endian::big);
                     switch (encodingMode)
                     {
                         case 'N':
                         {
-                            // Using C style cast because cba const_cast(reinterpret_cast())
                             _handler(_ms.Data<uint8_t>().subspan(0, chunkInfo.compressedSize));
                             _ms.SkipRead(chunkInfo.compressedSize);
                             break;
@@ -130,6 +157,7 @@ namespace boost::beast::user {
                         }
                     }
 
+                    // Move to the next block.
                     _step = static_cast<Step>(static_cast<uint32_t>(_step) + 1);
                     break;
                 }

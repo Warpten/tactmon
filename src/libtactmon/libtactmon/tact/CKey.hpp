@@ -1,8 +1,10 @@
 #pragma once
 
 #include "libtactmon/detail/Export.hpp"
+#include "libtactmon/tact/detail/Key.hpp"
 
 #include <array>
+#include <concepts>
 #include <cstdint>
 #include <memory>
 #include <ranges>
@@ -15,7 +17,7 @@ namespace libtactmon::tact {
     /**
      * Represents a content key.
      */
-    struct LIBTACTMON_API CKey final {
+    struct LIBTACTMON_API CKey final : private detail::Key {
         /**
          * Tries to construct an content key from a hex string.
          * 
@@ -26,26 +28,9 @@ namespace libtactmon::tact {
          */
         static bool TryParse(std::string_view value, CKey& target);
 
-        CKey();
-        CKey(CKey&& other) noexcept;
-        CKey(CKey const& other);
-
-        CKey& operator = (CKey&& other) noexcept;
-        CKey& operator = (CKey const& other);
-
-        /**
-        * Constructs a content key, copying the contents of the memory range provided.
-        * 
-        * @param[in] data A range of bytes.
-        */
-        explicit CKey(std::span<uint8_t const> data);
-
-        /**
-         * Returns a hex string representation of this content key.
-         */
-        [[nodiscard]] std::string ToString() const;
-
-        [[nodiscard]] std::span<uint8_t const> data() const { return std::span<uint8_t const> { _data.get(), _size }; }
+        using detail::Key::Key;
+        using detail::Key::ToString;
+        using detail::Key::data;
 
         friend bool operator == (CKey const& left, CKey const& right) noexcept;
 
@@ -53,8 +38,5 @@ namespace libtactmon::tact {
         friend bool operator == (CKey const& left, T right) noexcept {
             return std::equal(left._data.get(), left._data.get() + left._size, std::begin(right), std::end(right));
         }
-    private:
-        std::unique_ptr<uint8_t[]> _data;
-        std::size_t _size = 0;
     };
 }

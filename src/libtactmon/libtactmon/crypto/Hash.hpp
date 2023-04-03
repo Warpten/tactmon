@@ -60,7 +60,7 @@ namespace libtactmon::crypto {
 
         Hash& operator = (Hash&& other) noexcept {
             _context = std::exchange(other._context, detail::HashImpl::Creator());
-            _digest = std::exchange(other._digest, Digest{ });
+            _digest = std::exchange(other._digest, Digest { });
 
             return *this;
         }

@@ -33,7 +33,7 @@ namespace libtactmon::tact::data {
         // Buggy, disabled for now.
         // for (auto&& [name, tag] : instance._tags) {
         //     auto itr = instance._entries.begin();
-        //     for (size_t i = 0; i < instance._entries.size(); ++i, ++itr) {
+        //     for (std::size_t i = 0; i < instance._entries.size(); ++i, ++itr) {
         //         if (tag.Matches(i))
         //             itr->_tags.push_back(std::addressof(tag));
         //     }

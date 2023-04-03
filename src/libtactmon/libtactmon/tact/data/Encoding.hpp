@@ -80,7 +80,7 @@ namespace libtactmon::tact::data {
                 stream.SeekRead(position);
             }
 
-            T const& operator [] (size_t index) const { return _entries.at(index); }
+            [[nodiscard]] T const& operator [] (size_t index) const { return _entries.at(index); }
             [[nodiscard]] std::size_t size() const { return _entries.size(); }
 
         private:

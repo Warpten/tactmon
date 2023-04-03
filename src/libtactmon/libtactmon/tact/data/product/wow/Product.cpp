@@ -19,7 +19,7 @@ namespace libtactmon::tact::data::product::wow {
         spdlog::stopwatch sw;
 
         _root = [&]() -> std::optional<tact::data::product::wow::Root> {
-            for (size_t i = 0; i < rootLocation->keyCount(); ++i) {
+            for (std::size_t i = 0; i < rootLocation->keyCount(); ++i) {
                 tact::EKey key = (*rootLocation)[i];
 
                 auto root = Base::ResolveCachedData(key.ToString(), [&encoding = _encoding](io::IReadableStream& fstream)

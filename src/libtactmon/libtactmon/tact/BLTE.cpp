@@ -46,7 +46,7 @@ namespace libtactmon::tact {
 
         std::unique_ptr<ChunkHeader[]> chunks = std::make_unique<ChunkHeader[]>(chunkCount);
         
-        for (size_t i = 0; i < chunkCount; ++i) {
+        for (std::size_t i = 0; i < chunkCount; ++i) {
             chunks[i].CompressedSize = fstream.Read<uint32_t>(std::endian::big);
             chunks[i].DecompressedSize = fstream.Read<uint32_t>(std::endian::big);
             fstream.Read(chunks[i].Checksum, std::endian::little);

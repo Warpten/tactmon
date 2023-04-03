@@ -29,11 +29,11 @@ namespace libtactmon::tact::config {
 
             if (tokens[0] == "archives") {
                 config.archives.resize(tokens.size() - 1);
-                for (size_t i = 1; i < tokens.size(); ++i)
+                for (std::size_t i = 1; i < tokens.size(); ++i)
                     config.archives[i - 1].Name = tokens[i];
             }
             else if (tokens[0] == "archives-index-size") {
-                for (size_t i = 1; i < tokens.size(); ++i) {
+                for (std::size_t i = 1; i < tokens.size(); ++i) {
                     auto [ptr, ec] = std::from_chars(tokens[i].data(), tokens[i].data() + tokens[i].size(), config.archives[i - 1].Size);
                     if (ec != std::errc{ })
                         return std::nullopt;

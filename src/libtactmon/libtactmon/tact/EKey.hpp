@@ -1,8 +1,10 @@
 #pragma once
 
 #include "libtactmon/detail/Export.hpp"
+#include "libtactmon/tact/detail/Key.hpp"
 
 #include <array>
+#include <concepts>
 #include <cstdint>
 #include <memory>
 #include <ranges>
@@ -14,11 +16,8 @@
 namespace libtactmon::tact {
     /**
      * Represents an encoding key.
-     * 
-     * You may be confused as to why this type is the exact copy of CKey? Well, these are effectively the same (a hex string), but I wanted
-     * different type semantics.
      */
-    struct LIBTACTMON_API EKey final {
+    struct LIBTACTMON_API EKey final : private detail::Key {
         /**
          * Tries to construct an encoding key from a hex string.
          * 
@@ -29,37 +28,15 @@ namespace libtactmon::tact {
          */
         static bool TryParse(std::string_view value, EKey& target);
 
-        EKey();
-
-        EKey(EKey const& other);
-        EKey(EKey&& other) noexcept;
-
-        EKey& operator = (EKey const& other);
-        EKey& operator = (EKey&& other) noexcept;
-
-        /**
-         * Constructs a content key, copying the contents of the memory range provided.
-         * 
-         * @param[in] data A range of bytes.
-         */
-        explicit EKey(std::span<uint8_t const> data);
-
-        /**
-         * Returns a hex string representation of this content key.
-         */
-        [[nodiscard]] std::string ToString() const;
+        using detail::Key::Key;
+        using detail::Key::ToString;
+        using detail::Key::data;
 
         friend bool operator == (EKey const& left, EKey const& right) noexcept;
 
-        [[nodiscard]] std::span<uint8_t const> data() const { return std::span<uint8_t const> { _data.get(), _size }; }
-        
         template <std::ranges::range T>
         friend bool operator == (EKey const& left, T right) noexcept {
             return std::equal(left._data.get(), left._data.get() + left._size, std::begin(right), std::end(right));
         }
-
-    private:
-        std::unique_ptr<uint8_t[]> _data;
-        std::size_t _size = 0;
     };
 }

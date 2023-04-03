@@ -9,6 +9,7 @@
 
 #include <boost/beast/core/error.hpp>
 
+#include <libtactmon/crypto/Hash.hpp>
 #include <libtactmon/io/MemoryStream.hpp>
 
 namespace boost::beast::user {
@@ -47,5 +48,6 @@ namespace boost::beast::user {
         OutputHandler _handler;
         InputFeedback _feedback;
         libtactmon::io::GrowableMemoryStream _ms;
+        crypto::MD5 _engine;
     };
 }

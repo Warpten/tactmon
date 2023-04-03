@@ -107,7 +107,7 @@ namespace libtactmon::tact::config {
         stream.SeekRead(0);
         
         std::string_view contents { stream.Data<char>().data(), stream.GetLength() };
-        std::vector<std::string_view> lines = detail::Tokenize(contents, '\n', true);
+        std::vector<std::string_view> lines = libtactmon::detail::Tokenize(contents, '\n', false);
         if (lines.empty())
             return std::nullopt;
 
@@ -118,7 +118,7 @@ namespace libtactmon::tact::config {
                 continue;
 
             static const char Separators[] = { ' ', '=' };
-            std::vector<std::string_view> tokens = detail::Tokenize(line, std::span { Separators }, true);
+            std::vector<std::string_view> tokens = libtactmon::detail::Tokenize(line, std::span { Separators }, true);
 
             for (auto&& handler : Handlers) {
                 if (tokens[0] != handler.Token)
