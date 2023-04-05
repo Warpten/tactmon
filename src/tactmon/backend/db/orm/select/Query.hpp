@@ -34,9 +34,9 @@ namespace backend::db::select {
 
     public:
         using parameter_types = decltype(utility::tuple_cat(
-                std::declval<typename PROJECTION::parameter_types>(),
-                std::declval<typename ENTITY::parameter_types>(),
-                std::declval<typename COMPONENTS::parameter_types>()...
+            std::declval<typename PROJECTION::parameter_types>(),
+            std::declval<typename ENTITY::parameter_types>(),
+            std::declval<typename COMPONENTS::parameter_types>()...
         ));
         using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_only>;
         using result_type = PROJECTION;

@@ -11,7 +11,7 @@ namespace libtactmon::ribbit::detail {
     using char_sep = boost::char_separator<char>;
     using tokenizer = boost::tokenizer<char_sep>;
 
-    /* static */ std::vector<std::string_view> VersionTraits<Version::V1>::ParseCore(std::string_view input, std::shared_ptr<spdlog::logger> logger) {
+    /* static */ std::vector<std::string_view> VersionTraits<Version::V1>::ParseCore(std::string_view input, spdlog::logger* logger) {
         // We pretend this is an HTTP response by shoving a "HTTP/1.1 200 OK\r\n" at the front of the response
         std::string httpResponse = "HTTP/1.1 200 OK\r\n";
         httpResponse += input;
@@ -52,7 +52,7 @@ namespace libtactmon::ribbit::detail {
         return messageParts;
     }
 
-    /* static */ std::vector<std::string_view> VersionTraits<Version::V2>::ParseCore(std::string_view input, std::shared_ptr<spdlog::logger> logger) {
+    /* static */ std::vector<std::string_view> VersionTraits<Version::V2>::ParseCore(std::string_view input, spdlog::logger* logger) {
         // Split on the header delimiter.
         std::vector<std::string_view> messageParts;
         boost::split_regex(messageParts, input, boost::regex { "\r\n\r\n" });

@@ -24,7 +24,7 @@ namespace backend::db::entity::bound_channel {
         * Selects all records.
         */
         using Select = db::PreparedStatement<"BoundChannels.Select", db::select::Query<
-            Entity,
+            Entity::projection_type,
             Entity
         >>;
 

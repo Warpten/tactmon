@@ -12,17 +12,17 @@ namespace libtactmon::tact::data {
      * Describes the location of a given file, according to one or many encoding keys.
      */
     struct FileLocation final {
-        explicit FileLocation(size_t fileSize, size_t keyCount, std::span<const uint8_t> keys);
+        explicit FileLocation(std::size_t fileSize, std::size_t keyCount, std::span<const uint8_t> keys);
 
         /**
          * Returns the decompressed size of this file.
          */
-        size_t fileSize() const { return _fileSize; }
+        [[nodiscard]] std::size_t fileSize() const { return _fileSize; }
 
         /**
          * Returns the amount of encoding keys for the associated file.
          */
-        size_t keyCount() const { return _keyCount; }
+        [[nodiscard]] std::size_t keyCount() const { return _keyCount; }
 
         /**
          * Returns one of the encoding keys for the associated file.
@@ -30,8 +30,8 @@ namespace libtactmon::tact::data {
         EKey operator [] (size_t index) const;
 
     private:
-        size_t _fileSize;
-        size_t _keyCount;
+        std::size_t _fileSize;
+        std::size_t _keyCount;
         std::span<const uint8_t> _keys;
     };
 
@@ -40,26 +40,26 @@ namespace libtactmon::tact::data {
      */
     struct ArchiveFileLocation final {
         explicit ArchiveFileLocation(std::string_view archiveName);
-        explicit ArchiveFileLocation(std::string_view archiveName, size_t offset, size_t size);
+        explicit ArchiveFileLocation(std::string_view archiveName, std::size_t offset, std::size_t size);
 
         /**
          * Returns the name of the archive.
          */
-        std::string_view name() const { return _archiveName; }
+        [[nodiscard]] std::string_view name() const { return _archiveName; }
 
         /**
          * Returns the compressed size of the file.
          */
-        size_t fileSize() const { return _fileSize; }
+        [[nodiscard]] std::size_t fileSize() const { return _fileSize; }
 
         /**
          * Returns the offset of the file in the archive.
          */
-        size_t offset() const { return _offset; }
+        [[nodiscard]] std::size_t offset() const { return _offset; }
 
     private:
-        size_t _fileSize = 0;
-        size_t _offset = 0;
+        std::size_t _fileSize = 0;
+        std::size_t _offset = 0;
         std::string _archiveName;
     };
 }

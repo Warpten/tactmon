@@ -20,7 +20,7 @@ namespace libtactmon::net {
             : DownloadTask(resourcePath), _localCache(localCache)
         { }
 
-        FileDownloadTask(std::string_view resourcePath, size_t offset, size_t length, tact::Cache& localCache) noexcept
+        FileDownloadTask(std::string_view resourcePath, std::size_t offset, std::size_t length, tact::Cache& localCache) noexcept
             : DownloadTask(resourcePath, offset, length), _localCache(localCache)
         { }
 

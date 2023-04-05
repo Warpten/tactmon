@@ -40,7 +40,7 @@ namespace libtactmon::tact {
         static std::optional<BLTE> _Parse(io::IReadableStream& fstream, tact::EKey const* ekey, tact::CKey const* ckey);
 
         explicit BLTE();
-        bool LoadChunk(io::IReadableStream& stream, size_t compressedSize, size_t decompressedSize, std::array<uint8_t, 16> checksum);
+        bool LoadChunk(io::IReadableStream& stream, std::size_t compressedSize, std::size_t decompressedSize, std::array<uint8_t, 16> checksum);
         bool Validate(tact::CKey const& ckey) const;
 
     public:

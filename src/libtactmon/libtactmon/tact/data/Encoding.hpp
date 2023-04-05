@@ -26,11 +26,11 @@ namespace libtactmon::tact::data {
         Encoding& operator = (Encoding&& other) noexcept;
 
     public:
-        size_t GetContentKeySize() const;
+        [[nodiscard]] std::size_t GetContentKeySize() const;
 
-        size_t count() const;
+        [[nodiscard]] std::size_t count() const;
 
-        std::optional<tact::data::FileLocation> FindFile(tact::CKey const& ckey) const;
+        [[nodiscard]] std::optional<tact::data::FileLocation> FindFile(tact::CKey const& ckey) const;
 
     private:
         struct Header {
@@ -44,7 +44,7 @@ namespace libtactmon::tact::data {
             uint32_t ContentKeySize = 0;
             uint32_t ESpecBlockSize = 0;
 
-            Header(io::IReadableStream& stream);
+            explicit Header(io::IReadableStream& stream);
         };
 
 
@@ -80,7 +80,7 @@ namespace libtactmon::tact::data {
             }
 
             T const& operator [] (size_t index) const { return _entries.at(index); }
-            size_t size() const { return _entries.size(); }
+            [[nodiscard]] std::size_t size() const { return _entries.size(); }
 
         private:
             std::vector<T> _entries;
@@ -99,15 +99,15 @@ namespace libtactmon::tact::data {
 
             CEKeyPageTable& operator = (CEKeyPageTable&& other) noexcept;
 
-            operator bool() const;
+            explicit operator bool() const;
 
-            static size_t HashSize(Header const& header);
+            static std::size_t HashSize(Header const& header);
 
-            size_t keyCount() const { return _keyCount; }
-            size_t fileSize() const { return _fileSize; }
+            [[nodiscard]] std::size_t keyCount() const { return _keyCount; }
+            [[nodiscard]] std::size_t fileSize() const { return _fileSize; }
 
-            tact::EKey ekey(size_t index, Encoding const& owner) const;
-            tact::CKey ckey(Encoding const& owner) const;
+            [[nodiscard]] tact::EKey ekey(size_t index, Encoding const& owner) const;
+            [[nodiscard]] tact::CKey ckey(Encoding const& owner) const;
 
         private:
             friend struct Encoding;
@@ -124,9 +124,9 @@ namespace libtactmon::tact::data {
 
             EKeySpecPageTable& operator = (EKeySpecPageTable&& other) noexcept;
 
-            operator bool() const;
+            explicit operator bool() const;
 
-            static size_t HashSize(Header const& header);
+            static std::size_t HashSize(Header const& header);
 
         private:
             std::vector<uint8_t> _ekey;

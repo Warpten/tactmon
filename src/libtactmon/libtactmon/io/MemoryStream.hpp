@@ -22,22 +22,22 @@ namespace libtactmon::io {
         using IReadableStream::Data;
 
     public: // IReadableStream
-        size_t GetReadCursor() const override { return _cursor; }
-        size_t SeekRead(size_t offset) override { return _cursor = std::min(offset, _data.size()); }
-        void SkipRead(size_t offset) override { _cursor += offset; }
-        bool CanRead(size_t amount) const override { return _cursor + amount <= _data.size(); }
-        size_t GetLength() const override { return _data.size(); }
+        [[nodiscard]] std::size_t GetReadCursor() const override { return _cursor; }
+        std::size_t SeekRead(std::size_t offset) override { return _cursor = std::min(offset, _data.size()); }
+        void SkipRead(std::size_t offset) override { _cursor += offset; }
+        [[nodiscard]] bool CanRead(std::size_t amount) const override { return _cursor + amount <= _data.size(); }
+        [[nodiscard]] std::size_t GetLength() const override { return _data.size(); }
 
-        operator bool() const override { return true; }
+        explicit operator bool() const override { return true; }
 
-        std::span<std::byte const> Data() const override { return _data.subspan(_cursor); }
+        [[nodiscard]] std::span<std::byte const> Data() const override { return _data.subspan(_cursor); }
 
     protected:
-        size_t _ReadImpl(std::span<std::byte> writableSpan) override;
+        std::size_t _ReadImpl(std::span<std::byte> writableSpan) override;
 
     private:
         std::span<const std::byte> _data;
-        size_t _cursor = 0;
+        std::size_t _cursor = 0;
     };
 
     /**
@@ -46,22 +46,22 @@ namespace libtactmon::io {
     struct MemoryStream final : IReadableStream {
         explicit MemoryStream(std::span<std::byte> data);
 
-        size_t GetReadCursor() const override { return _cursor; }
-        size_t SeekRead(size_t offset) override;
-        void SkipRead(size_t offset) override { _cursor += offset; }
-        bool CanRead(size_t amount) const override { return _cursor + amount <= _data.size(); }
-        size_t GetLength() const override { return _data.size(); }
+        [[nodiscard]] std::size_t GetReadCursor() const override { return _cursor; }
+        std::size_t SeekRead(std::size_t offset) override;
+        void SkipRead(std::size_t offset) override { _cursor += offset; }
+        [[nodiscard]] bool CanRead(std::size_t amount) const override { return _cursor + amount <= _data.size(); }
+        [[nodiscard]] std::size_t GetLength() const override { return _data.size(); }
 
-        operator bool() const override { return true; }
+        explicit operator bool() const override { return true; }
 
-        std::span<std::byte const> Data() const override { return std::span { _data }.subspan(_cursor); }
+        [[nodiscard]] std::span<std::byte const> Data() const override { return std::span { _data }.subspan(_cursor); }
 
     protected:
-        size_t _ReadImpl(std::span<std::byte> writableSpan) override;
+        std::size_t _ReadImpl(std::span<std::byte> writableSpan) override;
 
     private:
         std::span<std::byte> _data;
-        size_t _cursor = 0;
+        std::size_t _cursor = 0;
     };
 
     struct GrowableMemoryStream final : IReadableStream, IWritableStream {
@@ -70,38 +70,36 @@ namespace libtactmon::io {
 
         template <typename ConstBufferSequence>
         requires boost::asio::is_const_buffer_sequence<ConstBufferSequence>::value
-        GrowableMemoryStream(ConstBufferSequence const& buffers) : GrowableMemoryStream() {
+        explicit GrowableMemoryStream(ConstBufferSequence const& buffers) : GrowableMemoryStream() {
             _data.reserve(boost::asio::buffer_size(buffers));
             for (auto const buffer : boost::beast::buffers_range_ref(buffers))
                 _data.insert(_data.end(), reinterpret_cast<const std::byte*>(buffer.data()), reinterpret_cast<const std::byte*>(buffer.data()) + buffer.size());
         }
 
-        void Consume(size_t bytes);
-
-        size_t GetLength() const override { return _data.size(); }
-        operator bool() const override { return true; }
+        [[nodiscard]] std::size_t GetLength() const override { return _data.size(); }
+        explicit operator bool() const override { return true; }
 
     public:
-        size_t GetReadCursor() const override { return _readCursor; }
-        size_t SeekRead(size_t offset) override;
-        void SkipRead(size_t offset) override { _readCursor += offset; }
-        bool CanRead(size_t amount) const override { return _readCursor + amount <= _data.size(); }
-        std::span<std::byte const> Data() const override { return std::span { _data }.subspan(_readCursor); }
+        [[nodiscard]] std::size_t GetReadCursor() const override { return _readCursor; }
+        std::size_t SeekRead(std::size_t offset) override;
+        void SkipRead(std::size_t offset) override { _readCursor += offset; }
+        [[nodiscard]] bool CanRead(std::size_t amount) const override { return _readCursor + amount <= _data.size(); }
+        [[nodiscard]] std::span<std::byte const> Data() const override { return std::span { _data }.subspan(_readCursor); }
 
         using IReadableStream::Data;
 
     public:
-        size_t GetWriteCursor() const override { return _writeCursor; }
-        size_t SeekWrite(size_t offset) override;
-        void SkipWrite(size_t offset) override { _writeCursor += offset; }
+        std::size_t GetWriteCursor() const override { return _writeCursor; }
+        std::size_t SeekWrite(std::size_t offset) override;
+        void SkipWrite(std::size_t offset) override { _writeCursor += offset; }
 
     protected:
-        size_t _ReadImpl(std::span<std::byte> writableSpan) override;
+        std::size_t _ReadImpl(std::span<std::byte> writableSpan) override;
         std::span<std::byte> _WriteImpl(std::span<const std::byte> writableSpan) override;
 
     private:
         std::vector<std::byte> _data;
-        size_t _readCursor = 0;
-        size_t _writeCursor = 0;
+        std::size_t _readCursor = 0;
+        std::size_t _writeCursor = 0;
     };
 }

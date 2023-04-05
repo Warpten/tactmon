@@ -28,6 +28,7 @@ namespace backend::db {
         template <typename... COLUMNS>
         struct column_tuple {
             column_tuple() : columns_() { }
+            column_tuple(column_tuple const& other) : columns_(other) { }
 
             template <size_t... Is>
             column_tuple(std::index_sequence<Is...>, pqxx::row const& row) : columns_(row[Is].as<typename COLUMNS::value_type>()...)
@@ -64,6 +65,7 @@ namespace backend::db {
 
         Projection() : _columns() { }
         explicit Projection(pqxx::row const& row) : _columns(std::make_index_sequence<sizeof...(COLUMNS)> { }, row) { }
+        Projection(Projection const& proj) : _columns(proj._columns) { }
 
         template <size_t P>
         static auto render_to(std::ostream& ss, std::integral_constant<size_t, P> p) {

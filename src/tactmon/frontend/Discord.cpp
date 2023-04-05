@@ -22,6 +22,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/range/adaptor/filtered.hpp>
+#include <utility>
 
 #include <fmt/format.h>
 
@@ -33,24 +34,38 @@ namespace frontend {
 
     Discord::Discord(size_t threadCount, std::string const& token,
         backend::ProductCache& productManager, backend::Database& database, std::shared_ptr<net::Server> proxyServer)
-        : _threadPool(threadCount), httpServer(proxyServer), productManager(productManager), db(database), bot(token)
+        : _threadPool(threadCount), httpServer(std::move(proxyServer)), productManager(productManager), db(database), bot(token)
     {
         _logger = utility::logging::GetLogger("discord");
 
-        bot.on_ready(std::bind(&Discord::HandleReady, this, std::placeholders::_1));
-        bot.on_guild_create(std::bind(&Discord::HandleGuildCreate, this, std::placeholders::_1));
-        bot.on_slashcommand(std::bind(&Discord::HandleSlashCommand, this, std::placeholders::_1));
-        bot.on_form_submit(std::bind(&Discord::HandleFormSubmitEvent, this, std::placeholders::_1));
-        bot.on_select_click(std::bind(&Discord::HandleSelectClickEvent, this, std::placeholders::_1));
-        bot.on_log(std::bind(&Discord::HandleLogEvent, this, std::placeholders::_1));
-        bot.on_autocomplete(std::bind(&Discord::HandleAutoCompleteEvent, this, std::placeholders::_1));
+        bot.on_ready([this](const dpp::ready_t& evnt) {
+            HandleReady(evnt);
+        });
+        bot.on_guild_create([this](const dpp::guild_create_t& evnt) {
+            this->HandleGuildCreate(evnt);
+        });
+        bot.on_slashcommand([this](const dpp::slashcommand_t& evnt) {
+            this->HandleSlashCommand(evnt);
+        });
+        bot.on_form_submit([this](const dpp::form_submit_t& evnt) {
+            this->HandleFormSubmitEvent(evnt);
+        });
+        bot.on_select_click([this](const dpp::select_click_t& evnt) {
+            this->HandleSelectClickEvent(evnt);
+        });
+        bot.on_log([this](const dpp::log_t& evnt ) {
+            this->HandleLogEvent(evnt);
+        });
+        bot.on_autocomplete([this](const dpp::autocomplete_t& evnt) {
+            this->HandleAutoCompleteEvent(evnt);
+        });
     }
 
     Discord::~Discord() {
         bot.shutdown();
     }
 
-    size_t Discord::Hash(dpp::slashcommand const& command) const {
+    /* static */ size_t Discord::Hash(dpp::slashcommand const& command) {
         size_t hash = 0;
         boost::hash_combine(hash, command.name);
         boost::hash_combine(hash, command.description);

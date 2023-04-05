@@ -48,7 +48,7 @@ namespace libtactmon::tact::data::product {
         /**
          * The name of this product.
          */
-        std::string_view name() const { return _productName; }
+        [[nodiscard]] std::string_view name() const { return _productName; }
 
     protected: // Resource resolution APIs
 
@@ -75,7 +75,7 @@ namespace libtactmon::tact::data::product {
          */
         template <typename R>
         std::optional<R> ResolveCachedData(std::string_view key, std::function<std::optional<R>(io::FileStream&)> resultSupplier) const {
-            return ResourceResolver::ResolveData(*_cdns, key, resultSupplier, _logger);
+            return ResourceResolver::ResolveData(*_cdns, key, resultSupplier, _logger.get());
         }
 
     public: // Front-facing API
@@ -99,7 +99,7 @@ namespace libtactmon::tact::data::product {
          * 
          * @returns The location of the file, or an empty optional if not found.
          */
-        virtual std::optional<tact::data::FileLocation> FindFile(std::string_view filePath) const;
+        [[nodiscard]] virtual std::optional<tact::data::FileLocation> FindFile(std::string_view filePath) const;
 
         /**
          * Locates a file by FDID.
@@ -108,7 +108,7 @@ namespace libtactmon::tact::data::product {
          * 
          * @returns The location of the file, or an empty optional if not found.
          */
-        virtual std::optional<tact::data::FileLocation> FindFile(uint32_t fileDataID) const { return std::nullopt; }
+        [[nodiscard]] virtual std::optional<tact::data::FileLocation> FindFile(uint32_t fileDataID) const { return std::nullopt; }
 
         /**
          * Locates a file by content key.
@@ -117,7 +117,7 @@ namespace libtactmon::tact::data::product {
          * 
          * @returns The location of the file, or an empty optional if not found.
          */
-        std::optional<tact::data::FileLocation> FindFile(tact::CKey const& contentKey) const;
+        [[nodiscard]] std::optional<tact::data::FileLocation> FindFile(tact::CKey const& contentKey) const;
 
         /**
          * Locates the archive that contains a given encoding key.
@@ -125,7 +125,7 @@ namespace libtactmon::tact::data::product {
          * @param[in] ekey The encoding key.
          * @returns Location of the file in an archive, or an empty optional if the file could not be found.
          */
-        std::optional<tact::data::ArchiveFileLocation> FindArchive(tact::EKey const& ekey) const;
+        [[nodiscard]] std::optional<tact::data::ArchiveFileLocation> FindArchive(tact::EKey const& ekey) const;
 
     private:
         boost::asio::any_io_executor _executor;

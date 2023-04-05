@@ -75,7 +75,7 @@ namespace libtactmon::ribbit {
             constexpr static const std::string_view Value = "v1";
 
             template <typename C>
-            static auto Parse(std::string_view payload, std::shared_ptr<spdlog::logger> logger)
+            static auto Parse(std::string_view payload, spdlog::logger* logger)
                 -> std::optional<typename C::ValueType>
             {
                 std::vector<std::string_view> messageParts = ParseCore(payload, logger);
@@ -89,14 +89,14 @@ namespace libtactmon::ribbit {
             }
 
         private:
-            static std::vector<std::string_view> ParseCore(std::string_view input, std::shared_ptr<spdlog::logger> logger);
+            static std::vector<std::string_view> ParseCore(std::string_view input, spdlog::logger* logger);
         };
 
         template <> struct VersionTraits<Version::V2> {
             constexpr static const std::string_view Value = "v2";
 
             template <typename C>
-            static auto Parse(std::string_view payload, std::shared_ptr<spdlog::logger> logger)
+            static auto Parse(std::string_view payload, spdlog::logger* logger)
                 -> std::optional<typename C::ValueType>
             {
                 std::vector<std::string_view> messageParts = ParseCore(payload, logger);
@@ -110,7 +110,7 @@ namespace libtactmon::ribbit {
             }
 
         private:
-            static std::vector<std::string_view> ParseCore(std::string_view input, std::shared_ptr<spdlog::logger> logger);
+            static std::vector<std::string_view> ParseCore(std::string_view input, spdlog::logger* logger);
         };
 
         template <Command C, Version V, typename Args> class command_executor_impl;
@@ -124,7 +124,7 @@ namespace libtactmon::ribbit {
                 return Execute(executor, nullptr, region, std::forward<Args&&>(args)...);
             }
 
-            static auto Execute(boost::asio::any_io_executor executor, std::shared_ptr<spdlog::logger> logger, Region region, Args&&... args)
+            static auto Execute(boost::asio::any_io_executor executor, spdlog::logger* logger, Region region, Args&&... args)
                 -> std::optional<typename CommandTraits::ValueType>
             {
                 namespace asio = boost::asio;

@@ -33,7 +33,7 @@ namespace libtactmon::net {
         using MessageType = boost::beast::http::message<false, Body>;
 
         explicit DownloadTask(std::string_view resourcePath) : _resourcePath(resourcePath) { }
-        DownloadTask(std::string_view resourcePath, size_t offset, size_t length) : DownloadTask(resourcePath) {
+        DownloadTask(std::string_view resourcePath, std::size_t offset, std::size_t length) : DownloadTask(resourcePath) {
             _offset = offset;
             _size = length;
         }
@@ -43,7 +43,7 @@ namespace libtactmon::net {
 
         std::optional<R> Run(boost::asio::any_io_executor executor,
             std::string_view host,
-            std::shared_ptr<spdlog::logger> logger)
+            spdlog::logger* logger = nullptr)
         {
             namespace asio = boost::asio;
             namespace ip = asio::ip;
@@ -110,7 +110,7 @@ namespace libtactmon::net {
 
     protected:
         std::string _resourcePath;
-        size_t _size = 0;
-        size_t _offset = 0;
+        std::size_t _size = 0;
+        std::size_t _offset = 0;
     };
 }

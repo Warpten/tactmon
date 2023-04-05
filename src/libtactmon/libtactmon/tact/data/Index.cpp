@@ -11,7 +11,7 @@ namespace libtactmon::tact::data {
         std::vector<uint8_t> hashBytes;
         boost::algorithm::unhex(hash.begin(), hash.end(), std::back_inserter(hashBytes));
 
-        size_t checksumSize = 0x10;
+        std::size_t checksumSize = 0x10;
         while (checksumSize > 0) {
             size_t footerSize = checksumSize * 2 + sizeof(uint8_t) * 8 + sizeof(uint32_t);
 
@@ -28,7 +28,7 @@ namespace libtactmon::tact::data {
         if (checksumSize == 0)
             return;
 
-        size_t footerSize = checksumSize * 2 + sizeof(uint8_t) * 8 + sizeof(uint32_t);
+        std::size_t footerSize = checksumSize * 2 + sizeof(uint8_t) * 8 + sizeof(uint32_t);
         stream.SeekRead(stream.GetLength() - footerSize);
 
         // Read footer
@@ -49,15 +49,15 @@ namespace libtactmon::tact::data {
         //   ????
 
         // Compute some file properties
-        size_t blockSize = blockSizeKb * 1024u;
-        size_t entrySize = _keySizeBytes + sizeBytes + offsetBytes;
-        size_t entryCount = blockSize / entrySize;
-        size_t paddingSize = blockSize - entrySize * entryCount;
+        std::size_t blockSize = blockSizeKb * 1024u;
+        std::size_t entrySize = _keySizeBytes + sizeBytes + offsetBytes;
+        std::size_t entryCount = blockSize / entrySize;
+        std::size_t paddingSize = blockSize - entrySize * entryCount;
 
         // Compute block count. Integrate a block's data in the TOC to do the math, since there is only one
         // TOC entry per block (well, technically, two entries; one corresponding to the last EKey of a block,
         // and one corresponding to the lower part of the MD5 of a block)
-        size_t blockCount = (stream.GetLength() - footerSize) / (blockSize + (_keySizeBytes + checksumSize));
+        std::size_t blockCount = (stream.GetLength() - footerSize) / (blockSize + (_keySizeBytes + checksumSize));
 
         // Block data is stored flattened.
         // We collapse all the encoding keys in a single buffer, and just index into it when keying the file entries.
@@ -65,7 +65,7 @@ namespace libtactmon::tact::data {
         // Reserve storage for the actual keys
         _keyBuffer.reserve(entryCount * _keySizeBytes * blockCount);
 
-        for (size_t i = 0; i < blockCount; ++i) {
+        for (std::size_t i = 0; i < blockCount; ++i) {
             stream.SeekRead(i * blockSize);
             std::span<const uint8_t> rawBlockData = stream.Data<uint8_t>().subspan(0, blockSize);
 
@@ -76,7 +76,7 @@ namespace libtactmon::tact::data {
             if (!std::equal(digest.begin(), digest.begin() + checksumSize, checksum.begin(), checksum.end()))
                 continue;
 
-            for (size_t j = 0; j < entryCount; ++j) {
+            for (std::size_t j = 0; j < entryCount; ++j) {
                 stream.SeekRead(i * blockSize + j * entrySize);
 
                 // Read the key and insert it into storage
@@ -87,7 +87,7 @@ namespace libtactmon::tact::data {
                 if (std::ranges::all_of(keyData, [](uint8_t b){ return b == 0; }))
                     continue;
 
-                size_t keyOfs = _keyBuffer.size();
+                std::size_t keyOfs = _keyBuffer.size();
                 _keyBuffer.insert(_keyBuffer.end(), keyData.begin(), keyData.end());
                 _entries.emplace_back(stream, sizeBytes, offsetBytes, keyOfs);
             }
@@ -96,17 +96,17 @@ namespace libtactmon::tact::data {
         _keyBuffer.shrink_to_fit();
     }
 
-    Index::Entry::Entry(io::IReadableStream& stream, size_t sizeBytes, size_t offsetBytes, size_t keyOffset)
+    Index::Entry::Entry(io::IReadableStream& stream, std::size_t sizeBytes, std::size_t offsetBytes, std::size_t keyOffset)
         : _keyOffset(keyOffset)
     {
         std::span<const uint8_t> dataBytes = stream.Data<uint8_t>().subspan(0, sizeBytes + offsetBytes);
         stream.SkipRead(sizeBytes + offsetBytes);
 
-        for (size_t i = 0; i < sizeBytes; ++i) {
+        for (std::size_t i = 0; i < sizeBytes; ++i) {
             _size = (_size << 8) | dataBytes[i];
         }
 
-        for (size_t i = 0; i < offsetBytes; ++i) {
+        for (std::size_t i = 0; i < offsetBytes; ++i) {
             _offset = (_offset << 8) | dataBytes[sizeBytes + i];
         }
     }

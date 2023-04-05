@@ -26,7 +26,7 @@ namespace backend::db::entity::tracked_file {
         * Selects all records.
         */
         using Select = db::PreparedStatement<"TrackedFiles.Select", db::select::Query<
-            Entity,
+            Entity::projection_type,
             Entity
         >>;
 

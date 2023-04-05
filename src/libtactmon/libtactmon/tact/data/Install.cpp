@@ -15,7 +15,7 @@ namespace libtactmon::tact::data {
         Install instance { };
 
         instance._tags.reserve(numTags);
-        for (int i = 0; i < numTags; ++i) {
+        for (std::size_t i = 0; i < numTags; ++i) {
             std::string name;
             stream.ReadCString(name);
             std::string& nameItr = instance._tagNames.emplace_back(std::move(name));
@@ -27,7 +27,7 @@ namespace libtactmon::tact::data {
         }
 
         instance._entries.reserve(numEntries);
-        for (size_t i = 0; i < numEntries; ++i) {
+        for (std::size_t i = 0; i < numEntries; ++i) {
             std::string name;
             stream.ReadCString(name);
 
@@ -46,7 +46,7 @@ namespace libtactmon::tact::data {
         return instance;
     }
 
-    Install::Install() { }
+    Install::Install() = default;
 
     Install::Entry::Entry(io::IReadableStream& stream, size_t hashSize, std::string const& name)
         : _hash(stream.Data<uint8_t>().subspan(0, hashSize)), _name(name)
@@ -65,13 +65,13 @@ namespace libtactmon::tact::data {
     }
 
     Install::Tag::Tag(Tag&& other) noexcept
-        : _name(std::move(other._name)), _type(other._type), _bitmaskSize(other._bitmaskSize), _bitmask(std::move(other._bitmask))
+        : _name(other._name), _type(other._type), _bitmaskSize(other._bitmaskSize), _bitmask(std::move(other._bitmask))
     {
         other._bitmaskSize = 0;
     }
 
     Install::Tag& Install::Tag::operator = (Install::Tag&& other) noexcept {
-        _name = std::move(other._name);
+        _name = other._name;
         _type = other._type;
         _bitmaskSize = other._bitmaskSize;
         _bitmask = std::move(other._bitmask);
@@ -91,7 +91,7 @@ namespace libtactmon::tact::data {
         return std::nullopt;
     }
 
-    bool Install::Tag::Matches(size_t fileIndex) const {
+    bool Install::Tag::Matches(std::size_t fileIndex) const {
         return false;
 
         // Buggy, disabled for now.

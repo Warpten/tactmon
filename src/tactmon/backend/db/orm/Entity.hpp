@@ -36,7 +36,8 @@ namespace backend::db {
 
     public:
         Entity() : _proj() { }
-        Entity(pqxx::row const& row) : _proj(row) { }
+        explicit Entity(pqxx::row const& row) : _proj(row) { }
+        Entity(projection_type const& proj) : _proj(proj) { }
 
         template <size_t PARAMETER>
         static auto render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p) {

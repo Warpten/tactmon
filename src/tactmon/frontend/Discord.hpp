@@ -46,7 +46,7 @@ namespace frontend {
         void HandleAutoCompleteEvent(dpp::autocomplete_t const& evnt);
 
     private:
-        size_t Hash(dpp::slashcommand const& command) const;
+        static size_t Hash(dpp::slashcommand const& command) ;
 
         /**
          * Returns a tuple describing if and how a command should be resynchronized with Discord.

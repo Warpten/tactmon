@@ -41,7 +41,7 @@ namespace libtactmon::tact::data::product {
          */
         template <typename T>
         std::optional<T> ResolveConfiguration(ribbit::types::CDNs const& cdns,
-            std::string_view key, Parser<T> parser, std::shared_ptr<spdlog::logger> logger = nullptr) const
+            std::string_view key, Parser<T> parser, spdlog::logger* logger = nullptr) const
         {
             return Resolve(cdns, key, "/{}/config/{}/{}/{}", parser, logger);
         }
@@ -58,7 +58,7 @@ namespace libtactmon::tact::data::product {
          */
         template <typename T>
         std::optional<T> ResolveData(ribbit::types::CDNs const& cdns,
-            std::string_view key, Parser<T> parser, std::shared_ptr<spdlog::logger> logger = nullptr) const
+            std::string_view key, Parser<T> parser, spdlog::logger* logger = nullptr) const
         {
             return Resolve(cdns, key, "/{}/data/{}/{}/{}", parser, logger);
         }
@@ -68,7 +68,7 @@ namespace libtactmon::tact::data::product {
         std::optional<T> Resolve(ribbit::types::CDNs const& cdns,
             std::string_view key, std::string_view formatString,
             Parser<T> parser,
-            std::shared_ptr<spdlog::logger> logger = nullptr) const
+            spdlog::logger* logger = nullptr) const
         {
             for (ribbit::types::cdns::Record const& cdn : cdns) {
                 std::string relativePath{ fmt::format(fmt::runtime(formatString), cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };

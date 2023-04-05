@@ -22,7 +22,7 @@ namespace libtactmon::tact::data {
         struct Tag final {
             friend struct Install;
 
-            Tag(io::IReadableStream& stream, size_t bitmaskSize, std::string_view name);
+            Tag(io::IReadableStream& stream, std::size_t bitmaskSize, std::string_view name);
 
             Tag(Tag&& other) noexcept;
             Tag& operator = (Tag&& other) noexcept;
@@ -31,22 +31,22 @@ namespace libtactmon::tact::data {
             Tag& operator = (Tag const&) = delete;
 
         public:
-            std::string_view name() const { return _name; }
-            uint8_t type() const { return _type; }
+            [[nodiscard]] std::string_view name() const { return _name; }
+            [[nodiscard]] uint8_t type() const { return _type; }
 
-            bool Matches(size_t fileIndex) const;
+            [[nodiscard]] bool Matches(std::size_t fileIndex) const;
 
         private:
             std::string_view _name;
             uint8_t _type;
 
-            size_t _bitmaskSize;
+            std::size_t _bitmaskSize;
             std::unique_ptr<uint8_t[]> _bitmask;
         };
 
-        size_t size() const { return _entries.size(); }
+        [[nodiscard]] std::size_t size() const { return _entries.size(); }
 
-        std::optional<tact::CKey> FindFile(std::string_view fileName) const;
+        [[nodiscard]] std::optional<tact::CKey> FindFile(std::string_view fileName) const;
 
     private:
         Install();
@@ -56,13 +56,13 @@ namespace libtactmon::tact::data {
 
             Entry(io::IReadableStream& stream, size_t hashSize, std::string const& name);
 
-            std::string_view name() const { return _name; }
+            [[nodiscard]] std::string_view name() const { return _name; }
 
-            tact::CKey const& ckey() const { return _hash; }
+            [[nodiscard]] tact::CKey const& ckey() const { return _hash; }
 
         private:
             std::string _name;
-            size_t _fileSize;
+            std::size_t _fileSize;
             
             tact::CKey _hash;
 

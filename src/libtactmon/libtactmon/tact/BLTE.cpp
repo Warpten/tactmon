@@ -16,7 +16,7 @@ struct ChunkHeader {
     uint32_t DecompressedSize;
     std::array<uint8_t, 16> Checksum;
 
-    size_t Offset; // Calculated
+    std::size_t Offset; // Calculated
 };
 
 namespace libtactmon::tact {
@@ -70,7 +70,7 @@ namespace libtactmon::tact {
         }
         
         BLTE blte { };
-        for (size_t i = 0; i < chunkCount; ++i) {
+        for (std::size_t i = 0; i < chunkCount; ++i) {
             fstream.SeekRead(chunks[i].Offset);
             if (!blte.LoadChunk(fstream, chunks[i].CompressedSize, chunks[i].DecompressedSize, chunks[i].Checksum)) {
                 if (ekey != nullptr)
@@ -90,9 +90,9 @@ namespace libtactmon::tact {
         return blte;
     }
 
-    BLTE::BLTE() { }
+    BLTE::BLTE() = default;
 
-    bool BLTE::LoadChunk(io::IReadableStream& stream, size_t compressedSize, size_t decompressedSize, std::array<uint8_t, 16> checksum) {
+    bool BLTE::LoadChunk(io::IReadableStream& stream, std::size_t compressedSize, std::size_t decompressedSize, std::array<uint8_t, 16> checksum) {
         if (stream.GetReadCursor() + compressedSize > stream.GetLength())
             return false;
 
@@ -136,7 +136,7 @@ namespace libtactmon::tact {
                         return false;
                     }
 
-                    size_t writeCount = _dataBuffer.Write(std::span { decompressedBuffer.data(), decompressedBuffer.size() - strm.avail_out }, std::endian::little);
+                    std::size_t writeCount = _dataBuffer.Write(std::span { decompressedBuffer.data(), decompressedBuffer.size() - strm.avail_out }, std::endian::little);
                     if (writeCount != decompressedBuffer.size() - strm.avail_out)
                         return false;
                 }

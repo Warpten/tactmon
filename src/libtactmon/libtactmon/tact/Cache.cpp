@@ -1,7 +1,7 @@
 #include "libtactmon/tact/Cache.hpp"
 
 namespace libtactmon::tact {
-    Cache::Cache(std::filesystem::path root) : _root(root) { 
+    Cache::Cache(const std::filesystem::path& root) : _root(root) {
         if (!std::filesystem::is_directory(root))
             std::filesystem::create_directories(root);
     }
@@ -19,7 +19,7 @@ namespace libtactmon::tact {
 
         // Avoid reverting to absolute paths
         // Maybe a code smell ?
-        if (relativePath.size() > 0 && (relativePath[0] == '/' || relativePath[0] == '\\'))
+        if (!relativePath.empty() && (relativePath[0] == '/' || relativePath[0] == '\\'))
             return fullResourcePath / relativePath.substr(1);
 
         return _root / relativePath;

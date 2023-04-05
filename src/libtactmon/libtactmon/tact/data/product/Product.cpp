@@ -18,7 +18,7 @@ namespace libtactmon::tact::data::product {
     using namespace std::string_view_literals;
 
     Product::Product(std::string_view productName, Cache& localCache, boost::asio::any_io_executor executor, std::shared_ptr<spdlog::logger> logger)
-        : ResourceResolver(executor, localCache), _executor(executor), _productName(productName), _localCache(localCache), _logger(logger)
+        : ResourceResolver(executor, localCache), _executor(executor), _productName(productName), _localCache(localCache), _logger(std::move(logger))
     {
     }
 

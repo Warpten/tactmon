@@ -50,6 +50,7 @@ namespace backend::db {
     }
 
     /**
+     * A SQL equality test.
      * Renders `${COMPONENT} = ${PARAMETER}`.
      */
     template <typename COMPONENT, typename PARAMETER>
