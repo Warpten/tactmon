@@ -3,8 +3,8 @@
 namespace libtactmon::io {
     SpanStream::SpanStream(std::span<const std::byte> data) : _data(data) { }
 
-    size_t SpanStream::_ReadImpl(std::span<std::byte> bytes) {
-        size_t length = std::min(bytes.size(), _data.size() - _cursor);
+    std::size_t SpanStream::_ReadImpl(std::span<std::byte> bytes) {
+        std::size_t length = std::min(bytes.size(), _data.size() - _cursor);
 
         std::copy_n(Data().subspan(length).data(), length, bytes.data());
         _cursor += length;
@@ -15,7 +15,7 @@ namespace libtactmon::io {
         : IReadableStream(), _data(data)
     { }
 
-    std::size_t MemoryStream::SeekRead(size_t offset) {
+    std::size_t MemoryStream::SeekRead(std::size_t offset) {
         _cursor = std::min(_data.size(), offset);
 
         return _cursor;

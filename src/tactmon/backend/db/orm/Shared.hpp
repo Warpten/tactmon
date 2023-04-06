@@ -22,7 +22,7 @@ namespace backend::db {
      * @tparam COMPONENT A predicate to use in a query.
      */
     template <typename COMPONENT>
-    struct Where {
+    struct Where final {
         using parameter_types = typename COMPONENT::parameter_types;
 
         template <std::size_t I>
@@ -75,7 +75,7 @@ namespace backend::db {
     /**
      * A positional SQL parameter.
      */
-    struct Parameter {
+    struct Parameter final {
         /**
          * Do not use this type directly; it will be automatically used when using the parent type inside of criteria declaration.
          */
@@ -120,7 +120,7 @@ namespace backend::db {
      * {@endcode}
      */
     template <auto V>
-    struct Constant {
+    struct Constant final {
         using parameter_types = utility::tuple<>;
 
         template <std::size_t I>
@@ -134,7 +134,7 @@ namespace backend::db {
      * An SQL OFFSET statement. Offsets the database's returned data set by a given amount as specified by the provided component.
      */
     template <typename COMPONENT>
-    struct Offset {
+    struct Offset final {
         using parameter_types = typename COMPONENT::parameter_types;
 
         template <std::size_t I>
@@ -148,7 +148,7 @@ namespace backend::db {
      * An SQL LIMIT statement. Limits the amount of rows returned by the query as specified by the provided component.
      */
     template <typename COMPONENT>
-    struct Limit {
+    struct Limit final {
         using parameter_types = typename COMPONENT::parameter_types;
 
         template <std::size_t I>

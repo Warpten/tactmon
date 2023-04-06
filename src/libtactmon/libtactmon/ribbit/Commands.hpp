@@ -162,7 +162,7 @@ namespace libtactmon::ribbit {
 
                 { // Read Ribbit response
                     boost::asio::streambuf buf;
-                    size_t bytesTransferred = asio::read(socket, buf, ec);
+                    std::size_t bytesTransferred = asio::read(socket, buf, ec);
                     boost::ignore_unused(bytesTransferred);
                     if (ec && ec != boost::asio::error::eof) {
                         if (logger != nullptr)

@@ -22,6 +22,6 @@ namespace libtactmon::ribbit::types {
 
     struct Versions {
         std::vector<versions::Record> Records;
-        size_t SequenceID = 0;
+        std::size_t SequenceID = 0;
     };
 }

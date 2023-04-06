@@ -27,7 +27,7 @@ namespace libtactmon::io {
         /**
          * Returns the position of the read cursor.
          */
-        virtual std::size_t GetReadCursor() const = 0;
+        [[nodiscard]] virtual std::size_t GetReadCursor() const = 0;
 
         /**
          * Sets the position of the read cursor.
@@ -40,7 +40,7 @@ namespace libtactmon::io {
         /**
          * Returns true if at least @pre amount bytes can be read from the stream.
          */
-        virtual bool CanRead(std::size_t amount) const = 0;
+        [[nodiscard]] virtual bool CanRead(std::size_t amount) const = 0;
 
         /**
          * Returns a pointer to the data located at offset specified by the read cursor.
@@ -92,7 +92,7 @@ namespace libtactmon::io {
             return value;
         }
 
-        std::size_t ReadString(std::string& value, size_t length) {
+        std::size_t ReadString(std::string& value, std::size_t length) {
             value.resize(length);
             std::span<char> bufferView { value.data(), length };
 

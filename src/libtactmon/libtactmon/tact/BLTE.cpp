@@ -107,7 +107,7 @@ namespace libtactmon::tact {
         switch (chunkSpan[0]) {
             case 'N':
             {
-                size_t writeCount = _dataBuffer.Write(chunkSpan.subspan(1), std::endian::little);
+                std::size_t writeCount = _dataBuffer.Write(chunkSpan.subspan(1), std::endian::little);
                 return writeCount == chunkSpan.size() - 1;
             }
             case 'Z':

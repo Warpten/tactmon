@@ -32,12 +32,12 @@ namespace libtactmon::tact::config {
         CKey Root;
         struct {
             Key Key;
-            size_t Size[2] = { 0, 0 };
+            std::size_t Size[2] = { 0, 0 };
         } Install;
         // struct { ... } Download;
         struct {
             Key Key;
-            size_t Size[2] = { 0, 0 };
+            std::size_t Size[2] = { 0, 0 };
         } Encoding;
 
         std::string BuildName;

@@ -52,6 +52,7 @@ namespace backend::db::update {
     /* static */ auto Query<ENTITY, SET>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
         ss << "UPDATE ";
         auto entityOffset = ENTITY::render_to(ss, p);
+        ss << ' ';
         return SET::render_to(ss, entityOffset);
     }
 }

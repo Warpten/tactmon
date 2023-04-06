@@ -22,7 +22,7 @@ namespace libtactmon::tact::config {
             Archive() { }
 
             std::string Name;
-            size_t Size = 0;
+            std::size_t Size = 0;
         };
 
         static std::optional<CDNConfig> Parse(io::IReadableStream& stream);

@@ -14,7 +14,7 @@ namespace libtactmon::io {
         /**
          * Returns the position of the write cursor within the stream.
          */
-        virtual std::size_t GetWriteCursor() const = 0;
+        [[nodiscard]] virtual std::size_t GetWriteCursor() const = 0;
 
         /**
          * Sets the position of the write cursor.

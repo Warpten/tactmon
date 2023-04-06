@@ -19,8 +19,6 @@ namespace libtactmon::io {
     struct SpanStream final : IReadableStream {
         explicit SpanStream(std::span<const std::byte> data);
 
-        using IReadableStream::Data;
-
     public: // IReadableStream
         [[nodiscard]] std::size_t GetReadCursor() const override { return _cursor; }
         std::size_t SeekRead(std::size_t offset) override { return _cursor = std::min(offset, _data.size()); }
@@ -30,6 +28,7 @@ namespace libtactmon::io {
 
         explicit operator bool() const override { return true; }
 
+        using IReadableStream::Data;
         [[nodiscard]] std::span<std::byte const> Data() const override { return _data.subspan(_cursor); }
 
     protected:

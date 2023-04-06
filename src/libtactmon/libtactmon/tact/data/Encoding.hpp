@@ -52,8 +52,8 @@ namespace libtactmon::tact::data {
         struct Page {
             Page() = default;
 
-            Page(io::IReadableStream& stream, Header const& header, size_t pageOffset, size_t pageEnd) {
-                size_t hashSize = T::HashSize(header);
+            Page(io::IReadableStream& stream, Header const& header, std::size_t pageOffset, std::size_t pageEnd) {
+                std::size_t hashSize = T::HashSize(header);
 
                 if constexpr (!Indexed) {
                     stream.SkipRead(hashSize + 0x10);
@@ -63,7 +63,7 @@ namespace libtactmon::tact::data {
                     stream.Read(std::span{ _index.get(), hashSize + 0x10 }, std::endian::little);
                 }
 
-                size_t position = stream.GetReadCursor();
+                std::size_t position = stream.GetReadCursor();
                 stream.SeekRead(pageOffset);
 
                 while (stream.GetReadCursor() < pageEnd) {
@@ -86,7 +86,7 @@ namespace libtactmon::tact::data {
             std::vector<T> _entries;
 
             //! Because I can't be bothered specializing on the boolean.
-            std::conditional_t<Indexed,
+            [[no_unique_address]] std::conditional_t<Indexed,
                 std::unique_ptr<uint8_t[]>,
                 Empty
             > _index;

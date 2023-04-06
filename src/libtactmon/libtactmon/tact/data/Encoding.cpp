@@ -129,7 +129,7 @@ namespace libtactmon::tact::data {
 
         stream.SkipRead(_header.ESpecBlockSize); // Skip ESpec strings
 
-        size_t pageStart = stream.GetReadCursor() + _header.CEKey.PageCount * (_header.EncodingKeySize + 0x10);
+        std::size_t pageStart = stream.GetReadCursor() + _header.CEKey.PageCount * (_header.EncodingKeySize + 0x10);
 
         _cekeyPages.reserve(_header.CEKey.PageCount);
 
@@ -156,20 +156,20 @@ namespace libtactmon::tact::data {
 
     Encoding::~Encoding() = default;
 
-    size_t Encoding::count() const {
-        size_t value = 0;
+    std::size_t Encoding::count() const {
+        std::size_t value = 0;
         for (const auto & ceKeyPage : _cekeyPages)
             value += ceKeyPage.size();
         return value;
     }
 
-    size_t Encoding::GetContentKeySize() const {
+    std::size_t Encoding::GetContentKeySize() const {
         return _header.ContentKeySize;
     }
 
     std::optional<tact::data::FileLocation> Encoding::FindFile(tact::CKey const& contentKey) const {
         for (Page<CEKeyPageTable> const& page : _cekeyPages) {
-            for (size_t j = 0; j < page.size(); ++j) {
+            for (std::size_t j = 0; j < page.size(); ++j) {
                 auto&& entry = page[j].ckey(*this);
 
                 if (entry == contentKey)

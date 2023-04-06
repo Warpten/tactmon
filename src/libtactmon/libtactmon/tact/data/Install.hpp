@@ -54,7 +54,7 @@ namespace libtactmon::tact::data {
         struct Entry {
             friend struct Install;
 
-            Entry(io::IReadableStream& stream, size_t hashSize, std::string const& name);
+            Entry(io::IReadableStream& stream, std::size_t hashSize, std::string const& name);
 
             [[nodiscard]] std::string_view name() const { return _name; }
 

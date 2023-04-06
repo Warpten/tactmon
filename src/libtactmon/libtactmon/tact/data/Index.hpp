@@ -20,7 +20,7 @@ namespace libtactmon::tact::data {
         struct Entry {
             friend struct Index;
 
-            Entry(io::IReadableStream& stream, size_t sizeBytes, size_t offsetBytes, size_t keyOffset);
+            Entry(io::IReadableStream& stream, std::size_t sizeBytes, std::size_t offsetBytes, std::size_t keyOffset);
 
         public:
             [[nodiscard]] std::size_t size() const { return _size; }

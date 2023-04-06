@@ -15,7 +15,7 @@ namespace backend::db {
      * @tparam TYPE The type of the column's value.
      */
     template <utility::Literal NAME, typename TYPE>
-    struct Column {
+    struct Column final {
         using parameter_types = utility::tuple<>;
         using value_type = TYPE;
 
@@ -29,7 +29,7 @@ namespace backend::db {
          * Binds a column to a projection (or an entity).
          */
         template <typename PROJECTION>
-        struct Of : Column<NAME, TYPE> {
+        struct Of final {
             template <std::size_t PARAMETER>
             static auto render_to(std::ostream& stream, std::integral_constant<std::size_t, PARAMETER> p);
 

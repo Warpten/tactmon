@@ -36,7 +36,7 @@ namespace backend::db {
          * Base implementation of an unary predicate.
          */
         template <utility::Literal BEGIN, utility::Literal END, typename CRITERIA>
-        struct UnaryCriteria {
+        struct UnaryCriteria final {
             using parameter_types = typename CRITERIA::parameter_types;
 
             template <std::size_t P>

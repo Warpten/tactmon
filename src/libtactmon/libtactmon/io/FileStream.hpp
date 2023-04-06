@@ -15,7 +15,7 @@ namespace libtactmon::io {
         explicit operator bool() const override { return _stream.is_open(); }
 
     public: // IReadableStream
-        size_t SeekRead(std::size_t offset) override;
+        std::size_t SeekRead(std::size_t offset) override;
         [[nodiscard]] std::size_t GetReadCursor() const override;
         void SkipRead(std::size_t offset) override { _cursor += offset; }
         [[nodiscard]] bool CanRead(std::size_t count) const override { return _cursor + count <= _stream.size(); }

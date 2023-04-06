@@ -48,7 +48,7 @@ namespace libtactmon::tact::data {
 
     Install::Install() = default;
 
-    Install::Entry::Entry(io::IReadableStream& stream, size_t hashSize, std::string const& name)
+    Install::Entry::Entry(io::IReadableStream& stream, std::size_t hashSize, std::string const& name)
         : _hash(stream.Data<uint8_t>().subspan(0, hashSize)), _name(name)
     {
         stream.SkipRead(hashSize);
@@ -56,7 +56,7 @@ namespace libtactmon::tact::data {
         _fileSize = stream.Read<uint32_t>(std::endian::big);
     }
 
-    Install::Tag::Tag(io::IReadableStream& stream, size_t bitmaskSize, std::string_view name) : _name(name) {
+    Install::Tag::Tag(io::IReadableStream& stream, std::size_t bitmaskSize, std::string_view name) : _name(name) {
         _type = stream.Read<uint16_t>(std::endian::big);
         _bitmaskSize = bitmaskSize;
 
@@ -95,8 +95,8 @@ namespace libtactmon::tact::data {
         return false;
 
         // Buggy, disabled for now.
-        // size_t byteIndex = fileIndex / sizeof(uint8_t);
-        // size_t bitIndex = fileIndex % sizeof(uint8_t);
+        // std::size_t byteIndex = fileIndex / sizeof(uint8_t);
+        // std::size_t bitIndex = fileIndex % sizeof(uint8_t);
         //
         // return (_bitmask[byteIndex] & (1 << bitIndex)) != 0;
     }

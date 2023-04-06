@@ -52,7 +52,7 @@ namespace backend::db {
      * Implements the DISTINCT column_name concept.
      */
     template <typename COMPONENT>
-    struct Distinct : Selector<"DISTINCT", COMPONENT> {
+    struct Distinct final : Selector<"DISTINCT", COMPONENT> {
         /**
          * Special case of DISTINCT where the uniquity column differs from the column returned.
          */
@@ -77,7 +77,7 @@ namespace backend::db {
      * @tparam COMPONENT A component that will be aliased to a name.
      */
     template <utility::Literal TOKEN, typename COMPONENT>
-    struct Alias {
+    struct Alias final {
         using parameter_types = typename COMPONENT::parameter_types;
         using value_type = typename COMPONENT::value_type;
 
@@ -91,7 +91,7 @@ namespace backend::db {
         /**
          * A reference to the alias.
          */
-        struct Reference {
+        struct Reference final {
             using parameter_types = utility::tuple<>;
 
             template <std::size_t I>

@@ -1,3 +1,4 @@
+#include "libtactmon/detail/Tokenizer.hpp"
 #include "libtactmon/ribbit/Commands.hpp"
 #include "libtactmon/ribbit/types/BGDL.hpp"
 #include "libtactmon/ribbit/types/CDNs.hpp"
@@ -5,7 +6,6 @@
 #include "libtactmon/ribbit/types/Versions.hpp"
 
 #include <boost/beast/http.hpp>
-#include <boost/tokenizer.hpp>
 
 namespace libtactmon::ribbit::detail {
     using char_sep = boost::char_separator<char>;
@@ -31,12 +31,9 @@ namespace libtactmon::ribbit::detail {
         auto mimeBoundary = [&]() -> std::optional<std::string_view> {
             auto contentType = parser.get()[boost::beast::http::field::content_type];
 
-            auto r1 = ctre::match<R"reg(^multipart/([^;]+);\s*boundary="(?<boundary>[^"]+)"$)reg">(contentType.begin(), contentType.end());
-            auto r2 = ctre::match<R"reg(^multipart/([^;]+);\s*boundary=(?<boundary>[^"]+)$)reg">(contentType.begin(), contentType.end());
-
+            auto r1 = ctre::match<R"reg(^multipart/(?:[^;]+);\s*boundary=("|'|)?(?<boundary>[^"]+)\1$)reg">(contentType.begin(), contentType.end());
             if (r1) return r1.get<"boundary">();
-            if (r2) return r2.get<"boundary">();
-            return {};
+            return std::nullopt;
         }();
 
         if (mimeBoundary == std::nullopt) {
@@ -48,25 +45,24 @@ namespace libtactmon::ribbit::detail {
 
         // Found a MIME boundary, split the body
         std::vector<std::string_view> messageParts;
-        boost::split_regex(messageParts, input, boost::regex{ fmt::format("--{}\r\n", *mimeBoundary) });
+        boost::split_regex(messageParts, input, boost::regex { fmt::format("--{}\r\n", *mimeBoundary) });
         return messageParts;
     }
 
     /* static */ std::vector<std::string_view> VersionTraits<Version::V2>::ParseCore(std::string_view input, spdlog::logger* logger) {
+        using namespace std::string_view_literals;
+
         // Split on the header delimiter.
-        std::vector<std::string_view> messageParts;
-        boost::split_regex(messageParts, input, boost::regex { "\r\n\r\n" });
-        return messageParts;
+        return libtactmon::detail::Tokenize(input, "\r\n\r\n"sv, false);
     }
 
     /* static */ std::optional<types::BGDL> CommandTraits<Command::ProductBGDL>::Parse(std::string_view input) {
-        boost::char_separator<char> sep{ "\r\n" };
-        std::string strInput{ input };
-        tokenizer tok{ strInput, sep };
+        using namespace std::string_view_literals;
 
         types::BGDL bgdl;
 
-        for (std::string const& line : tok) {
+        std::vector<std::string_view> lines = libtactmon::detail::Tokenize(input, "\r\n"sv, true);
+        for (std::string_view line : lines) {
             auto value = types::bgdl::Record::Parse(line);
             if (value.has_value())
                 bgdl.push_back(*value);
@@ -82,13 +78,12 @@ namespace libtactmon::ribbit::detail {
     }
 
     /* static */ std::optional<types::CDNs> CommandTraits<Command::ProductCDNs>::Parse(std::string_view input) {
-        boost::char_separator<char> sep{ "\r\n" };
-        std::string strInput{ input };
-        tokenizer tok{ strInput, sep };
+        using namespace std::string_view_literals;
 
         types::CDNs cdns;
 
-        for (std::string const& line : tok) {
+        std::vector<std::string_view> lines = libtactmon::detail::Tokenize(input, "\r\n"sv, true);
+        for (std::string_view line : lines) {
             auto value = types::cdns::Record::Parse(line);
             if (value.has_value())
                 cdns.push_back(*value);
@@ -104,13 +99,12 @@ namespace libtactmon::ribbit::detail {
     }
 
     /* static */ std::optional<types::Summary> CommandTraits<Command::Summary>::Parse(std::string_view input) {
-        boost::char_separator<char> sep{ "\r\n" };
-        std::string strInput{ input };
-        tokenizer tok{ strInput, sep };
+        using namespace std::string_view_literals;
 
         types::Summary summary;
 
-        for (std::string const& line : tok) {
+        std::vector<std::string_view> lines = libtactmon::detail::Tokenize(input, "\r\n"sv, true);
+        for (std::string_view line : lines) {
             auto item = types::summary::Record::Parse(line);
             if (item.has_value())
                 summary.push_back(*item);
@@ -124,13 +118,12 @@ namespace libtactmon::ribbit::detail {
     }
 
     /* static */ std::optional<types::Versions> CommandTraits<Command::ProductVersions>::Parse(std::string_view input) {
-        boost::char_separator<char> sep{ "\r\n" };
-        std::string strInput{ input };
-        tokenizer tok{ strInput, sep };
+        using namespace std::string_view_literals;
 
         types::Versions versions;
 
-        for (std::string const& line : tok) {
+        std::vector<std::string_view> lines = libtactmon::detail::Tokenize(input, "\r\n"sv, true);
+        for (std::string_view line : lines) {
             auto value = types::versions::Record::Parse(line);
             if (value.has_value())
                 versions.Records.push_back(*value);

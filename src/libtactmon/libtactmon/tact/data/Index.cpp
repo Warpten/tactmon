@@ -6,16 +6,19 @@
 
 namespace libtactmon::tact::data {
     Index::Index(std::string_view hash, io::IReadableStream& stream)
-        : _archiveName(hash)
+        : _archiveName(hash), _keySizeBytes(0)
     {
         std::vector<uint8_t> hashBytes;
         boost::algorithm::unhex(hash.begin(), hash.end(), std::back_inserter(hashBytes));
 
         std::size_t checksumSize = 0x10;
         while (checksumSize > 0) {
-            size_t footerSize = checksumSize * 2 + sizeof(uint8_t) * 8 + sizeof(uint32_t);
+            std::size_t footerSize = checksumSize * 2 + sizeof(uint8_t) * 8 + sizeof(uint32_t);
 
             stream.SeekRead(stream.GetLength() - footerSize);
+            if (!stream.CanRead(footerSize)) // Protect against underflow
+                continue;
+
             std::span<const uint8_t> footerData = stream.Data<uint8_t>().subspan(0, footerSize);
             auto digest = crypto::MD5::Of(footerData);
 
@@ -25,6 +28,7 @@ namespace libtactmon::tact::data {
             --checksumSize;
         }
 
+        // Unable to validate the file, exit out
         if (checksumSize == 0)
             return;
 
@@ -49,7 +53,7 @@ namespace libtactmon::tact::data {
         //   ????
 
         // Compute some file properties
-        std::size_t blockSize = blockSizeKb * 1024u;
+        std::size_t blockSize = 1024uLL * blockSizeKb;
         std::size_t entrySize = _keySizeBytes + sizeBytes + offsetBytes;
         std::size_t entryCount = blockSize / entrySize;
         std::size_t paddingSize = blockSize - entrySize * entryCount;
