@@ -93,14 +93,10 @@ namespace libtactmon::io {
         }
 
         std::size_t ReadString(std::string& value, size_t length) {
-            // TODO: there probably is a way to avoid double copies here
+            value.resize(length);
+            std::span<char> bufferView { value.data(), length };
 
-            std::unique_ptr<char[]> buffer = std::make_unique<char[]>(length);
-            std::span<char> bufferView { buffer.get(), length };
-
-            std::size_t bytesRead = Read(bufferView);
-            value.assign(buffer.get(), bytesRead);
-            return bytesRead;
+            return Read(bufferView);
         }
 
         std::size_t ReadCString(std::string& value) {

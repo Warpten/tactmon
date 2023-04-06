@@ -50,9 +50,9 @@ namespace backend::db::insert {
             // TODO: There are cases where values inserted will be derived from joins
             //       This needs to be fixed to handle such values as it'll break otherwise.
             for (size_t i = 0; i < sizeof...(COLUMNS); ++i)
-                ss << '$' << (I + i);
+                ss << '$' << (componentsOffset.value + i);
             ss << ")";
-            return std::integral_constant<size_t, I + sizeof...(COLUMNS)> { };
+            return std::integral_constant<size_t, componentsOffset.value + sizeof...(COLUMNS)> { };
         }
 
     public:

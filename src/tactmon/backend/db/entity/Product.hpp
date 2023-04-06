@@ -26,7 +26,7 @@ namespace backend::db::entity::product {
          * Selects all records.
          */
         using Select = db::PreparedStatement<"Products.Select", db::select::Query<
-            Entity::projection_type,
+            Entity,
             Entity
         >>;
 
@@ -34,7 +34,7 @@ namespace backend::db::entity::product {
          * Selects a product by its name (as seen in Ribbit).
          */
         using SelByName = db::PreparedStatement<"Products.SelByName", db::select::Query<
-            Entity::projection_type,
+            Entity,
             Entity,
             db::Where<
                 db::Equals<name, db::Parameter>
@@ -45,7 +45,7 @@ namespace backend::db::entity::product {
          * Selects a product by its ID (database PK).
          */
         using SelById = db::PreparedStatement<"Products.SelById", db::select::Query<
-            Entity::projection_type,
+            Entity,
             Entity,
             db::Where<
                 db::Equals<id, db::Parameter>

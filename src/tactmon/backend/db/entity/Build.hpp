@@ -41,7 +41,7 @@ namespace backend::db::entity::build {
          * Selects all records.
          */
         using Select = db::PreparedStatement<"Builds.Select", db::select::Query<
-            Entity::projection_type,
+            Entity,
             Entity
         >>;
 
@@ -49,7 +49,7 @@ namespace backend::db::entity::build {
          * Selects a build by its name (build-name key in build configuration) .
          */
         using SelByName = db::PreparedStatement<"Builds.SelByName", db::select::Query<
-            Entity::projection_type,
+            Entity,
             Entity,
             db::Where<
                 db::Conjunction<
@@ -63,7 +63,7 @@ namespace backend::db::entity::build {
          * Selects a build by its ID (database PK).
          */
         using SelById = db::PreparedStatement<"Builds.SelById", db::select::Query<
-            Entity::projection_type,
+            Entity,
             Entity,
             db::Where<
                 db::Equals<id, db::Parameter>

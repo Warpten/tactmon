@@ -136,7 +136,7 @@ namespace libtactmon::tact::data::product {
     }
 
     std::optional<ribbit::types::Versions> Product::Refresh() noexcept {
-        auto summary = ribbit::Summary<>::Execute(_executor, _logger, ribbit::Region::US);
+        auto summary = ribbit::Summary<>::Execute(_executor, _logger.get(), ribbit::Region::US);
         if (!summary.has_value())
             return std::nullopt;
 
@@ -146,7 +146,7 @@ namespace libtactmon::tact::data::product {
         if (summaryItr == summary->end())
             return std::nullopt;
 
-        auto versions = ribbit::Versions<>::Execute(_executor, _logger, ribbit::Region::US, std::string_view { _productName });
+        auto versions = ribbit::Versions<>::Execute(_executor, _logger.get(), ribbit::Region::US, std::string_view { _productName });
         if (!versions.has_value())
             return std::nullopt;
 

@@ -29,10 +29,7 @@ namespace backend::db {
          * Binds a column to a projection (or an entity).
          */
         template <typename PROJECTION>
-        struct Of {
-            using parameter_types = utility::tuple<>;
-            using value_type = TYPE;
-
+        struct Of : Column<NAME, TYPE> {
             template <size_t PARAMETER>
             static auto render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p);
 

@@ -137,7 +137,7 @@ namespace utility {
              */
             template <std::size_t... Is, typename... Us>
             requires (sizeof...(Is) == sizeof...(Us))
-            constexpr tuple_storage(std::index_sequence<Is...>, Us&&... args)
+            constexpr explicit tuple_storage(std::index_sequence<Is...>, Us&&... args)
                 noexcept((std::is_nothrow_constructible_v<leaf_for_front<Is>, Us> && ...))
                 : leaf_for_front<Is>(std::forward<Us>(args))...
             { }
