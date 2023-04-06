@@ -18,7 +18,7 @@ namespace libtactmon::tact::config {
 
     // Not all properties are modeled here.
     static const ConfigHandler Handlers[] = {
-        { "root", 
+        { "root",
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 2)
                     return false;

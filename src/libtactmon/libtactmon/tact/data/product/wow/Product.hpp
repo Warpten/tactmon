@@ -1,5 +1,6 @@
 #pragma once
 
+#include "libtactmon/detail/Export.hpp"
 #include "libtactmon/tact/data/product/Product.hpp"
 #include "libtactmon/tact/data/product/wow/Root.hpp"
 
@@ -12,7 +13,7 @@ namespace libtactmon::tact::data::product::wow {
     /**
      * An implementation of World of Warcraft related game products.
      */
-    struct Product final : tact::data::product::Product {
+    struct LIBTACTMON_API Product final : tact::data::product::Product {
         using Base = tact::data::product::Product;
         using Base::Base;
 

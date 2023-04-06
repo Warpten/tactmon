@@ -1,5 +1,6 @@
 #pragma once
 
+#include "libtactmon/detail/Export.hpp"
 #include "libtactmon/tact/CKey.hpp"
 #include "libtactmon/tact/EKey.hpp"
 
@@ -17,7 +18,7 @@ namespace libtactmon::tact::config {
      * 
      * Does **not** model all properties **yet**.
      */
-    struct BuildConfig final {
+    struct LIBTACTMON_API BuildConfig final {
         static std::optional<BuildConfig> Parse(io::IReadableStream& stream);
 
     private:

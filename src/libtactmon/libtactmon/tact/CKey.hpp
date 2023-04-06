@@ -1,5 +1,7 @@
 #pragma once
 
+#include "libtactmon/detail/Export.hpp"
+
 #include <array>
 #include <cstdint>
 #include <memory>
@@ -13,7 +15,7 @@ namespace libtactmon::tact {
     /**
      * Represents a content key.
      */
-    struct CKey final {
+    struct LIBTACTMON_API CKey final {
         /**
          * Tries to construct an content key from a hex string.
          * 

@@ -208,61 +208,57 @@ namespace net {
             std::string remotePath = fmt::format("/{}/data/{}/{}/{}", cdn.Path, archiveName.substr(0, 2), archiveName.substr(2, 2), archiveName);
 
             for (std::string_view host : cdn.Hosts) {
-                auto validationTask = std::make_shared<boost::packaged_task<std::optional<result_type>>>([&, remotePath, host]() -> std::optional<result_type>
-                    {
-                        beast::error_code ec;
+                auto validationTask = std::make_shared<boost::packaged_task<std::optional<result_type>>>([&, remotePath, host]() -> std::optional<result_type> {
+                    beast::error_code ec;
 
-                        auto strand = boost::asio::make_strand(workers.executor());
+                    auto strand = boost::asio::make_strand(workers.executor());
 
-                        boost::asio::ip::tcp::resolver resolver(strand);
-                        beast::tcp_stream remoteStream(strand);
-                        remoteStream.connect(resolver.resolve(host, "80"), ec);
-                        if (ec.failed())
-                            return std::nullopt;
-
-                        auto checkExistence = [&](http::verb method) -> bool
-                        {
-                            http::request<http::empty_body> remoteRequest(method, remotePath, 11);
-                            remoteRequest.set(http::field::host, host);
-                            if (length != 0)
-                                remoteRequest.set(http::field::range, fmt::format("{}-{}", offset, offset + length - 1));
-
-                            http::write(remoteStream, remoteRequest, ec);
-                            if (ec.failed())
-                                return false;
-
-                            beast::flat_buffer buffer { 1024 };
-                            http::response_parser<http::dynamic_body> response;
-                            response.body_limit({ });
-                            http::read_header(remoteStream, buffer, response, ec);
-                            if (ec.failed())
-                                return false;
-
-                            switch (response.get().result()) {
-                                case http::status::not_found:
-                                case http::status::range_not_satisfiable:
-                                case http::status::method_not_allowed:
-                                    return false;
-                                default:
-                                    break;
-                            }
-
-                            return true;
-                        };
-
-                        if (checkExistence(http::verb::head) || checkExistence(http::verb::get))
-                            return std::pair { host, remotePath };
-
+                    boost::asio::ip::tcp::resolver resolver(strand);
+                    beast::tcp_stream remoteStream(strand);
+                    remoteStream.connect(resolver.resolve(host, "80"), ec);
+                    if (ec.failed())
                         return std::nullopt;
-                    });
+
+                    auto checkExistence = [&](http::verb method) -> bool
+                    {
+                        http::request<http::empty_body> remoteRequest(method, remotePath, 11);
+                        remoteRequest.set(http::field::host, host);
+                        if (length != 0)
+                            remoteRequest.set(http::field::range, fmt::format("{}-{}", offset, offset + length - 1));
+
+                        http::write(remoteStream, remoteRequest, ec);
+                        if (ec.failed())
+                            return false;
+
+                        beast::flat_buffer buffer { 1024 };
+                        http::response_parser<http::dynamic_body> response;
+                        response.body_limit({ });
+                        http::read_header(remoteStream, buffer, response, ec);
+                        if (ec.failed())
+                            return false;
+
+                        switch (response.get().result()) {
+                            case http::status::not_found:
+                            case http::status::range_not_satisfiable:
+                            case http::status::method_not_allowed:
+                                return false;
+                            default:
+                                break;
+                        }
+
+                        return true;
+                    };
+
+                    if (checkExistence(http::verb::head) || checkExistence(http::verb::get))
+                        return std::pair { host, remotePath };
+
+                    return std::nullopt;
+                });
 
                 archiveFutures.push_back(validationTask->get_future());
 
                 boost::asio::post(workers.pool_executor(), [validationTask]() { (*validationTask)(); });
-                break; // For testing
             }
-
-            break; // For testing
         }
 
         std::unordered_map<std::string_view, std::string> resultSet;
@@ -313,3 +309,4 @@ namespace net {
             BeginRead();
     }
 }
+

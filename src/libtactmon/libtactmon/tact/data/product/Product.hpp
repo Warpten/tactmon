@@ -1,5 +1,6 @@
 #pragma once
 
+#include "libtactmon/detail/Export.hpp"
 #include "libtactmon/io/FileStream.hpp"
 #include "libtactmon/net/DownloadTask.hpp"
 #include "libtactmon/net/FileDownloadTask.hpp"
@@ -34,7 +35,7 @@ namespace libtactmon::tact::data::product {
     /**
      * An implementation of a game product.
      */
-    struct Product : private ResourceResolver {
+    struct LIBTACTMON_API Product : private ResourceResolver {
         /**
          * Creates a new abstraction around a game product.
          * 

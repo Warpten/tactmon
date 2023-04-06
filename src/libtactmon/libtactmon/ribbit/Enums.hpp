@@ -31,7 +31,7 @@ namespace libtactmon::ribbit {
 }
 
 template <>
-struct fmt::formatter<libtactmon::ribbit::Region> {
+struct LIBTACTMON_API fmt::formatter<libtactmon::ribbit::Region> {
     template <typename ParseContext>
     constexpr auto parse(ParseContext& ctx) {
         return ctx.begin();

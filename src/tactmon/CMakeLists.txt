@@ -56,7 +56,7 @@ target_link_libraries(tactmon
     boost
     openssl
     dpp::dpp
-    libtactmon
+    libtactmon-static
     libpqxx::pqxx
     spdlog::spdlog
     spdlog::spdlog_header_only

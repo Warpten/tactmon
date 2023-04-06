@@ -1,5 +1,6 @@
 #pragma once
 
+#include "libtactmon/detail/Export.hpp"
 #include "libtactmon/tact/EKey.hpp"
 
 #include <cstdint>
@@ -12,7 +13,7 @@ namespace libtactmon::io {
 }
 
 namespace libtactmon::tact::data {
-    struct Index final {
+    struct LIBTACTMON_API Index final {
         explicit Index(std::string_view hash, io::IReadableStream& stream);
 
         [[nodiscard]] std::string_view name() const { return _archiveName; }

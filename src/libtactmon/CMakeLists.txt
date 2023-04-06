@@ -10,7 +10,7 @@ find_package(spdlog REQUIRED)
 find_package(ZLIB REQUIRED)
 
 add_library(libtactmon
-  STATIC
+  OBJECT
     ${PRIVATE_SOURCES}
 )
 
@@ -47,6 +47,11 @@ target_link_libraries(libtactmon
     spdlog::spdlog_header_only
 )
 
+target_compile_definitions(libtactmon
+  PRIVATE
+    LIBTACTMON_BUILD
+)
+
 if (TACTMON_ENABLE_ADDRESS_SANITIZER)
   target_compile_options(libtactmon
     PRIVATE
@@ -65,4 +70,12 @@ endif ()
 
 install(TARGETS libtactmon
   DESTINATION "${CMAKE_INSTALL_PREFIX}"
+)
+
+add_library(libtactmon-static STATIC $<TARGET_OBJECTS:libtactmon>)
+add_library(libtactmon-shared SHARED $<TARGET_OBJECTS:libtactmon>)
+
+target_compile_definitions(libtactmon-static
+  PRIVATE
+    LIBTACTMON_STATIC_BUILD
 )

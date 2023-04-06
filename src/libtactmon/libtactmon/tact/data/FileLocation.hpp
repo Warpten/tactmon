@@ -1,5 +1,6 @@
 #pragma once
 
+#include "libtactmon/detail/Export.hpp"
 #include "libtactmon/tact/EKey.hpp"
 
 #include <cstdint>
@@ -11,7 +12,7 @@ namespace libtactmon::tact::data {
     /**
      * Describes the location of a given file, according to one or many encoding keys.
      */
-    struct FileLocation final {
+    struct LIBTACTMON_API FileLocation final {
         explicit FileLocation(std::size_t fileSize, std::size_t keyCount, std::span<const uint8_t> keys);
 
         /**
@@ -38,7 +39,7 @@ namespace libtactmon::tact::data {
     /**
      * Represents the location of a specific file in an archive.
      */
-    struct ArchiveFileLocation final {
+    struct LIBTACTMON_API ArchiveFileLocation final {
         explicit ArchiveFileLocation(std::string_view archiveName);
         explicit ArchiveFileLocation(std::string_view archiveName, std::size_t offset, std::size_t size);
 

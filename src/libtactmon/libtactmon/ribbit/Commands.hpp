@@ -1,5 +1,7 @@
 #pragma once
 
+#include "libtactmon/detail/ctre.hpp"
+#include "libtactmon/detail/Export.hpp"
 #include "libtactmon/ribbit/Enums.hpp"
 #include "libtactmon/ribbit/types/BGDL.hpp"
 #include "libtactmon/ribbit/types/CDNs.hpp"
@@ -26,8 +28,6 @@
 #include <fmt/format.h>
 
 #include <spdlog/spdlog.h>
-
-#include "libtactmon/detail/ctre.hpp"
 
 namespace libtactmon::ribbit {
     namespace detail {
@@ -181,7 +181,7 @@ namespace libtactmon::ribbit {
     }
 
     template <Command C, Version V, typename Args = typename detail::CommandTraits<C>::Args>
-    struct CommandExecutor final : detail::command_executor_impl<C, V, Args> { };
+    struct LIBTACTMON_API CommandExecutor final : detail::command_executor_impl<C, V, Args> { };
 
     template <Version V = Version::V1>
     using CDNs = CommandExecutor<Command::ProductCDNs, V>;

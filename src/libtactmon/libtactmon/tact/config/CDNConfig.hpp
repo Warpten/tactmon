@@ -1,5 +1,7 @@
 #pragma once
 
+#include "libtactmon/detail/Export.hpp"
+
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -17,7 +19,7 @@ namespace libtactmon::tact::config {
      * 
      * Does **not** model all properties **yet** (mostly because patch-archives are not really understood).
      */
-    struct CDNConfig final {
+    struct LIBTACTMON_API CDNConfig final {
         struct Archive {
             Archive() { }
 

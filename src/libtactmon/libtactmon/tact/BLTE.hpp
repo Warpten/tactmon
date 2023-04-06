@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <optional>
 
+#include "libtactmon/detail/Export.hpp"
 #include "libtactmon/io/MemoryStream.hpp"
 #include "libtactmon/tact/CKey.hpp"
 #include "libtactmon/tact/EKey.hpp"
@@ -12,7 +13,7 @@ namespace libtactmon::tact {
     /**
      * Implementation of a block table encoded archive.
      */
-    struct BLTE final {
+    struct LIBTACTMON_API BLTE final {
         /**
          * Parses a BLTE archive from the given stream, validating its contents against the ekey and ckey provided, and returning
          * the decompressed data stream if successful.

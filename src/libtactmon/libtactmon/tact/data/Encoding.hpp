@@ -1,5 +1,6 @@
 #pragma once
 
+#include "libtactmon/detail/Export.hpp"
 #include "libtactmon/tact/CKey.hpp"
 #include "libtactmon/tact/EKey.hpp"
 #include "libtactmon/tact/data/FileLocation.hpp"
@@ -17,7 +18,7 @@ namespace libtactmon::io {
 namespace libtactmon::tact::data {
     struct Empty { };
 
-    struct Encoding final {
+    struct LIBTACTMON_API Encoding final {
         explicit Encoding(io::IReadableStream& stream);
         Encoding(Encoding&& other) noexcept;
 

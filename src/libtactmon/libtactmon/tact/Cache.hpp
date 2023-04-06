@@ -1,5 +1,6 @@
 #pragma once
 
+#include "libtactmon/detail/Export.hpp"
 #include "libtactmon/io/FileStream.hpp"
 
 #include <filesystem>
@@ -11,7 +12,7 @@ namespace libtactmon::tact {
     /**
      * Represents a portion of the local filesystem that stores copies of files from Blizzard CDNs.
      */
-    struct Cache final {
+    struct LIBTACTMON_API Cache final {
         explicit Cache(const std::filesystem::path& root);
 
         /**
