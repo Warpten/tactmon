@@ -17,7 +17,7 @@ namespace backend::db {
          */
         template <utility::Literal TOKEN, typename COMPONENT, typename PARAMETER>
         struct BinaryCriteria {
-            using bound_parameter_type = typename PARAMETER::template Bind<COMPONENT>;
+            using bound_parameter_type = typename PARAMETER::template BindToProjection<COMPONENT>;
 
             using parameter_types = decltype(utility::tuple_cat(
                 std::declval<typename COMPONENT::parameter_types>(),

@@ -80,7 +80,7 @@ namespace backend::db {
          * Do not use this type directly; it will be automatically used when using the parent type inside of criteria declaration.
          */
         template <typename COMPONENT>
-        struct Bind {
+        struct BindToProjection {
             using parameter_types = utility::tuple<typename COMPONENT::value_type>;
 
             template <size_t I>
@@ -100,7 +100,7 @@ namespace backend::db {
     template <size_t I>
     struct BoundParameter {
         template <typename COMPONENT>
-        struct Bind {
+        struct BindToProjection {
             using parameter_types = utility::tuple<>;
 
             template <size_t X>

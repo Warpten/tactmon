@@ -33,11 +33,11 @@ namespace backend::db {
             template <size_t PARAMETER>
             static auto render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p);
 
-            template <typename> using Bind = Of<PROJECTION>;
+            template <typename> using BindToProjection = Of<PROJECTION>;
         };
 
         template <typename PROJECTION>
-        using Bind = Of<PROJECTION>;
+        using BindToProjection = Of<PROJECTION>;
     };
 
     template <utility::Literal NAME, typename TYPE>

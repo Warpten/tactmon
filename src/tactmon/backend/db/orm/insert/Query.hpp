@@ -154,11 +154,11 @@ namespace backend::db::insert {
                 ", ",
                 Equals<
                     COMPONENTS,
-                    typename COMPONENTS::template Bind<Excluded>
+                    typename COMPONENTS::template BindToProjection<Excluded>
                 >...
             >::render_to(ss, p);
             ss << " WHERE ";
-            return Equals<PK, typename PK::template Bind<Excluded>>::render_to(ss, setOffset);
+            return Equals<PK, typename PK::template BindToProjection<Excluded>>::render_to(ss, setOffset);
         }
     };
 

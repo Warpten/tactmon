@@ -73,14 +73,14 @@ namespace backend::db {
         */
         template <typename T>
         auto&& get() {
-            using bound_column_type = typename T::template Bind<Entity<NAME, SCHEMA, COMPONENTS...>>;
+            using bound_column_type = typename T::template BindToProjection<Entity<NAME, SCHEMA, COMPONENTS...>>;
 
             return _proj.template get<bound_column_type>();
         }
 
         template <typename T>
         auto&& get() const {
-            using bound_column_type = typename T::template Bind<Entity<NAME, SCHEMA, COMPONENTS...>>;
+            using bound_column_type = typename T::template BindToProjection<Entity<NAME, SCHEMA, COMPONENTS...>>;
 
             return _proj.template get<bound_column_type>();
         }
