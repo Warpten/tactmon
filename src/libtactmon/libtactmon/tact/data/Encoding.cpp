@@ -129,7 +129,7 @@ namespace libtactmon::tact::data {
 
         stream.SkipRead(_header.ESpecBlockSize); // Skip ESpec strings
 
-        std::size_t pageStart = stream.GetReadCursor() + _header.CEKey.PageCount * (_header.EncodingKeySize + 0x10);
+        std::size_t pageStart = stream.GetReadCursor() + static_cast<std::size_t>(_header.CEKey.PageCount) * (0x10uLL + _header.EncodingKeySize);
 
         _cekeyPages.reserve(_header.CEKey.PageCount);
 
@@ -173,7 +173,7 @@ namespace libtactmon::tact::data {
                 auto&& entry = page[j].ckey(*this);
 
                 if (entry == contentKey)
-                    return tact::data::FileLocation { page[j].fileSize(), page[j].keyCount(), std::span<uint8_t> { const_cast<uint8_t*>(page[j]._ekeys.data()), page[j].keyCount() * _header.EncodingKeySize }};
+                    return tact::data::FileLocation { page[j].fileSize(), page[j].keyCount(), std::span { page[j]._ekeys.data(), page[j].keyCount() * _header.EncodingKeySize } };
             }
         }
 

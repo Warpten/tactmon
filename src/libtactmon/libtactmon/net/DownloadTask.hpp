@@ -23,6 +23,12 @@
 #include <spdlog/logger.h>
 
 namespace libtactmon::net {
+    /**
+     * A network download task.
+     *
+     * @tparam Body The type of HTTP body to be used by Boost.Beast when processing the server's response.
+     * @tparam R    The result type as returned by this task.
+     */
     template <typename Body, typename R>
     struct DownloadTask {
         using BodyType = Body;
@@ -32,7 +38,20 @@ namespace libtactmon::net {
 
         using MessageType = boost::beast::http::message<false, Body>;
 
+        /**
+         * Prepares a new download task for a remote resource.
+         *
+         * @param resourcePath Remote path to the resource.
+         */
         explicit DownloadTask(std::string_view resourcePath) : _resourcePath(resourcePath) { }
+
+        /**
+         * Prepares a new download task for part of a remote resource at a given location.
+         *
+         * @param resourcePath Remote path to the resource.
+         * @param offset       Offset of the first bytes to be retrieved.
+         * @param length       Amount of bytes to retrieve.
+         */
         DownloadTask(std::string_view resourcePath, std::size_t offset, std::size_t length) : DownloadTask(resourcePath) {
             _offset = offset;
             _size = length;
@@ -41,6 +60,15 @@ namespace libtactmon::net {
         virtual boost::system::error_code Initialize(ValueType& body) = 0;
         virtual std::optional<R> TransformMessage(MessageType& body) = 0;
 
+        /**
+         * Executes this task.
+         *
+         * @param executor An ASIO (Networking TS) executor.
+         * @param host     The remote host expected to supply the resource.
+         * @param logger   An (optional) logger.
+         *
+         * @returns An optional containing the parsed response or an empty optional if an error occured.
+         */
         std::optional<R> Run(boost::asio::any_io_executor executor,
             std::string_view host,
             spdlog::logger* logger = nullptr)

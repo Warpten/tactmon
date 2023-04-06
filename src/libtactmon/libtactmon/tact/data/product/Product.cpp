@@ -24,7 +24,7 @@ namespace libtactmon::tact::data::product {
 
     bool Product::Load(std::string_view buildConfig, std::string_view cdnConfig) noexcept {
         // **Always** refresh CDN
-        _cdns = ribbit::CDNs<>::Execute(_executor, nullptr, ribbit::Region::US, std::string_view { _productName });
+        _cdns = ribbit::CDNs<>::Execute(_executor, nullptr, ribbit::Region::US, _productName);
         if (!_cdns.has_value())
             return false;
 
@@ -146,7 +146,7 @@ namespace libtactmon::tact::data::product {
         if (summaryItr == summary->end())
             return std::nullopt;
 
-        auto versions = ribbit::Versions<>::Execute(_executor, _logger.get(), ribbit::Region::US, std::string_view { _productName });
+        auto versions = ribbit::Versions<>::Execute(_executor, _logger.get(), ribbit::Region::US, _productName);
         if (!versions.has_value())
             return std::nullopt;
 
@@ -189,7 +189,7 @@ namespace libtactmon::tact::data::product {
         for (tact::data::Index const& index : _indices) {
             tact::data::Index::Entry const* entry = index[ekey];
             if (entry != nullptr)
-                return tact::data::ArchiveFileLocation{ index.name(), entry->offset(), entry->size() };
+                return tact::data::ArchiveFileLocation { index.name(), entry->offset(), entry->size() };
         }
 
         return std::nullopt;

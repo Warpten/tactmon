@@ -120,11 +120,11 @@ namespace libtactmon::ribbit {
             using VersionTraits = detail::VersionTraits<V>;
 
         public:
-            static auto Execute(boost::asio::any_io_executor executor, Region region, Args&&... args) {
-                return Execute(executor, nullptr, region, std::forward<Args&&>(args)...);
+            static auto Execute(boost::asio::any_io_executor executor, Region region, Args... args) {
+                return Execute(executor, nullptr, region, std::forward<Args>(args)...);
             }
 
-            static auto Execute(boost::asio::any_io_executor executor, spdlog::logger* logger, Region region, Args&&... args)
+            static auto Execute(boost::asio::any_io_executor executor, spdlog::logger* logger, Region region, Args... args)
                 -> std::optional<typename CommandTraits::ValueType>
             {
                 namespace asio = boost::asio;
