@@ -1,5 +1,7 @@
 #pragma once
 
+#include "libtactmon/detail/Export.hpp"
+
 #include <cstdint>
 
 #include <assert.hpp>

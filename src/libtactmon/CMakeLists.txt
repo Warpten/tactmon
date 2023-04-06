@@ -9,10 +9,15 @@ GroupSources(${CMAKE_CURRENT_SOURCE_DIR})
 find_package(spdlog REQUIRED)
 find_package(ZLIB REQUIRED)
 
-add_library(libtactmon
-  OBJECT
-    ${PRIVATE_SOURCES}
-)
+# Uses BUILD_SHARED_LIBS to determine if this is a static or shared library.
+add_library(libtactmon ${PRIVATE_SOURCES})
+
+if (NOT BUILD_SHARED_LIBS)
+  target_compile_definitions(libtactmon
+    PRIVATE
+      LIBTACTMON_STATIC_BUILD
+  )
+endif ()
 
 add_dependencies(libtactmon
   boost
@@ -34,6 +39,7 @@ set_target_properties(libtactmon
     CXX_STANDARD 20
     CXX_EXTENSIONS OFF
     CXX_STANDARD_REQUIRED ON
+    POSITION_INDEPENDENT_CODE ${BUILD_SHARED_LIBS}
 )
 
 target_link_libraries(libtactmon
@@ -70,12 +76,4 @@ endif ()
 
 install(TARGETS libtactmon
   DESTINATION "${CMAKE_INSTALL_PREFIX}"
-)
-
-add_library(libtactmon-static STATIC $<TARGET_OBJECTS:libtactmon>)
-add_library(libtactmon-shared SHARED $<TARGET_OBJECTS:libtactmon>)
-
-target_compile_definitions(libtactmon-static
-  PRIVATE
-    LIBTACTMON_STATIC_BUILD
 )

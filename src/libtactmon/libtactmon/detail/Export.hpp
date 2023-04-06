@@ -14,4 +14,6 @@
 #     define LIBTACTMON_API
 #   endif
 # endif
+#else
+# define LIBTACTMON_API
 #endif
