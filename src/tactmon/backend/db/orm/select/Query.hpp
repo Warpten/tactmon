@@ -23,8 +23,8 @@ namespace backend::db::select {
         class QueryImpl : public IQuery<QueryImpl<R, P, E, CS...>> {
             friend struct IQuery<QueryImpl<R, P, E, CS...>>;
 
-            template <size_t I>
-            static auto render_to(std::ostream& ss, std::integral_constant<size_t, I>);
+            template <std::size_t I>
+            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>);
 
         public:
             using parameter_types = decltype(utility::tuple_cat(
@@ -47,8 +47,8 @@ namespace backend::db::select {
             class With final : public IQuery<With<ES...>> {
                 friend struct IQuery<With<ES...>>;
 
-                template <size_t I>
-                static auto render_to(std::ostream& ss, std::integral_constant<size_t, I>);
+                template <std::size_t I>
+                static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>);
 
             public:
                 using parameter_types = decltype(utility::tuple_cat(
@@ -61,9 +61,9 @@ namespace backend::db::select {
         };
 
         template <typename R, typename P, typename E, typename... CS>
-        template <size_t I>
-        /* static */ auto QueryImpl<R, P, E, CS...>::render_to(std::ostream& ss, std::integral_constant<size_t, I>) {
-            ss << "SELECT "; auto projectionOffset = P::render_to(ss, std::integral_constant<size_t, 1> { });
+        template <std::size_t I>
+        /* static */ auto QueryImpl<R, P, E, CS...>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I>) {
+            ss << "SELECT "; auto projectionOffset = P::render_to(ss, std::integral_constant<std::size_t, 1> { });
             ss << " FROM ";  auto entityOffset = E::render_to(ss, projectionOffset);
 
             if constexpr (sizeof...(CS) > 0)
@@ -73,8 +73,8 @@ namespace backend::db::select {
 
         template <typename R, typename P, typename E, typename... CS>
         template <concepts::IsCTE... ES>
-        template <size_t I>
-        /* static */ auto QueryImpl<R, P, E, CS...>::With<ES...>::render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+        template <std::size_t I>
+        /* static */ auto QueryImpl<R, P, E, CS...>::With<ES...>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
             ss << "WITH ";
             auto cteOffset = db::detail::VariadicRenderable<", ", ES...>::render_to(ss, p);
             ss << ' ';

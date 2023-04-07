@@ -25,8 +25,8 @@ namespace backend::db {
     struct Where {
         using parameter_types = typename COMPONENT::parameter_types;
 
-        template <size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+        template <std::size_t I>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
             ss << "WHERE ";
             return COMPONENT::render_to(ss, p);
         }
@@ -43,8 +43,8 @@ namespace backend::db {
             std::declval<typename COMPONENTS::parameter_types>()...
         ));
 
-        template <size_t PARAMETER>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, PARAMETER> p) {
+        template <std::size_t PARAMETER>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, PARAMETER> p) {
             ss << '(';
             auto predicateOffset = detail::VariadicRenderable<" AND ", COMPONENTS...>::render_to(ss, p);
             ss << ')';
@@ -63,8 +63,8 @@ namespace backend::db {
             std::declval<typename COMPONENTS::parameter_types>()...
         ));
 
-        template <size_t PARAMETER>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, PARAMETER> p) {
+        template <std::size_t PARAMETER>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, PARAMETER> p) {
             ss << '(';
             auto predicateOffset = detail::VariadicRenderable<" OR ", COMPONENTS...>::render_to(ss, p);
             ss << ')';
@@ -83,11 +83,11 @@ namespace backend::db {
         struct BindToProjection {
             using parameter_types = utility::tuple<typename COMPONENT::value_type>;
 
-            template <size_t I>
-            static auto render_to(std::ostream& ss, std::integral_constant<size_t, I>) {
+            template <std::size_t I>
+            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>) {
                 ss << '$' << I;
 
-                return std::integral_constant<size_t, I + 1> { };
+                return std::integral_constant<std::size_t, I + 1> { };
             }
         };
     };
@@ -97,14 +97,14 @@ namespace backend::db {
      *
      * @tparam I The parameter's position in the parameter array.
      */
-    template <size_t I>
+    template <std::size_t I>
     struct BoundParameter {
         template <typename COMPONENT>
         struct BindToProjection {
             using parameter_types = utility::tuple<>;
 
-            template <size_t X>
-            static auto render_to(std::ostream& ss, std::integral_constant<size_t, X> p) {
+            template <std::size_t X>
+            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, X> p) {
                 static_assert(I < X, "Unable to bind to a position parameter prior to its first use.");
 
                 ss << '$' << I;
@@ -123,8 +123,8 @@ namespace backend::db {
     struct Constant {
         using parameter_types = utility::tuple<>;
 
-        template <size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+        template <std::size_t I>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
             ss << V;
             return p;
         }
@@ -137,8 +137,8 @@ namespace backend::db {
     struct Offset {
         using parameter_types = typename COMPONENT::parameter_types;
 
-        template <size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+        template <std::size_t I>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
             ss << "OFFSET ";
             return COMPONENT::render_to(ss, p);
         }
@@ -151,8 +151,8 @@ namespace backend::db {
     struct Limit {
         using parameter_types = typename COMPONENT::parameter_types;
 
-        template <size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+        template <std::size_t I>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
             ss << "LIMIT ";
             return COMPONENT::render_to(ss, p);
         }
@@ -165,8 +165,8 @@ namespace backend::db {
     struct OrderClause final {
         using parameter_types = typename COMPONENT::parameter_types;
 
-        template <size_t PARAMETER>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, PARAMETER> p) {
+        template <std::size_t PARAMETER>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, PARAMETER> p) {
             auto componentOffset = COMPONENT::render_to(ss, p);
             ss << (ASCENDING ? " ASC" : " DESC");
             return componentOffset;
@@ -190,8 +190,8 @@ namespace backend::db {
     struct OrderBy final {
         using parameter_types = decltype(utility::tuple_cat(std::declval<typename COMPONENTS::parameter_types>()...));
 
-        template <size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+        template <std::size_t I>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
             ss << "ORDER BY ";
             return detail::VariadicRenderable<", ", COMPONENTS...>::render_to(ss, p);
         }
@@ -206,8 +206,8 @@ namespace backend::db {
     struct GroupBy final {
         using parameter_types = decltype(utility::tuple_cat(std::declval<typename COMPONENTS::parameter_types>()...));
 
-        template <size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+        template <std::size_t I>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
             ss << "GROUP BY ";
             return detail::VariadicRenderable<", ", COMPONENTS...>::render_to(ss, p);
         }

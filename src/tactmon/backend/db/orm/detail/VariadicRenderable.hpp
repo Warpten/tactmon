@@ -17,14 +17,14 @@ namespace backend::db::detail {
      */
     template <utility::Literal TOKEN, typename... COMPONENTS>
     struct VariadicRenderable final {
-        template <size_t PARAMETER>
-        static auto render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p) {
+        template <std::size_t PARAMETER>
+        static auto render_to(std::ostream& stream, std::integral_constant<std::size_t, PARAMETER> p) {
             return render_<0>(stream, p);
         }
 
     private:
-        template <size_t I, size_t PARAMETER>
-        static auto render_(std::ostream& strm, std::integral_constant<size_t, PARAMETER> p) {
+        template <std::size_t I, size_t PARAMETER>
+        static auto render_(std::ostream& strm, std::integral_constant<std::size_t, PARAMETER> p) {
             if constexpr (I >= sizeof...(COMPONENTS))
                 return p;
             else {

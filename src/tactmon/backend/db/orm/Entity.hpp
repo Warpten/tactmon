@@ -39,8 +39,8 @@ namespace backend::db {
         explicit Entity(pqxx::row const& row) : _proj(row) { }
         Entity(projection_type const& proj) : _proj(proj) { }
 
-        template <size_t PARAMETER>
-        static auto render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p) {
+        template <std::size_t PARAMETER>
+        static auto render_to(std::ostream& stream, std::integral_constant<std::size_t, PARAMETER> p) {
             stream << SCHEMA.Value << '.' << NAME.Value;
             return p;
         }
@@ -51,7 +51,7 @@ namespace backend::db {
          *
          * @tparam I Index of the column to read.
          */
-        template <size_t I> requires (I < sizeof...(COMPONENTS))
+        template <std::size_t I> requires (I < sizeof...(COMPONENTS))
         auto&& get() {
             return _proj.template get<I>();
         }
@@ -61,7 +61,7 @@ namespace backend::db {
          *
          * @tparam I Index of the column to read.
          */
-        template <size_t I> requires (I < sizeof...(COMPONENTS))
+        template <std::size_t I> requires (I < sizeof...(COMPONENTS))
         auto&& get() const {
             return _proj.template get<I>();
         }
@@ -116,7 +116,7 @@ struct std::tuple_size<backend::db::Entity<NAME, SCHEMA, COMPONENTS...>> {
     constexpr static const size_t value = sizeof...(COMPONENTS);
 };
 
-template <size_t I, utility::Literal NAME, utility::Literal SCHEMA, typename... COMPONENTS>
+template <std::size_t I, utility::Literal NAME, utility::Literal SCHEMA, typename... COMPONENTS>
 struct std::tuple_element<I, backend::db::Entity<NAME, SCHEMA, COMPONENTS...>> {
     using type = decltype(std::declval<backend::db::Entity<NAME, SCHEMA, COMPONENTS...>>().template get<I>());
 };

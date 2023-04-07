@@ -4,7 +4,7 @@
 #include <string>
 
 namespace utility {
-    template <size_t N>
+    template <std::size_t N>
     struct Literal {
         constexpr Literal(const char(&val)[N]) {
             std::copy_n(val, N, Value);
@@ -18,7 +18,7 @@ namespace utility {
 
     namespace concepts {
         namespace detail {
-            template <size_t N>
+            template <std::size_t N>
             static consteval bool is_literal(Literal<N>) { return true; }
             static consteval bool is_literal(...) { return false; }
         }

@@ -29,7 +29,7 @@ namespace backend::db {
         struct column_tuple {
             column_tuple() : columns_() { }
 
-            template <size_t... Is>
+            template <std::size_t... Is>
             column_tuple(std::index_sequence<Is...>, pqxx::row const& row) : columns_(row[Is].as<typename COLUMNS::value_type>()...)
             { }
 
@@ -65,8 +65,8 @@ namespace backend::db {
         Projection() : _columns() { }
         explicit Projection(pqxx::row const& row) : _columns(std::make_index_sequence<sizeof...(COLUMNS)> { }, row) { }
 
-        template <size_t P>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, P> p) {
+        template <std::size_t P>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, P> p) {
             return detail::VariadicRenderable<", ", COLUMNS...>::render_to(ss, p);
         }
 
@@ -74,12 +74,12 @@ namespace backend::db {
         /**
         * Provides structured-binding access to this projection.
         */
-        template <size_t I> requires (I < sizeof...(COLUMNS))
+        template <std::size_t I> requires (I < sizeof...(COLUMNS))
         auto&& get() const {
             return utility::get<I>(_columns.columns_).value_;
         }
 
-        template <size_t I> requires (I < sizeof...(COLUMNS))
+        template <std::size_t I> requires (I < sizeof...(COLUMNS))
         auto&& get() {
             return utility::get<I>(_columns.columns_).value_;
         }
@@ -125,7 +125,7 @@ struct std::tuple_size<backend::db::Projection<COMPONENTS...>> {
     constexpr static const size_t value = sizeof...(COMPONENTS);
 };
 
-template <size_t I, typename... COMPONENTS>
+template <std::size_t I, typename... COMPONENTS>
 struct std::tuple_element<I, backend::db::Projection<COMPONENTS...>> {
     using type = decltype(std::declval<backend::db::Projection<COMPONENTS...>>().template get<I>());
 };

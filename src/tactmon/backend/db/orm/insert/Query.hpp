@@ -20,8 +20,8 @@ namespace backend::db::insert {
     struct OnConstraint {
         using parameter_types = utility::tuple<>;
 
-        template <size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+        template <std::size_t I>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
             ss << "ON CONSTRAINT " << NAME.Value;
             return p;
         }
@@ -39,8 +39,8 @@ namespace backend::db::insert {
     class Query final : public IQuery<Query<ENTITY, COLUMNS...>> {
         friend struct IQuery<Query<ENTITY, COLUMNS...>>;
 
-        template <size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+        template <std::size_t I>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
             ss << "INSERT INTO ";
             auto projectionOffset = ENTITY::render_to(ss, p);
             ss << " (";
@@ -52,7 +52,7 @@ namespace backend::db::insert {
             for (size_t i = 0; i < sizeof...(COLUMNS); ++i)
                 ss << '$' << (componentsOffset.value + i);
             ss << ")";
-            return std::integral_constant<size_t, componentsOffset.value + sizeof...(COLUMNS)> { };
+            return std::integral_constant<std::size_t, componentsOffset.value + sizeof...(COLUMNS)> { };
         }
 
     public:
@@ -73,8 +73,8 @@ namespace backend::db::insert {
         class Returning : public IQuery<Returning<PROJECTION>> {
             friend struct IQuery<Returning<PROJECTION>>;
 
-            template <size_t I>
-            static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+            template <std::size_t I>
+            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
                 auto queryOffset = Query<ENTITY, COLUMNS...>::render_to(ss, p);
                 ss << " RETURNING ";
                 return PROJECTION::render_to(ss, queryOffset);
@@ -98,8 +98,8 @@ namespace backend::db::insert {
         class OnConflict final : public IQuery<OnConflict<COMPONENT>> {
             friend struct IQuery<OnConflict<COMPONENT>>;
 
-            template <size_t I>
-            static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p);
+            template <std::size_t I>
+            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p);
 
         public:
             using parameter_types = decltype(utility::tuple_cat(
@@ -111,8 +111,8 @@ namespace backend::db::insert {
 
             template <typename PROJECTION>
             class Returning final : public IQuery<Returning<PROJECTION>> {
-                template <size_t P>
-                static auto render_to(std::ostream& ss, std::integral_constant<size_t, P> p) {
+                template <std::size_t P>
+                static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, P> p) {
                     auto baseOffset = OnConflict<COMPONENT>::render_to(ss, p);
                     ss << " RETURNING ";
                     return COMPONENT::render_to(ss, baseOffset);
@@ -147,8 +147,8 @@ namespace backend::db::insert {
         ));
 
         // Generates a sensible ON CONFLICT DO UPDATE query that fixes the conflicting record to the given parameters.
-        template <size_t P>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, P> p) {
+        template <std::size_t P>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, P> p) {
             ss << "UPDATE SET ";
             auto setOffset = detail::VariadicRenderable<
                 ", ",
@@ -168,8 +168,8 @@ namespace backend::db::insert {
     struct DoNothing final {
         using parameter_types = utility::tuple<>;
 
-        template <size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I>) {
+        template <std::size_t I>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>) {
             ss << "NOTHING";
         }
     };
@@ -185,24 +185,24 @@ namespace backend::db::insert {
     using Replace = Query<ENTITY, COLUMNS...>::OnConflict<UpdateFromExcluded<ENTITY, typename ENTITY::primary_key, COLUMNS...>>;
 
     namespace detail {
-        template <size_t I, typename C>
-        auto render_conflict_clause(std::ostream& ss, std::integral_constant<size_t, I> p, C) {
+        template <std::size_t I, typename C>
+        auto render_conflict_clause(std::ostream& ss, std::integral_constant<std::size_t, I> p, C) {
             ss << '(';
             auto result = C::render_to(ss, p);
             ss << ')';
             return result;
         }
 
-        template <size_t I, utility::Literal N>
-        auto render_conflict_clause(std::ostream& ss, std::integral_constant<size_t, I> p, OnConstraint<N>) {
+        template <std::size_t I, utility::Literal N>
+        auto render_conflict_clause(std::ostream& ss, std::integral_constant<std::size_t, I> p, OnConstraint<N>) {
             return OnConstraint<N>::render_to(ss, p);
         }
     }
 
     template <typename ENTITY, typename... COLUMNS>
     template <typename COMPONENT>
-    template <size_t I>
-    static auto Query<ENTITY, COLUMNS...>::OnConflict<COMPONENT>::render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+    template <std::size_t I>
+    static auto Query<ENTITY, COLUMNS...>::OnConflict<COMPONENT>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
         auto queryOffset = Query<ENTITY, COLUMNS...>::render_to(ss, p);
         ss << " ON CONFLICT DO";
         return detail::render_conflict_clause(ss, queryOffset, COMPONENT{ });

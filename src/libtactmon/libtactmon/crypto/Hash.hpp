@@ -87,7 +87,7 @@ namespace libtactmon::crypto {
             EVP_DigestUpdate(_context, data.data(), data.size());
         }
 
-        template <size_t N>
+        template <std::size_t N>
         void UpdateData(std::array<uint8_t const, N> data) {
             EVP_DigestUpdate(_context, data.data(), N);
         }

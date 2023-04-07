@@ -39,7 +39,7 @@ namespace libtactmon::detail {
 
         while (!input.empty()) {
             std::basic_string_view<CharT, Traits>* selectedToken = nullptr;
-            size_t tokenPosition = std::numeric_limits<size_t>::max();
+            size_t tokenPosition = std::numeric_limits<std::size_t>::max();
 
             for (std::basic_string_view<CharT, Traits> token : tokens) {
                 auto pos = input.find(token);
@@ -93,7 +93,7 @@ namespace libtactmon::detail {
         std::vector<std::basic_string_view<CharT, Traits>> result;
 
         while (!input.empty()) {
-            size_t tokenPosition = std::numeric_limits<size_t>::max();
+            size_t tokenPosition = std::numeric_limits<std::size_t>::max();
 
             for (CharT token : tokens) {
                 auto pos = input.find(token);
@@ -102,7 +102,7 @@ namespace libtactmon::detail {
                 }
             }
 
-            if (tokenPosition == std::numeric_limits<size_t>::max()) {
+            if (tokenPosition == std::numeric_limits<std::size_t>::max()) {
                 result.push_back(input);
                 break;
             }

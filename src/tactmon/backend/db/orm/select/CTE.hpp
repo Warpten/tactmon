@@ -18,13 +18,13 @@ namespace backend::db::select {
     struct CTE final {
         using parameter_types = typename QUERY::parameter_types;
 
-        template <size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I>);
+        template <std::size_t I>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>);
     };
 
     template <utility::Literal ALIAS, bool RECURSIVE, typename QUERY>
-    template <size_t I>
-    /* static */ auto CTE<ALIAS, RECURSIVE, QUERY>::render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+    template <std::size_t I>
+    /* static */ auto CTE<ALIAS, RECURSIVE, QUERY>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
         if constexpr (RECURSIVE)
             ss << "RECURSIVE ";
 

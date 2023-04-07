@@ -18,8 +18,8 @@ namespace backend::db::update {
             std::declval<typename ASSIGNMENTS::parameter_types>()...
         ));
 
-        template <size_t PARAMETER>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, PARAMETER> p) {
+        template <std::size_t PARAMETER>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, PARAMETER> p) {
             ss << "SET ";
             return detail::VariadicRenderable<", ", ASSIGNMENTS...>::render_to(ss, p);
         }

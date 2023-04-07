@@ -17,8 +17,8 @@ namespace backend::db::update {
     class Query final : public IQuery<Query<ENTITY, SET>> {
         friend struct IQuery<Query<ENTITY, SET>>;
 
-        template <size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I>);
+        template <std::size_t I>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>);
 
     public:
         using parameter_types = typename ENTITY::parameter_types;
@@ -29,9 +29,9 @@ namespace backend::db::update {
         class Where final : public IQuery<Where<CRITERIA>> {
             friend struct IQuery<Where<CRITERIA>>;
 
-            template <size_t I>
-            static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
-                auto queryOffset = Query<ENTITY, SET>::render_to(ss, std::integral_constant<size_t, 1> { });
+            template <std::size_t I>
+            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
+                auto queryOffset = Query<ENTITY, SET>::render_to(ss, std::integral_constant<std::size_t, 1> { });
                 ss << " WHERE ";
                 return CRITERIA::render_to(ss, queryOffset);
             }
@@ -48,8 +48,8 @@ namespace backend::db::update {
     };
 
     template <typename ENTITY, concepts::IsSet SET>
-    template <size_t I>
-    /* static */ auto Query<ENTITY, SET>::render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+    template <std::size_t I>
+    /* static */ auto Query<ENTITY, SET>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
         ss << "UPDATE ";
         auto entityOffset = ENTITY::render_to(ss, p);
         return SET::render_to(ss, entityOffset);

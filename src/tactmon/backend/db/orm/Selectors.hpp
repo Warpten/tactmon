@@ -17,8 +17,8 @@ namespace backend::db {
 
         using value_type = TYPE;
 
-        template <size_t PARAMETER>
-        static auto render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p) {
+        template <std::size_t PARAMETER>
+        static auto render_to(std::ostream& stream, std::integral_constant<std::size_t, PARAMETER> p) {
             stream << NAME.Value << '(';
             auto result = detail::VariadicRenderable<", ", COMPONENTS...>::render_to(stream, p);
             stream << ')';
@@ -41,8 +41,8 @@ namespace backend::db {
 
         using value_type = typename COMPONENT::value_type;
 
-        template <size_t I>
-        static auto render_to(std::ostream& stream, std::integral_constant<size_t, I> p) {
+        template <std::size_t I>
+        static auto render_to(std::ostream& stream, std::integral_constant<std::size_t, I> p) {
             stream << TOKEN.Value << ' ';
             return COMPONENT::render_to(stream, p);
         }
@@ -60,8 +60,8 @@ namespace backend::db {
         struct On {
             using value_type = typename COMPONENT::value_type;
 
-            template <size_t I>
-            static auto render_to(std::ostream& stream, std::integral_constant<size_t, I> p) {
+            template <std::size_t I>
+            static auto render_to(std::ostream& stream, std::integral_constant<std::size_t, I> p) {
                 stream << "DISTINCT ON (";
                 auto criteriaOffset = CRITERIA::render_to(stream, p);
                 stream << ") ";
@@ -81,8 +81,8 @@ namespace backend::db {
         using parameter_types = typename COMPONENT::parameter_types;
         using value_type = typename COMPONENT::value_type;
 
-        template <size_t I>
-        static auto render_to(std::ostream& stream, std::integral_constant<size_t, I> p) {
+        template <std::size_t I>
+        static auto render_to(std::ostream& stream, std::integral_constant<std::size_t, I> p) {
             auto result = COMPONENT::render_to(stream, p);
             stream << " AS " << TOKEN.Value;
             return result;
@@ -94,8 +94,8 @@ namespace backend::db {
         struct Reference {
             using parameter_types = utility::tuple<>;
 
-            template <size_t I>
-            static auto render_to(std::ostream& stream, std::integral_constant<size_t, I> p) {
+            template <std::size_t I>
+            static auto render_to(std::ostream& stream, std::integral_constant<std::size_t, I> p) {
                 stream << TOKEN.Value;
                 return p;
             }
@@ -105,8 +105,8 @@ namespace backend::db {
     namespace detail {
         template <utility::Literal KEYWORD>
         struct RawLiteral {
-            template <size_t I>
-            static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+            template <std::size_t I>
+            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
                 ss << KEYWORD.Value;
                 return p;
             }
@@ -114,8 +114,8 @@ namespace backend::db {
 
         template <auto V>
         struct Raw {
-            template <size_t I>
-            static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+            template <std::size_t I>
+            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
                 ss << V;
                 return p;
             }
@@ -137,8 +137,8 @@ namespace backend::db {
             std::declval<typename PARTITION::parameter_types>()
         ));
 
-        template <size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+        template <std::size_t I>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
             auto componentOffset = COMPONENT::render_to(ss, p);
             ss << " OVER (";
             auto result = PARTITION::render_to(ss, componentOffset);
@@ -151,8 +151,8 @@ namespace backend::db {
     struct PartitionBy final {
         using parameter_types = typename COMPONENT::parameter_types;
 
-        template <size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<size_t, I> p) {
+        template <std::size_t I>
+        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
             ss << "PARTITION BY ";
             return COMPONENT::render_to(ss, p);
         }

@@ -19,8 +19,8 @@ namespace backend::db {
         using parameter_types = utility::tuple<>;
         using value_type = TYPE;
 
-        template <size_t PARAMETER>
-        static auto render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p) {
+        template <std::size_t PARAMETER>
+        static auto render_to(std::ostream& stream, std::integral_constant<std::size_t, PARAMETER> p) {
             stream << NAME.Value;
             return p;
         }
@@ -30,8 +30,8 @@ namespace backend::db {
          */
         template <typename PROJECTION>
         struct Of : Column<NAME, TYPE> {
-            template <size_t PARAMETER>
-            static auto render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p);
+            template <std::size_t PARAMETER>
+            static auto render_to(std::ostream& stream, std::integral_constant<std::size_t, PARAMETER> p);
 
             template <typename> using BindToProjection = Of<PROJECTION>;
         };
@@ -42,8 +42,8 @@ namespace backend::db {
 
     template <utility::Literal NAME, typename TYPE>
     template <typename PROJECTION>
-    template <size_t PARAMETER>
-    /* static */ auto Column<NAME, TYPE>::Of<PROJECTION>::render_to(std::ostream& stream, std::integral_constant<size_t, PARAMETER> p) {
+    template <std::size_t PARAMETER>
+    /* static */ auto Column<NAME, TYPE>::Of<PROJECTION>::render_to(std::ostream& stream, std::integral_constant<std::size_t, PARAMETER> p) {
         auto projectionOffset = PROJECTION::render_to(stream, p);
         stream << '.' << NAME.Value;
         return projectionOffset;
