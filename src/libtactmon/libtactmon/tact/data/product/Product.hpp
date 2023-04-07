@@ -62,7 +62,7 @@ namespace libtactmon::tact::data::product {
          */
         template <typename T>
         std::optional<T> ResolveCachedConfig(std::string_view key, std::function<std::optional<T>(io::FileStream&)> parser) const {
-            return ResourceResolver::ResolveConfiguration(*_cdns, key, parser, _logger);
+            return ResourceResolver::ResolveConfiguration(*_cdns, key, parser, _logger.get());
         }
 
         /**
