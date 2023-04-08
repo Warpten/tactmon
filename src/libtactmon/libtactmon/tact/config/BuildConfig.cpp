@@ -3,7 +3,6 @@
 #include "libtactmon/io/IReadableStream.hpp"
 
 #include <charconv>
-#include <functional>
 #include <string_view>
 #include <vector>
 
@@ -13,7 +12,8 @@ namespace libtactmon::tact::config {
     struct ConfigHandler {
         std::string_view Token;
 
-        std::function<bool(BuildConfig&, std::vector<std::string_view>)> Handler;
+        using HandlerType = bool(*)(BuildConfig&, std::vector<std::string_view>);
+        HandlerType Handler;
     };
 
     // Not all properties are modeled here.

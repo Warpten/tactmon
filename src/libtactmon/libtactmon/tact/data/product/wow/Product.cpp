@@ -22,7 +22,9 @@ namespace libtactmon::tact::data::product::wow {
             for (size_t i = 0; i < rootLocation->keyCount(); ++i) {
                 tact::EKey key = (*rootLocation)[i];
 
-                auto root = Base::ResolveCachedData<tact::data::product::wow::Root>(key.ToString(), [&encoding = _encoding](io::IReadableStream& fstream) -> std::optional<tact::data::product::wow::Root> {
+                auto root = Base::ResolveCachedData(key.ToString(), [&encoding = _encoding](io::IReadableStream& fstream)
+                    -> std::optional<tact::data::product::wow::Root>
+                {
                     std::optional<tact::BLTE> blte = tact::BLTE::Parse(fstream);
                     if (blte.has_value())
                         return tact::data::product::wow::Root::Parse(blte->GetStream(), encoding->GetContentKeySize());

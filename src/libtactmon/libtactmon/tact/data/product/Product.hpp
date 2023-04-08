@@ -60,8 +60,8 @@ namespace libtactmon::tact::data::product {
          * 
          * @returns The parsed configuration object, or an empty optional if an error occured.
          */
-        template <typename T>
-        std::optional<T> ResolveCachedConfig(std::string_view key, std::function<std::optional<T>(io::FileStream&)> parser) const {
+        template <typename Handler>
+        auto ResolveCachedConfig(std::string_view key, Handler parser) const -> std::invoke_result_t<Handler, io::FileStream&> {
             return ResourceResolver::ResolveConfiguration(*_cdns, key, parser, _logger.get());
         }
 
@@ -73,8 +73,9 @@ namespace libtactmon::tact::data::product {
          * 
          * @returns An optional encapsulating the deserialized resource.
          */
-        template <typename R>
-        std::optional<R> ResolveCachedData(std::string_view key, std::function<std::optional<R>(io::FileStream&)> resultSupplier) const {
+        template <typename Handler>
+        // requires std::is_same_v<std::invoke_result_t<Handler, io::FileStream&>, std::optional<R>>
+        auto ResolveCachedData(std::string_view key, Handler resultSupplier) const -> std::invoke_result_t<Handler, io::FileStream&> {
             return ResourceResolver::ResolveData(*_cdns, key, resultSupplier, _logger.get());
         }
 

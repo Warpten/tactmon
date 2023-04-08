@@ -29,13 +29,13 @@ namespace libtactmon::tact::data::product {
             return false;
 
         // Load build config and cdn config; abort if invalid or not found.
-        _buildConfig = ResolveCachedConfig<tact::config::BuildConfig>(buildConfig, [](io::FileStream& fstream) {
+        _buildConfig = ResolveCachedConfig(buildConfig, [](io::FileStream& fstream) {
             return tact::config::BuildConfig::Parse(fstream);
         });
         if (!_buildConfig.has_value())
             return false;
 
-        _cdnConfig = ResolveCachedConfig<tact::config::CDNConfig>(cdnConfig, [](io::FileStream& fstream) {
+        _cdnConfig = ResolveCachedConfig(cdnConfig, [](io::FileStream& fstream) {
             return tact::config::CDNConfig::Parse(fstream);
         });
         if (!_cdnConfig.has_value())
@@ -49,7 +49,7 @@ namespace libtactmon::tact::data::product {
             _logger->info("({}) Detected root manifest: {}.", _buildConfig->BuildName, _buildConfig->Root.ToString());
         }
 
-        _encoding = ResolveCachedData<tact::data::Encoding>(_buildConfig->Encoding.Key.EncodingKey.ToString(),
+        _encoding = ResolveCachedData(_buildConfig->Encoding.Key.EncodingKey.ToString(),
             [&key = _buildConfig->Encoding.Key](io::FileStream& fstream) -> std::optional<tact::data::Encoding>
             {
                 if (!fstream)
@@ -71,7 +71,7 @@ namespace libtactmon::tact::data::product {
         if (_logger != nullptr)
             _logger->info("({}) {} entries found in encoding manifest.", _buildConfig->BuildName, _encoding->count());
 
-        _install = ResolveCachedData<tact::data::Install>(_buildConfig->Install.Key.EncodingKey.ToString(),
+        _install = ResolveCachedData(_buildConfig->Install.Key.EncodingKey.ToString(),
             [&key = _buildConfig->Install.Key](io::FileStream& fstream) -> std::optional<tact::data::Install> {
                 if (!fstream)
                     return std::nullopt;
@@ -98,7 +98,7 @@ namespace libtactmon::tact::data::product {
         for (config::CDNConfig::Archive const& archive : _cdnConfig->archives) {
             std::shared_ptr<index_parse_task> task = std::make_shared<index_parse_task>(
                 [archiveName = archive.Name, archiveSize = archive.Size, buildName = _buildConfig->BuildName, logger = _logger, this]() {
-                    return ResolveCachedData<tact::data::Index>(fmt::format("{}.index", archiveName),
+                    return ResolveCachedData(fmt::format("{}.index", archiveName),
                         [&](io::FileStream& fstream) -> std::optional<tact::data::Index> {
                             if (!fstream /* || fstream.GetLength() != archiveSize */ )
                                 return std::nullopt;
@@ -117,7 +117,7 @@ namespace libtactmon::tact::data::product {
             if (_logger != nullptr)
                 _logger->info("({}) Loading file index '{}'.", _buildConfig->BuildName, _cdnConfig->fileIndex->Name);
 
-            _fileIndex = ResolveCachedData<tact::data::Index>(fmt::format("{}.index", _cdnConfig->fileIndex->Name),
+            _fileIndex = ResolveCachedData(fmt::format("{}.index", _cdnConfig->fileIndex->Name),
                 [name = _cdnConfig->fileIndex->Name](io::FileStream& fstream) -> std::optional<tact::data::Index> {
                     if (!fstream)
                         return std::nullopt;
