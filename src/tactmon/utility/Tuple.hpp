@@ -21,7 +21,7 @@
 
 #ifdef __clang__
 # pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Wreordder-ctor"
+# pragma clang diagnostic ignored "-Wreorder-ctor"
 #endif
 
 namespace utility {
