@@ -120,7 +120,7 @@ namespace backend::db::insert {
             class Returning final : public IQuery<Returning<PROJECTION>> {
                 template <std::size_t P>
                 static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, P> p) {
-                    auto baseOffset = OnConflict<COMPONENT>::render_to(ss, p);
+                    auto baseOffset = OnConflict<CONFLICTING, COMPONENT>::render_to(ss, p);
                     ss << " RETURNING ";
                     return COMPONENT::render_to(ss, baseOffset);
                 }
