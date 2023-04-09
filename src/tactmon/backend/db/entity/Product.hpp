@@ -54,7 +54,7 @@ namespace backend::db::entity::product {
 
         using Insert = db::PreparedStatement<"Products.Insert", db::insert::Query<
             Entity,
-            name, sequence_id
+            insert::Value<name>, insert::Value<sequence_id>
         >>;
 
         using Update = db::PreparedStatement<"Products.Update", db::update::Query<

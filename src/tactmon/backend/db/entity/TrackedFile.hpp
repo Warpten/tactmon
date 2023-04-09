@@ -32,7 +32,7 @@ namespace backend::db::entity::tracked_file {
 
         using Insert = db::PreparedStatement<"TrackedFiles.Insert", db::insert::Query<
             Entity,
-            product_name, file_path, display_name
+            insert::Value<product_name>, insert::Value<file_path>, insert::Value<display_name>
         >>;
 
         using Delete = db::PreparedStatement<"TrackedFiles.Delete", db::del::Query<

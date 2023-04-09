@@ -30,7 +30,7 @@ namespace backend::db::entity::bound_channel {
 
         using Insert = db::PreparedStatement<"BoundChannels.Insert", db::insert::Query<
             Entity,
-            guild_id, channel_id, product_name
+            insert::Value<guild_id>, insert::Value<channel_id>, insert::Value<product_name>
         >>;
 
         using Delete = db::PreparedStatement<"BoundChannels.Delete", db::del::Query<

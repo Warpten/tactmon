@@ -4,6 +4,7 @@
 #include "backend/db/orm/Predicates.hpp"
 #include "backend/db/orm/Query.hpp"
 #include "backend/db/orm/Selectors.hpp"
+#include "backend/db/orm/Shared.hpp"
 #include "backend/db/orm/detail/VariadicRenderable.hpp"
 #include "utility/Literal.hpp"
 #include "utility/Tuple.hpp"
@@ -29,6 +30,14 @@ namespace backend::db::insert {
 
     using Excluded = db::Raw<utility::Literal { "EXCLUDED" }>;
 
+    template <typename COLUMN, typename VALUE = Parameter>
+    struct Value final {
+        using column_type = COLUMN;
+        using parameter_type = typename VALUE::template BindToProjection<COLUMN>;
+
+        using parameter_types = typename parameter_type::parameter_types;
+    };
+
     /**
      * An INSERT query.
      *
@@ -44,21 +53,17 @@ namespace backend::db::insert {
             ss << "INSERT INTO ";
             auto projectionOffset = ENTITY::render_to(ss, p);
             ss << " (";
-            auto componentsOffset = detail::VariadicRenderable<", ", COLUMNS...>::render_to(ss, projectionOffset);
+            auto componentsOffset = detail::VariadicRenderable<", ", typename COLUMNS::column_type...>::render_to(ss, projectionOffset);
             ss << ") VALUES (";
-
-            // TODO: There are cases where values inserted will be derived from joins
-            //       This needs to be fixed to handle such values as it'll break otherwise.
-            for (size_t i = 0; i < sizeof...(COLUMNS); ++i)
-                ss << '$' << (componentsOffset.value + i);
-            ss << ")";
-            return std::integral_constant<std::size_t, componentsOffset.value + sizeof...(COLUMNS)> { };
+            auto valueOffset = detail::VariadicRenderable<", ", typename COLUMNS::parameter_type...>::render_to(ss, componentsOffset);
+            ss << ')';
+            return valueOffset;
         }
 
     public:
         using parameter_types = decltype(utility::tuple_cat(
             std::declval<typename ENTITY::parameter_types>(),
-            std::declval<utility::tuple<typename COLUMNS::value_type>>()...
+            std::declval<typename COLUMNS::parameter_types>()...
         ));
         using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
         using result_type = ENTITY;
@@ -82,7 +87,8 @@ namespace backend::db::insert {
 
         public:
             using parameter_types = decltype(utility::tuple_cat(
-                std::declval<utility::tuple<typename COLUMNS::value_type>>()...,
+                std::declval<typename ENTITY::parameter_types>(),
+                std::declval<typename COLUMNS::parameter_types>()...,
                 std::declval<typename PROJECTION::parameter_types>()
             ));
             using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
@@ -103,7 +109,8 @@ namespace backend::db::insert {
 
         public:
             using parameter_types = decltype(utility::tuple_cat(
-                std::declval<utility::tuple<typename COLUMNS::value_type>>()...,
+                std::declval<typename ENTITY::parameter_types>(),
+                std::declval<typename COLUMNS::parameter_types>()...,
                 std::declval<typename COMPONENT::parameter_types>()
             ));
             using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
@@ -120,7 +127,8 @@ namespace backend::db::insert {
 
             public:
                 using parameter_types = decltype(utility::tuple_cat(
-                    std::declval<utility::tuple<typename COLUMNS::value_type>>()...,
+                    std::declval<typename ENTITY::parameter_types>(),
+                    std::declval<typename COLUMNS::parameter_types>()...,
                     std::declval<typename COMPONENT::parameter_types>(),
                     std::declval<typename PROJECTION::parameter_types>()
                 ));
@@ -182,7 +190,7 @@ namespace backend::db::insert {
      * @tparam COLUMNS... The columns being set.
      */
     template <typename ENTITY, typename... COLUMNS>
-    using Replace = typename Query<ENTITY, COLUMNS...>::template OnConflict<UpdateFromExcluded<ENTITY, typename ENTITY::primary_key, COLUMNS...>>;
+    using Replace = typename Query<ENTITY, COLUMNS...>::template OnConflict<UpdateFromExcluded<ENTITY, typename ENTITY::primary_key, typename COLUMNS::column_type...>>;
 
     namespace detail {
         template <std::size_t I, typename C>

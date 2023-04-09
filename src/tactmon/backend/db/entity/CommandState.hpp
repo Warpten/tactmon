@@ -40,7 +40,7 @@ namespace backend::db::entity::command_state {
 
         using InsertOrUpdate = db::PreparedStatement<"CommandStates.InsertOrUpdate", db::insert::Query<
             Entity,
-            name, hash, version
+            insert::Value<name>, insert::Value<hash>, insert::Value<version>
         >::OnConflict<db::insert::UpdateFromExcluded<Entity, name, hash, version>>>;
     }
 }
