@@ -100,9 +100,9 @@ namespace backend::db::insert {
          *
          * @tparam COMPONENT A conflict handling clause. See UpdateFromExcluded and DoNothing.
          */
-        template <typename COMPONENT>
-        class OnConflict final : public IQuery<OnConflict<COMPONENT>> {
-            friend struct IQuery<OnConflict<COMPONENT>>;
+        template <typename CONFLICTING, typename COMPONENT>
+        class OnConflict final : public IQuery<OnConflict<CONFLICTING, COMPONENT>> {
+            friend struct IQuery<OnConflict<CONFLICTING, COMPONENT>>;
 
             template <std::size_t I>
             static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p);
@@ -195,10 +195,7 @@ namespace backend::db::insert {
     namespace detail {
         template <std::size_t I, typename C>
         auto render_conflict_clause(std::ostream& ss, std::integral_constant<std::size_t, I> p, C) {
-            ss << '(';
-            auto result = C::render_to(ss, p);
-            ss << ')';
-            return result;
+            return C::render_to(ss, p);
         }
 
         template <std::size_t I, utility::Literal N>
@@ -208,11 +205,13 @@ namespace backend::db::insert {
     }
 
     template <typename ENTITY, typename... COLUMNS>
-    template <typename COMPONENT>
+    template <typename CONFLICTING, typename COMPONENT>
     template <std::size_t I>
-    /* static */ auto Query<ENTITY, COLUMNS...>::OnConflict<COMPONENT>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
+    /* static */ auto Query<ENTITY, COLUMNS...>::OnConflict<CONFLICTING, COMPONENT>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
         auto queryOffset = Query<ENTITY, COLUMNS...>::render_to(ss, p);
-        ss << " ON CONFLICT DO";
-        return detail::render_conflict_clause(ss, queryOffset, COMPONENT{ });
+        ss << " ON CONFLICT (";
+        auto clauseOffset = CONFLICTING::render_to(ss, queryOffset);
+        ss << ") DO ";
+        return detail::render_conflict_clause(ss, clauseOffset, COMPONENT{ });
     }
 }

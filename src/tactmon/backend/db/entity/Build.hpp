@@ -101,7 +101,7 @@ namespace backend::db::entity::build {
             Entity,
             insert::Value<region>, insert::Value<product_name>, insert::Value<build_name>,
             insert::Value<build_config>, insert::Value<cdn_config>, insert::Value<detected_at>
-        >::Returning<Entity>>;
+        >::Returning<Entity::projection_type>>;
     }
 }
 
