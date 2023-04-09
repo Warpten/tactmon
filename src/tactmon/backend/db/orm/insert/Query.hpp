@@ -182,7 +182,7 @@ namespace backend::db::insert {
      * @tparam COLUMNS... The columns being set.
      */
     template <typename ENTITY, typename... COLUMNS>
-    using Replace = Query<ENTITY, COLUMNS...>::template OnConflict<UpdateFromExcluded<ENTITY, typename ENTITY::primary_key, COLUMNS...>>;
+    using Replace = typename Query<ENTITY, COLUMNS...>::template OnConflict<UpdateFromExcluded<ENTITY, typename ENTITY::primary_key, COLUMNS...>>;
 
     namespace detail {
         template <std::size_t I, typename C>
