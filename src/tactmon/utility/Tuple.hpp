@@ -19,6 +19,11 @@
 # endif
 #endif // TACTMON_NO_UNIQUE_ADDRESS
 
+#ifdef __clang__
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wreordder-ctor"
+#endif
+
 namespace utility {
     template <typename...> class tuple;
 
@@ -129,11 +134,6 @@ namespace utility {
              */
             using indices_map = mp::mp_list<mapping<Outs, Ins>...>;
 
-#ifdef __clang__
-# pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Wreordder-ctor"
-#endif
-
             /**
              * Constructs a new storage if std::is_constructible_v<Ts[I], Us[I]> for all Is.
              *
@@ -146,10 +146,6 @@ namespace utility {
                 noexcept((std::is_nothrow_constructible_v<leaf_for_front<Is>, Us> && ...))
                 : leaf_for_front<Is>(std::forward<Us>(args))...
             { }
-
-#ifdef __clang__
-# pragma clang diagnostic pop
-#endif
 
             constexpr void swap(tuple_storage&& other)
                 noexcept((std::is_nothrow_swappable_v<Ts> && ...))
@@ -390,5 +386,9 @@ namespace utility {
             return detail::tuple_cat_impl(std::make_index_sequence<elem_count> { }, std::forward<Ts>(tuples)...);
     }
 }
+
+#ifdef __clang__
+# pragma clang diagnostic pop
+#endif
 
 #undef TACTMON_NO_UNIQUE_ADDRESS
