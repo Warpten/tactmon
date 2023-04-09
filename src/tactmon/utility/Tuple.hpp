@@ -102,7 +102,7 @@ namespace utility {
         // Pair of indices (storage <-> interface)
         template <std::size_t Out, std::size_t In> struct mapping { };
 
-        template <typename> struct tuple_storage;
+        template <typename> class tuple_storage;
         template <std::size_t... Outs, std::size_t... Ins, typename... Ts>
         class tuple_storage<
             mp::mp_list<
@@ -129,6 +129,11 @@ namespace utility {
              */
             using indices_map = mp::mp_list<mapping<Outs, Ins>...>;
 
+#ifdef __clang__
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wreordder-ctor"
+#endif
+
             /**
              * Constructs a new storage if std::is_constructible_v<Ts[I], Us[I]> for all Is.
              *
@@ -141,6 +146,10 @@ namespace utility {
                 noexcept((std::is_nothrow_constructible_v<leaf_for_front<Is>, Us> && ...))
                 : leaf_for_front<Is>(std::forward<Us>(args))...
             { }
+
+#ifdef __clang__
+# pragma clang diagnostic pop
+#endif
 
             constexpr void swap(tuple_storage&& other)
                 noexcept((std::is_nothrow_swappable_v<Ts> && ...))

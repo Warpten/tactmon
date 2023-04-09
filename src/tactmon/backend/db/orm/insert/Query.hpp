@@ -182,7 +182,7 @@ namespace backend::db::insert {
      * @tparam COLUMNS... The columns being set.
      */
     template <typename ENTITY, typename... COLUMNS>
-    using Replace = Query<ENTITY, COLUMNS...>::OnConflict<UpdateFromExcluded<ENTITY, typename ENTITY::primary_key, COLUMNS...>>;
+    using Replace = Query<ENTITY, COLUMNS...>::template OnConflict<UpdateFromExcluded<ENTITY, typename ENTITY::primary_key, COLUMNS...>>;
 
     namespace detail {
         template <std::size_t I, typename C>
@@ -202,7 +202,7 @@ namespace backend::db::insert {
     template <typename ENTITY, typename... COLUMNS>
     template <typename COMPONENT>
     template <std::size_t I>
-    static auto Query<ENTITY, COLUMNS...>::OnConflict<COMPONENT>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
+    /* static */ auto Query<ENTITY, COLUMNS...>::OnConflict<COMPONENT>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
         auto queryOffset = Query<ENTITY, COLUMNS...>::render_to(ss, p);
         ss << " ON CONFLICT DO";
         return detail::render_conflict_clause(ss, queryOffset, COMPONENT{ });

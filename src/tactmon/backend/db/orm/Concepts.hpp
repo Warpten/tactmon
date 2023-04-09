@@ -26,5 +26,5 @@ namespace backend::db::concepts {
     }
 
     template <typename T>
-    concept IsParameterized = detail::IsTuple<typename T::parameter_types>;
+    concept IsParameterized = detail::IsTuple<typename T::parameter_types>::value;
 }
