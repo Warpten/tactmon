@@ -6,12 +6,12 @@ namespace backend::db::repository {
     Build::Build(utility::ThreadPool& threadPool, pqxx::connection& connection, spdlog::async_logger& logger)
         : Base(threadPool, connection, logger)
     {
-        entity::build::queries::SelById::Prepare(_connection, _logger);
-        entity::build::queries::SelByName::Prepare(_connection, _logger);
-        entity::build::queries::SelByProduct::Prepare(_connection, _logger);
-        entity::build::queries::SelStatistics::Prepare(_connection, _logger);
+        entity::build::queries::SelById::Prepare(_connection, logger);
+        entity::build::queries::SelByName::Prepare(_connection, logger);
+        entity::build::queries::SelByProduct::Prepare(_connection, logger);
+        entity::build::queries::SelStatistics::Prepare(_connection, logger);
 
-        entity::build::queries::Insert::Prepare(_connection, _logger);
+        entity::build::queries::Insert::Prepare(_connection, logger);
     }
 
     std::optional<entity::build::Entity> Build::GetByBuildName(std::string buildName, std::string region) const {

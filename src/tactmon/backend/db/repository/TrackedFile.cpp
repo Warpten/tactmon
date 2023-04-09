@@ -6,8 +6,8 @@ namespace backend::db::repository {
     TrackedFile::TrackedFile(utility::ThreadPool& threadPool, pqxx::connection& connection, spdlog::async_logger& logger)
         : Base(threadPool, connection, logger)
     {
-        entity::tracked_file::queries::Insert::Prepare(_connection, _logger);
-        entity::tracked_file::queries::Delete::Prepare(_connection, _logger);
+        entity::tracked_file::queries::Insert::Prepare(_connection, logger);
+        entity::tracked_file::queries::Delete::Prepare(_connection, logger);
     }
 
     void TrackedFile::Insert(std::string productName, std::string filePath, std::optional<std::string> displayName) {

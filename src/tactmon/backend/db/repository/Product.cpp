@@ -6,11 +6,11 @@ namespace backend::db::repository {
     Product::Product(utility::ThreadPool& threadPool, pqxx::connection& connection, spdlog::async_logger& logger)
         : Base(threadPool, connection, logger)
     {
-        entity::product::queries::SelById::Prepare(_connection, _logger);
-        entity::product::queries::SelByName::Prepare(_connection, _logger);
+        entity::product::queries::SelById::Prepare(_connection, logger);
+        entity::product::queries::SelByName::Prepare(_connection, logger);
 
-        entity::product::queries::Insert::Prepare(_connection, _logger);
-        entity::product::queries::Update::Prepare(_connection, _logger);
+        entity::product::queries::Insert::Prepare(_connection, logger);
+        entity::product::queries::Update::Prepare(_connection, logger);
     }
 
     std::optional<entity::product::Entity> Product::GetByName(std::string buildName) const {

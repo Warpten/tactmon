@@ -6,8 +6,8 @@ namespace backend::db::repository {
     CommandState::CommandState(pqxx::connection& connection, spdlog::async_logger& logger)
         : Base(connection, logger)
     {
-        entity::command_state::queries::SelectByName::Prepare(_connection, _logger);
-        entity::command_state::queries::InsertOrUpdate::Prepare(_connection, _logger);
+        entity::command_state::queries::SelectByName::Prepare(_connection, logger);
+        entity::command_state::queries::InsertOrUpdate::Prepare(_connection, logger);
     }
 
     std::optional<entity::command_state::Entity> CommandState::FindCommand(std::string name) {
