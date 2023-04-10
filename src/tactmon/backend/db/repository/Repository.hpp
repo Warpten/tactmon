@@ -39,6 +39,8 @@ namespace backend::db::repository {
                 : _refreshTimer(threadPool.pool_executor()), _refreshInterval(refreshInterval), _logger(logger), _connection(connection)
             {
                 LOAD_STATEMENT::Prepare(_connection, _logger);
+
+                Refresh_({ });
             }
 
             // io_context::strand is immovable?
@@ -104,16 +106,15 @@ namespace backend::db::repository {
             }
 
         protected:
-            template <typename T>
-            void Refresh_(boost::system::error_code const& ec, T* self) {
+            void Refresh_(boost::system::error_code const& ec) {
                 if (ec == boost::asio::error::operation_aborted)
                     return;
 
-                LoadFromDB_(self);
+                LoadFromDB_();
 
                 _refreshTimer.expires_at(std::chrono::high_resolution_clock::now() + _refreshInterval);
-                _refreshTimer.async_wait([this, self](boost::system::error_code const& ec) {
-                    this->Refresh_(ec, self);
+                _refreshTimer.async_wait([this](boost::system::error_code const& ec) {
+                    this->Refresh_(ec);
                 });
             }
 
@@ -128,8 +129,7 @@ namespace backend::db::repository {
             *
             * This function automatically executes every minute.
             */
-            template <typename T>
-            void LoadFromDB_(T* self) {
+            void LoadFromDB_() {
                 namespace chrono = std::chrono;
 
                 _logger.info("Refreshing cache entries for db::{}.", ENTITY::Name.Value);

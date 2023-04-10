@@ -36,10 +36,10 @@ namespace frontend {
         backend::ProductCache& productManager, backend::Database& database, std::shared_ptr<net::Server> proxyServer)
         : _threadPool(threadCount), httpServer(std::move(proxyServer)), productManager(productManager), db(database), bot(token)
     {
-        _logger = utility::logging::GetLogger("discord");
+        logger = utility::logging::GetLogger("discord");
 
         bot.on_ready([this](const dpp::ready_t& evnt) {
-            HandleReady(evnt);
+            this->HandleReady(evnt);
         });
         bot.on_guild_create([this](const dpp::guild_create_t& evnt) {
             this->HandleGuildCreate(evnt);
@@ -131,7 +131,7 @@ namespace frontend {
         if (evnt.created == nullptr)
             return;
 
-        std::vector<dpp::slashcommand> commands;
+        // std::vector<dpp::slashcommand> commands;
         for (std::shared_ptr<commands::ICommand> command : _commands) {
             dpp::slashcommand registrationInfo = command->GetRegistrationInfo(bot);
             auto [needsUpdate, hash, newVersion] = RequiresSynchronization(registrationInfo);
@@ -140,21 +140,22 @@ namespace frontend {
                 boost::hash_combine(hash, newVersion);
                 db.commandStates.InsertOrUpdate(registrationInfo.name, hash, newVersion);
 
-                commands.emplace_back(std::move(registrationInfo));
+                // commands.emplace_back(std::move(registrationInfo));
+                bot.guild_command_create(registrationInfo, evnt.created->id);
             }
         }
 
-        bot.guild_bulk_command_create(commands, evnt.created->id);
+        // bot.guild_bulk_command_create(commands, evnt.created->id);
     }
 
     void Discord::HandleLogEvent(dpp::log_t const& evnt) {
         switch (evnt.severity) {
-            case dpp::ll_trace:   _logger->trace("{}", evnt.message); break;
-            case dpp::ll_debug:   _logger->debug("{}", evnt.message); break;
-            case dpp::ll_info:    _logger->info("{}", evnt.message); break;
-            case dpp::ll_warning: _logger->warn("{}", evnt.message); break;
-            case dpp::ll_error:   _logger->error("{}", evnt.message); break;
-            default:              _logger->critical("{}", evnt.message); break;
+            case dpp::ll_trace:   logger->trace("{}", evnt.message); break;
+            case dpp::ll_debug:   logger->debug("{}", evnt.message); break;
+            case dpp::ll_info:    logger->info("{}", evnt.message); break;
+            case dpp::ll_warning: logger->warn("{}", evnt.message); break;
+            case dpp::ll_error:   logger->error("{}", evnt.message); break;
+            default:              logger->critical("{}", evnt.message); break;
         }
     }
 
@@ -176,7 +177,7 @@ namespace frontend {
                 )
             ));
         } catch (std::exception const& ex) {
-            _logger->error(ex.what());
+            logger->error(ex.what());
         }
     }
 
@@ -188,9 +189,9 @@ namespace frontend {
             }
 
             // Empty response by default.
-            bot.interaction_response_create_sync(evnt.command.id, evnt.command.token, dpp::interaction_response{ dpp::ir_autocomplete_reply });
+            bot.interaction_response_create_sync(evnt.command.id, evnt.command.token, dpp::interaction_response { dpp::ir_autocomplete_reply });
         } catch (std::exception const& ex) {
-            _logger->error(ex.what());
+            logger->error(ex.what());
         }
     }
 
@@ -201,7 +202,7 @@ namespace frontend {
                     return;
             }
         } catch (std::exception const& ex) {
-            _logger->error(ex.what());
+            logger->error(ex.what());
         }
     }
 

@@ -206,7 +206,7 @@ void Execute(boost::program_options::variables_map vm) {
             if (itr == newBuilds.end()) {
                 NewBuild& record = newBuilds.emplace_back();
                 record.Regions.push_back(version.Region);
-                record.Configuration = databaseRecord;
+                record.Configuration = std::move(databaseRecord);
             } else
                 itr->Regions.push_back(version.Region);
         }

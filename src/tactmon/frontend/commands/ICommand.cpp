@@ -1,5 +1,6 @@
 #include "frontend/commands/ICommand.hpp"
 #include "frontend/Discord.hpp"
+#include "utility/Logging.hpp"
 
 namespace db = backend::db;
 namespace entity = db::entity;
@@ -13,7 +14,11 @@ namespace frontend::commands {
             return false;
 
         cluster.RunAsync([this, evnt, &cluster]() {
-            this->HandleSlashCommand(evnt, cluster);
+            try {
+                this->HandleSlashCommand(evnt, cluster);
+            } catch (std::exception const& ex) {
+                cluster.logger->error(ex.what());
+            }
         });
 
         return true;
@@ -24,7 +29,11 @@ namespace frontend::commands {
             return false;
 
         cluster.RunAsync([this, evnt, &cluster]() {
-            this->HandleAutoCompleteEvent(evnt, cluster);
+            try {
+                this->HandleAutoCompleteEvent(evnt, cluster);
+            } catch (std::exception const& ex) {
+                cluster.logger->error(ex.what());
+            }
         });
 
         return true;
@@ -35,7 +44,11 @@ namespace frontend::commands {
             return false;
 
         cluster.RunAsync([this, evnt, &cluster]() {
-            this->HandleSelectClickEvent(evnt, cluster);
+            try {
+                this->HandleSelectClickEvent(evnt, cluster);
+            } catch (std::exception const& ex) {
+                cluster.logger->error(ex.what());
+            }
         });
 
         return true;
@@ -83,7 +96,7 @@ namespace frontend::commands {
         }
 
         if (focusedName.empty() || std::holds_alternative<std::monostate>(focusedValue) || !HandleAutoComplete(focusedName, focusedValue, std::move(context), cluster))
-            cluster.bot.interaction_response_create(evnt.command.id, evnt.command.token, dpp::interaction_response { dpp::ir_autocomplete_reply });
+            cluster.bot.interaction_response_create_sync(evnt.command.id, evnt.command.token, dpp::interaction_response { dpp::ir_autocomplete_reply });
     }
 
     bool ICommand::HandleAutoComplete(std::string const& name, dpp::command_value const& value, AutocompletionContext context, frontend::Discord& cluster) {
@@ -107,7 +120,7 @@ namespace frontend::commands {
                 }
             });
 
-            cluster.bot.interaction_response_create(context.evnt.command.id, context.evnt.command.token, interactionResponse);
+            cluster.bot.interaction_response_create_sync(context.evnt.command.id, context.evnt.command.token, interactionResponse);
             return true;
         }
 
@@ -150,7 +163,7 @@ namespace frontend::commands {
                 }
             });
 
-            cluster.bot.interaction_response_create(context.evnt.command.id, context.evnt.command.token, interactionResponse);
+            cluster.bot.interaction_response_create_sync(context.evnt.command.id, context.evnt.command.token, interactionResponse);
             return true;
         }
 
@@ -183,7 +196,7 @@ namespace frontend::commands {
                 }
             });
 
-            cluster.bot.interaction_response_create(context.evnt.command.id, context.evnt.command.token, interactionResponse);
+            cluster.bot.interaction_response_create_sync(context.evnt.command.id, context.evnt.command.token, interactionResponse);
             return true;
         }
 

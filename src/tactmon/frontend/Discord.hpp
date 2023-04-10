@@ -64,10 +64,10 @@ namespace frontend {
         }
 
         utility::ThreadPool _threadPool;
-        std::shared_ptr<spdlog::logger> _logger;
         std::vector<std::shared_ptr<frontend::commands::ICommand>> _commands;
 
     public:
+        std::shared_ptr<spdlog::logger> logger;
         std::shared_ptr<net::Server> httpServer;
         backend::ProductCache& productManager;
         backend::Database& db;
