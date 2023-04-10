@@ -1,5 +1,6 @@
 #pragma once
 
+#include <condition_variable>
 #include <cstdint>
 #include <deque>
 #include <mutex>
