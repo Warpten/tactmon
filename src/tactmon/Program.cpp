@@ -277,29 +277,29 @@ void Execute(boost::program_options::variables_map vm) {
         }
 
         // Immediately post Ribbit update notifications to subscribed channels.
-        database.boundChannels.ForEach([&](auto entity) {
-            if (db::get<bound_channel::product_name>(entity) != productName)
-                return;
-
-            uint64_t channelID = db::get<bound_channel::channel_id>(entity);
-
-            dpp::message message {
-                dpp::snowflake{ channelID },
-                fmt::format("Builds update for product `{0}` has been detected (**{1:%Y-%m-%d}** at **{1:%H:%M:%S}**).", productName, std::chrono::system_clock::now()),
-            };
-
-            for (NewBuild const& newBuild : newBuilds) {
-                dpp::embed embed;
-                embed.set_title(fmt::format("`{}` ({})", db::get<build::build_name>(newBuild.Configuration.value()), fmt::join(newBuild.Regions, ", ")))
-                    .add_field("Build Configuration", fmt::format("`{}`", db::get<build::build_config>(newBuild.Configuration.value())))
-                    .add_field("CDN Configuration", fmt::format("`{}`", db::get<build::cdn_config>(newBuild.Configuration.value())))
-                    .set_color(0x00FFFF00u);
-
-                message.add_embed(embed);
-            }
-
-            bot.bot.message_create(message);
-        });
+        // database.boundChannels.ForEach([&](auto entity) {
+        //     if (db::get<bound_channel::product_name>(entity) != productName)
+        //         return;
+        // 
+        //     uint64_t channelID = db::get<bound_channel::channel_id>(entity);
+        // 
+        //     dpp::message message {
+        //         dpp::snowflake{ channelID },
+        //         fmt::format("Builds update for product `{0}` has been detected (**{1:%Y-%m-%d}** at **{1:%H:%M:%S}**).", productName, std::chrono::system_clock::now()),
+        //     };
+        // 
+        //     for (NewBuild const& newBuild : newBuilds) {
+        //         dpp::embed embed;
+        //         embed.set_title(fmt::format("`{}` ({})", db::get<build::build_name>(newBuild.Configuration.value()), fmt::join(newBuild.Regions, ", ")))
+        //             .add_field("Build Configuration", fmt::format("`{}`", db::get<build::build_config>(newBuild.Configuration.value())))
+        //             .add_field("CDN Configuration", fmt::format("`{}`", db::get<build::cdn_config>(newBuild.Configuration.value())))
+        //             .set_color(0x00FFFF00u);
+        // 
+        //         message.add_embed(embed);
+        //     }
+        // 
+        //     bot.bot.message_create(message);
+        // });
     });
 
     // Start updating ribbit state
