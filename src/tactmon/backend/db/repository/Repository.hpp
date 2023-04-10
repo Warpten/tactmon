@@ -1,6 +1,7 @@
 #pragma once
 
 #include "backend/db/orm/PreparedStatement.hpp"
+#include "backend/ConnectionPool.hpp"
 #include "utility/ThreadPool.hpp"
 
 #include <chrono>
@@ -35,10 +36,10 @@ namespace backend::db::repository {
 
         template <typename LOAD_STATEMENT, typename PK, typename ENTITY>
         struct repository_base<LOAD_STATEMENT, PK, ENTITY, true> {
-            repository_base(utility::ThreadPool& threadPool, pqxx::connection& connection, std::chrono::seconds refreshInterval, spdlog::async_logger& logger)
-                : _refreshTimer(threadPool.pool_executor()), _refreshInterval(refreshInterval), _logger(logger), _connection(connection)
+            repository_base(utility::ThreadPool& threadPool, Pool& pool, std::chrono::seconds refreshInterval, spdlog::async_logger& logger)
+                : _refreshTimer(threadPool.pool_executor()), _refreshInterval(refreshInterval), _logger(logger), _pool(pool)
             {
-                LOAD_STATEMENT::Prepare(_connection, _logger);
+                LOAD_STATEMENT::Prepare(_pool, _logger);
 
                 Refresh_({ });
             }
@@ -136,7 +137,7 @@ namespace backend::db::repository {
 
                 spdlog::stopwatch sw { };
 
-                std::vector<ENTITY> storage = LOAD_STATEMENT::Execute(_connection);
+                std::vector<ENTITY> storage = LOAD_STATEMENT::Execute(_pool);
 
                 _logger.debug("Loaded {} db::{} entries from database in {}.",
                     storage.size(), ENTITY::Name.Value, chrono::duration_cast<chrono::milliseconds>(sw.elapsed()));
@@ -162,20 +163,15 @@ namespace backend::db::repository {
             boost::container::flat_map<typename PK::value_type, ENTITY> _storage;
 
         protected:
-            pqxx::connection& _connection;
+            Pool& _pool;
         };
 
         template <typename LOAD_STATEMENT, typename PK, typename ENTITY> struct repository_base<LOAD_STATEMENT, PK, ENTITY, false> {
-            repository_base(spdlog::async_logger& logger, pqxx::connection& connection)
-                : _connection(connection)
+            repository_base(spdlog::async_logger& logger, Pool& pool)
+                : _pool(pool)
             { }
 
-        protected:
-            template <typename T> void Refresh_(boost::system::error_code const& ec, T* self) { }
-
-            template <typename Callback> decltype(auto) WithMutex_(Callback callback) const { return callback(); }
-
-            pqxx::connection& _connection;
+            Pool& _pool;
         };
     }
 
@@ -187,14 +183,14 @@ namespace backend::db::repository {
 
     protected:
         template <auto B = CACHING, std::enable_if_t<B, int> _ = 0> // Make dependant
-        explicit Repository(utility::ThreadPool& threadPool, pqxx::connection& connection, spdlog::async_logger& logger, std::chrono::seconds interval = 60s)
-            : repository_base(threadPool, connection, interval, logger)
+        explicit Repository(utility::ThreadPool& threadPool, Pool& pool, spdlog::async_logger& logger, std::chrono::seconds interval = 60s)
+            : repository_base(threadPool, pool, interval, logger)
         {
         }
 
         template <auto B = CACHING, std::enable_if_t<!B, int> _ = 0>
-        Repository(pqxx::connection& connection, spdlog::async_logger& logger)
-            : repository_base(logger, connection)
+        Repository(Pool& pool, spdlog::async_logger& logger)
+            : repository_base(logger, pool)
         {
         }
 

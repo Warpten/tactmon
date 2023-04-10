@@ -3,18 +3,18 @@
 #include <chrono>
 
 namespace backend::db::repository {
-    CommandState::CommandState(pqxx::connection& connection, spdlog::async_logger& logger)
-        : Base(connection, logger)
+    CommandState::CommandState(Pool& pool, spdlog::async_logger& logger)
+        : Base(pool, logger)
     {
-        entity::command_state::queries::SelectByName::Prepare(_connection, logger);
-        entity::command_state::queries::InsertOrUpdate::Prepare(_connection, logger);
+        entity::command_state::queries::SelectByName::Prepare(pool, logger);
+        entity::command_state::queries::InsertOrUpdate::Prepare(pool, logger);
     }
 
     std::optional<entity::command_state::Entity> CommandState::FindCommand(std::string name) {
-        return entity::command_state::queries::SelectByName::ExecuteOne(_connection, std::move(name));
+        return entity::command_state::queries::SelectByName::ExecuteOne(_pool, std::move(name));
     }
 
     void CommandState::InsertOrUpdate(std::string commandName, uint64_t hash, uint32_t version) {
-        entity::command_state::queries::InsertOrUpdate::ExecuteOne(_connection, std::move(commandName), hash, version);
+        entity::command_state::queries::InsertOrUpdate::ExecuteOne(_pool, std::move(commandName), hash, version);
     }
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "backend/ConnectionPool.hpp"
 #include "backend/db/repository/Repository.hpp"
 #include "backend/db/entity/BoundChannel.hpp"
 #include "utility/ThreadPool.hpp"
@@ -16,7 +17,7 @@ namespace backend::db::repository {
     struct BoundChannel : Repository<entity::bound_channel::Entity, entity::bound_channel::queries::Select, entity::bound_channel::id, true> {
         using Base = Repository<entity::bound_channel::Entity, entity::bound_channel::queries::Select, entity::bound_channel::id, true>;
 
-        BoundChannel(utility::ThreadPool& threadPool, pqxx::connection& connection, spdlog::async_logger& logger);
+        BoundChannel(utility::ThreadPool& threadPool, Pool& pool, spdlog::async_logger& logger);
 
         /**
          * Registers a bound channel.

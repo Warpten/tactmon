@@ -1,5 +1,6 @@
 #pragma once
 
+#include "backend/ConnectionPool.hpp"
 #include "backend/db/repository/Repository.hpp"
 #include "backend/db/entity/TrackedFile.hpp"
 #include "utility/ThreadPool.hpp"
@@ -16,7 +17,7 @@ namespace backend::db::repository {
     struct TrackedFile : Repository<entity::tracked_file::Entity, entity::tracked_file::queries::Select, entity::tracked_file::id, true> {
         using Base = Repository<entity::tracked_file::Entity, entity::tracked_file::queries::Select, entity::tracked_file::id, true>;
 
-        TrackedFile(utility::ThreadPool& threadPool, pqxx::connection& connection, spdlog::async_logger& logger);
+        TrackedFile(utility::ThreadPool& threadPool, Pool& pool, spdlog::async_logger& logger);
 
         /**
          * Registers a file for tracking.

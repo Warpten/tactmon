@@ -1,5 +1,6 @@
 #pragma once
 
+#include "backend/ConnectionPool.hpp"
 #include "utility/Literal.hpp"
 #include "utility/Tuple.hpp"
 
@@ -40,8 +41,10 @@ namespace backend::db {
              *
              * @returns A single record if exactly one is returned by the query; an empty optional otherwise.
              */
-            static auto ExecuteOne(pqxx::connection& connection, Ts... args) {
-                work_type work { connection };
+            static auto ExecuteOne(Pool& pool, Ts... args) {
+                Connection connection = pool.Open();
+                work_type work{ connection.connection() };
+
                 return ExecuteOne(work, std::forward<Ts>(args)...);
             }
 
@@ -53,8 +56,10 @@ namespace backend::db {
              * 
              * @returns A collection of elements as read from the database.
              */
-            static auto Execute(pqxx::connection& connection, Ts... args) {
-                work_type work { connection };
+            static auto Execute(Pool& pool, Ts... args) {
+                Connection connection = pool.Open();
+                work_type work { connection.connection() };
+
                 return Execute(work, std::forward<Ts>(args)...);
             }
 
@@ -131,15 +136,17 @@ namespace backend::db {
     struct PreparedStatement final : private detail::PreparedStatementBase<NAME,
         typename QUERY::transaction_type, typename QUERY::result_type, typename QUERY::parameter_types>
     {
-        static void Prepare(pqxx::connection& connection) {
+        static void Prepare(Pool& pool) {
             std::string queryString = QUERY::render();
-            connection.prepare(pqxx::zview { NAME.Value, NAME.Size - 1 }, queryString);
+
+            pool.Prepare(std::string_view { NAME.Value, NAME.Size - 1 }, queryString);
         }
 
-        static void Prepare(pqxx::connection& connection, spdlog::async_logger& logger) {
+        static void Prepare(Pool& pool, spdlog::async_logger& logger) {
             std::string rendererQuery = QUERY::render();
             logger.debug("Preparing query {}: '{}'", NAME.Value, rendererQuery);
-            connection.prepare(pqxx::zview { NAME.Value, NAME.Size - 1 }, rendererQuery);
+
+            pool.Prepare(std::string_view { NAME.Value, NAME.Size - 1 }, rendererQuery);
         }
 
     private:

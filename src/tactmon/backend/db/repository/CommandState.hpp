@@ -1,5 +1,6 @@
 #pragma once
 
+#include "backend/ConnectionPool.hpp"
 #include "backend/db/repository/Repository.hpp"
 #include "backend/db/entity/CommandState.hpp"
 #include "utility/ThreadPool.hpp"
@@ -16,7 +17,7 @@ namespace backend::db::repository {
     struct CommandState : Repository<entity::command_state::Entity, entity::command_state::queries::Select, entity::command_state::id, false> {
         using Base = Repository<entity::command_state::Entity, entity::command_state::queries::Select, entity::command_state::id, false>;
 
-        CommandState(pqxx::connection& connection, spdlog::async_logger& logger);
+        CommandState(Pool& pool, spdlog::async_logger& logger);
 
         std::optional<entity::command_state::Entity> FindCommand(std::string name);
 
