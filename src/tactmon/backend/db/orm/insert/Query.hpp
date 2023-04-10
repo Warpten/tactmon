@@ -157,7 +157,7 @@ namespace backend::db::insert {
         template <std::size_t P>
         static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, P> p) {
             ss << "UPDATE SET ";
-            auto setOffset = detail::VariadicRenderable<
+            return detail::VariadicRenderable<
                 ", ",
                 Equals<
                     COMPONENTS, // typename COMPONENTS::template BindToProjection<ENTITY>,
