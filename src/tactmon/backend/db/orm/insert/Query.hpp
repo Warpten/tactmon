@@ -146,11 +146,10 @@ namespace backend::db::insert {
      * @tparam PK            A column of @p ENTITY that will serve as the identifier for the UPDATE clause.
      * @tparam COMPONENTS... The components to update.
      */
-    template <typename ENTITY, typename PK, typename... COMPONENTS>
+    template <typename ENTITY, typename... COMPONENTS>
     struct UpdateFromExcluded final {
         using parameter_types = decltype(utility::tuple_cat(
             std::declval<typename ENTITY::parameter_types>(),
-            std::declval<typename PK::parameter_types>(),
             std::declval<typename COMPONENTS::parameter_types>()...
         ));
 
@@ -161,12 +160,10 @@ namespace backend::db::insert {
             auto setOffset = detail::VariadicRenderable<
                 ", ",
                 Equals<
-                    COMPONENTS,
+                    COMPONENTS, // typename COMPONENTS::template BindToProjection<ENTITY>,
                     typename COMPONENTS::template BindToProjection<Excluded>
                 >...
             >::render_to(ss, p);
-            ss << " WHERE ";
-            return Equals<PK, typename PK::template BindToProjection<Excluded>>::render_to(ss, setOffset);
         }
     };
 
@@ -190,7 +187,7 @@ namespace backend::db::insert {
      * @tparam COLUMNS... The columns being set.
      */
     template <typename ENTITY, typename... COLUMNS>
-    using Replace = typename Query<ENTITY, COLUMNS...>::template OnConflict<UpdateFromExcluded<ENTITY, typename ENTITY::primary_key, typename COLUMNS::column_type...>>;
+    using Replace = typename Query<ENTITY, COLUMNS...>::template OnConflict<UpdateFromExcluded<ENTITY, typename COLUMNS::column_type...>>;
 
     namespace detail {
         template <std::size_t I, typename C>
