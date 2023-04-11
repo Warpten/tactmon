@@ -34,7 +34,7 @@ namespace frontend {
         auto RegisterCommand()
             -> std::enable_if_t<std::is_constructible_v<T, Args...>>
         {
-            _commands.emplace_back(std::make_shared<T>());
+            _commands.emplace_back(std::make_unique<T>());
         }
 
         void HandleReady(dpp::ready_t const& evnt);
@@ -64,7 +64,8 @@ namespace frontend {
         }
 
         utility::ThreadPool _threadPool;
-        std::vector<std::shared_ptr<frontend::commands::ICommand>> _commands;
+        std::shared_ptr<spdlog::logger> _logger;
+        std::vector<std::unique_ptr<frontend::commands::ICommand>> _commands;
 
     public:
         std::shared_ptr<spdlog::logger> logger;

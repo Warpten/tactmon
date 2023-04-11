@@ -74,18 +74,24 @@ namespace libtactmon::detail {
     template <typename CharT, typename Traits = std::char_traits<CharT>>
     std::vector<std::basic_string_view<CharT, Traits>> Tokenize(
         std::basic_string_view<CharT, Traits> input,
-        CharT token)
+        CharT token,
+        bool removeEmptyTokens)
     {
         std::vector<std::basic_string_view<CharT, Traits>> result;
 
         while (!input.empty()) {
             auto pos = input.find(token);
             if (pos == std::basic_string_view<CharT, Traits>::npos) {
-                result.push_back(input);
+                if (!removeEmptyTokens || !input.empty())
+                    result.push_back(input);
+
                 break;
             }
             else {
-                result.push_back(input.substr(0, pos));
+                std::basic_string_view<CharT, Traits> elem = input.substr(0, pos);
+                if (!removeEmptyTokens || !elem.empty())
+                    result.push_back(elem);
+
                 input.remove_prefix(pos + 1);
             }
         }

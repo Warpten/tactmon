@@ -8,7 +8,7 @@
 
 namespace libtactmon::ribbit::types::bgdl {
     std::optional<Record> Record::Parse(std::string_view input) {
-        std::vector<std::string_view> tokens = libtactmon::detail::Tokenize(input, '|');
+        std::vector<std::string_view> tokens = libtactmon::detail::Tokenize(input, '|', false);
         if (tokens.size() != 7)
             return std::nullopt;
 

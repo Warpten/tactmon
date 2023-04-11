@@ -33,15 +33,15 @@ namespace frontend::commands {
         bool bind = std::get<bool>(evnt.get_parameter("bind"));
 
         if (!bind) {
-            cluster.db.boundChannels.Delete(static_cast<uint64_t>(evnt.command.channel_id), product);
-            
             evnt.edit_response(fmt::format("I will no longer announce pushes to `{}` on this channel."
                 "\r\n:information_source: This may take a minute to apply.", product));
-        } else {
-            cluster.db.boundChannels.Insert(static_cast<uint64_t>(evnt.command.guild_id), static_cast<uint64_t>(evnt.command.channel_id), product);
 
+            cluster.db.boundChannels.Delete(static_cast<uint64_t>(evnt.command.channel_id), std::move(product));
+        } else {
             evnt.edit_response(fmt::format("I will announce pushes to `{}` on this channel."
                 "\r\n:information_source: This may take a minute to apply.", product));
+
+            cluster.db.boundChannels.Insert(static_cast<uint64_t>(evnt.command.guild_id), static_cast<uint64_t>(evnt.command.channel_id), std::move(product));
         }
     }
 }

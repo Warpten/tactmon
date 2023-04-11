@@ -73,12 +73,6 @@ namespace net {
     bool Session::ProcessRequest(http::request_parser<http::empty_body> const& request) {
         boost::system::error_code ec;
 
-        std::vector<std::string_view> tokens = libtactmon::detail::Tokenize(std::string_view { request.get().target() }, '/');
-        if (!tokens.empty())
-            tokens.erase(tokens.begin());
-
-        http::response<http::dynamic_body> response;
-
         auto writeError = [this, &response](http::status responseCode, std::string_view body) {
             response.result(responseCode);
             response.set(http::field::content_type, "text/plain");
@@ -86,12 +80,21 @@ namespace net {
 
             beast::ostream(response.body()) << body;
 
-            this->BeginWrite(http::message_generator { std::move(response) });
+            this->BeginWrite(http::message_generator{ std::move(response) });
             return true;
         };
 
+        if (request.get().target().find('\\') != std::string::npos)
+            return writeError(http::status::bad_request, "Don't try to exploit me");
+
+        std::vector<std::string_view> tokens = libtactmon::detail::Tokenize(std::string_view { request.get().target() }, '/', false);
+        if (!tokens.empty())
+            tokens.erase(tokens.begin());
+
+        http::response<http::dynamic_body> response;
+
         if (tokens.size() != 6)
-            return writeError(http::status::not_found, "Malformed request");
+            return writeError(http::status::bad_request, "Malformed request");
 
         FileQueryParams params;
         params.Product = tokens[0];
@@ -147,7 +150,7 @@ namespace net {
             // Call asio::write instead of beast, because we want the data to get out instantly.
             boost::asio::write(_stream.socket(), boost::asio::buffer(data.data(), data.size()));
         }, [&](size_t bytesRead) {
-            // Update remote range header; This will make sure we currectly resume from another CDN if the current one fails.
+            // Update remote range header; This will make sure we currectly resume from another CDN if the inflight one fails.
             params.Offset += bytesRead;
             params.Length -= bytesRead;
         });
@@ -168,7 +171,8 @@ namespace net {
                 continue;
 
             http::response_parser<beast::user::blte_body> remoteResponse;
-            remoteResponse.body_limit({ });
+            remoteResponse.body_limit({ }); // TODO: Use this actually to request chunks of data from Blizzard and do that in fixed intervals
+                                            //       (will maybe reduce overhead on Blizzard's side .... /s)
             remoteResponse.get().body() = parserState;
 
             // Read header from Blizzard CDN now.
@@ -298,7 +302,6 @@ namespace net {
 
     void Session::HandleWrite(bool keepAlive, beast::error_code ec, std::size_t bytesTransferred) {
         boost::ignore_unused(bytesTransferred);
-
         if (ec.failed())
             return;
 

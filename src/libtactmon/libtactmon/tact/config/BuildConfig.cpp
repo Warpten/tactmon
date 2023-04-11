@@ -107,14 +107,14 @@ namespace libtactmon::tact::config {
         stream.SeekRead(0);
         
         std::string_view contents { stream.Data<char>().data(), stream.GetLength() };
-        std::vector<std::string_view> lines = detail::Tokenize(contents, '\n');
+        std::vector<std::string_view> lines = detail::Tokenize(contents, '\n', true);
         if (lines.empty())
             return std::nullopt;
 
         BuildConfig config { };
 
         for (std::string_view line : lines) {
-            if (line.empty() || line[0] == '#')
+            if (line[0] == '#')
                 continue;
 
             static const char Separators[] = { ' ', '=' };

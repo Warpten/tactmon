@@ -59,22 +59,24 @@ namespace frontend::commands {
                 ));
             }
             else {
-                cluster.db.trackedFiles.Insert(product, filePath, displayName);
                 evnt.edit_response(dpp::message().add_embed(
                     dpp::embed()
                         .set_description(fmt::format("File `{}` is now tracked for product `{}`.", filePath, product))
                         .set_footer("This may take a minute to apply.", "")
                 ));
+
+                cluster.db.trackedFiles.Insert(std::move(product), std::move(filePath), std::move(displayName));
             }
         }
         else {
             if (alreadyChecked) {
-                cluster.db.trackedFiles.Delete(product, filePath);
                 evnt.edit_response(dpp::message().add_embed(
                     dpp::embed()
                         .set_description(fmt::format("File `{}` is no longer tracked for product `{}`.", filePath, product))
                         .set_footer("This may take a minute to apply.", "")
                 ));
+
+                cluster.db.trackedFiles.Delete(std::move(product), std::move(filePath));
             }
             else {
                 evnt.edit_response(dpp::message().add_embed(

@@ -9,6 +9,7 @@ if(WIN32)
   if (NOT BUILD_SHARED_LIBS)
     set(Boost_USE_STATIC_LIBS        ON)
   endif ()
+
   set(Boost_USE_MULTITHREADED      ON)
   set(Boost_USE_STATIC_RUNTIME     OFF)
 endif()
