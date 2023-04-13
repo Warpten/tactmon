@@ -1,5 +1,7 @@
 #pragma once
 
+#include "libtactmon/detail/Export.hpp"
+
 #include <array>
 #include <cstdint>
 #include <memory>
@@ -16,7 +18,7 @@ namespace libtactmon::tact {
      * You may be confused as to why this type is the exact copy of CKey? Well, these are effectively the same (a hex string), but I wanted
      * different type semantics.
      */
-    struct EKey final {
+    struct LIBTACTMON_API EKey final {
         /**
          * Tries to construct an encoding key from a hex string.
          * 
@@ -45,11 +47,11 @@ namespace libtactmon::tact {
         /**
          * Returns a hex string representation of this content key.
          */
-        std::string ToString() const;
+        [[nodiscard]] std::string ToString() const;
 
         friend bool operator == (EKey const& left, EKey const& right) noexcept;
 
-        std::span<uint8_t const> data() const { return std::span<uint8_t const> { _data.get(), _size }; }
+        [[nodiscard]] std::span<uint8_t const> data() const { return std::span<uint8_t const> { _data.get(), _size }; }
         
         template <std::ranges::range T>
         friend bool operator == (EKey const& left, T right) noexcept {
@@ -58,6 +60,6 @@ namespace libtactmon::tact {
 
     private:
         std::unique_ptr<uint8_t[]> _data;
-        size_t _size = 0;
+        std::size_t _size = 0;
     };
 }

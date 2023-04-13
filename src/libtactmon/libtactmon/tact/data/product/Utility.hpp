@@ -22,9 +22,6 @@ namespace libtactmon::tact::data::product {
      * Exposes utility methods to resolve files from Blizzard CDNs.
      */
     struct ResourceResolver {
-        template <typename T>
-        using Parser = std::function<std::optional<T>(io::FileStream&)>;
-
         ResourceResolver(boost::asio::any_io_executor executor, tact::Cache& localCache)
             : _executor(executor), _localCache(localCache)
         { }
@@ -39,9 +36,10 @@ namespace libtactmon::tact::data::product {
          * 
          * @returns The parsed file or an empty optional if unable to.
          */
-        template <typename T>
-        std::optional<T> ResolveConfiguration(ribbit::types::CDNs const& cdns,
-            std::string_view key, Parser<T> parser, std::shared_ptr<spdlog::logger> logger = nullptr) const
+        template <typename Handler>
+        auto ResolveConfiguration(ribbit::types::CDNs const& cdns,
+            std::string_view key, Handler parser, spdlog::logger* logger = nullptr) const
+            -> std::invoke_result_t<Handler, io::FileStream&>
         {
             return Resolve(cdns, key, "/{}/config/{}/{}/{}", parser, logger);
         }
@@ -56,24 +54,26 @@ namespace libtactmon::tact::data::product {
          * 
          * @returns The parsed file or an empty optional if unable to.
          */
-        template <typename T>
-        std::optional<T> ResolveData(ribbit::types::CDNs const& cdns,
-            std::string_view key, Parser<T> parser, std::shared_ptr<spdlog::logger> logger = nullptr) const
+        template <typename Handler>
+        auto ResolveData(ribbit::types::CDNs const& cdns,
+            std::string_view key, Handler parser, spdlog::logger* logger = nullptr) const
+            -> std::invoke_result_t<Handler, io::FileStream&>
         {
             return Resolve(cdns, key, "/{}/data/{}/{}/{}", parser, logger);
         }
 
     private:
-        template <typename T>
-        std::optional<T> Resolve(ribbit::types::CDNs const& cdns,
+        template <typename Handler>
+        auto Resolve(ribbit::types::CDNs const& cdns,
             std::string_view key, std::string_view formatString,
-            Parser<T> parser,
-            std::shared_ptr<spdlog::logger> logger = nullptr) const
+            Handler parser,
+            spdlog::logger* logger = nullptr) const
+            -> std::invoke_result_t<Handler, io::FileStream&>
         {
             for (ribbit::types::cdns::Record const& cdn : cdns) {
                 std::string relativePath{ fmt::format(fmt::runtime(formatString), cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
 
-                std::optional<T> cachedValue = _localCache.Resolve(relativePath, parser);
+                auto cachedValue = _localCache.Resolve(relativePath, parser);
                 if (cachedValue.has_value())
                     return cachedValue;
 
@@ -81,7 +81,7 @@ namespace libtactmon::tact::data::product {
                     net::FileDownloadTask downloadTask{ relativePath, _localCache };
                     auto taskResult = downloadTask.Run(_executor, host, logger);
                     if (taskResult.has_value()) {
-                        std::optional<T> parsedValue = parser(*taskResult);
+                        auto parsedValue = parser(*taskResult);
 
                         if (parsedValue.has_value())
                             return parsedValue;

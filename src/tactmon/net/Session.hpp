@@ -35,7 +35,7 @@ namespace net {
 
     private:
         std::unordered_map<std::string_view, std::string> CollectAvailableCDNs(libtactmon::ribbit::types::CDNs& cdns,
-            std::string_view archiveName, size_t offset, size_t length);
+            std::string_view archiveName, std::size_t offset, size_t length);
 
     private:
         boost::beast::tcp_stream _stream;

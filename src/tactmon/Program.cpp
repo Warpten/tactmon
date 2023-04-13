@@ -13,16 +13,17 @@
 #include <memory>
 #include <string_view>
 #include <thread>
+#include <type_traits>
 #include <utility>
 
 #include <assert.hpp>
 
-#include <boost/program_options.hpp>
 #include <boost/asio/executor_work_guard.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/asio/thread_pool.hpp>
+#include <boost/program_options.hpp>
 
 #include <fmt/chrono.h>
 #include <fmt/format.h>
@@ -171,7 +172,7 @@ void Execute(boost::program_options::variables_map vm) {
         for (ribbit::types::versions::Record const& version : versions->Records) {
             tact::data::product::ResourceResolver resolver(threadPool.executor(), localCache);
 
-            std::optional<tact::config::BuildConfig> buildConfig = resolver.ResolveConfiguration<tact::config::BuildConfig>(*cdns, version.BuildConfig,
+            std::optional<tact::config::BuildConfig> buildConfig = resolver.ResolveConfiguration(*cdns, version.BuildConfig,
                 [&](libtactmon::io::FileStream& fstream) {
                     return tact::config::BuildConfig::Parse(fstream);
                 });
@@ -205,7 +206,7 @@ void Execute(boost::program_options::variables_map vm) {
             if (itr == newBuilds.end()) {
                 NewBuild& record = newBuilds.emplace_back();
                 record.Regions.push_back(version.Region);
-                record.Configuration = databaseRecord;
+                record.Configuration = std::move(databaseRecord);
             } else
                 itr->Regions.push_back(version.Region);
         }
@@ -219,95 +220,86 @@ void Execute(boost::program_options::variables_map vm) {
                 productCache.LoadConfiguration(productName, newBuild.Configuration.value(), [&](backend::Product& product) {
                     // Iterate over each channel the bot is bound to and publish the links;
                     // do this only for the channels that are used to track a given product.
-                    // TODO: Generate links once for each file; just a small optimization
-                    //       even though generating links isn't terribly expensive.
                     database.boundChannels.ForEach([&](auto boundChannel) {
                         if (db::get<bound_channel::product_name>(boundChannel) != productName)
                             return;
 
                         uint64_t channelID = db::get<bound_channel::channel_id>(boundChannel);
 
-                        dpp::message msg {
-                            dpp::snowflake { channelID },
-                            fmt::format("Download links of tracked files for `{}` (`{}`).",
+                        // Create a thread for this push.
+                        dpp::thread buildThread = bot.bot.thread_create_sync(
+                            fmt::format("{} ({})",
                                 db::get<build::build_name>(newBuild.Configuration.value()),
-                                db::get<build::build_config>(newBuild.Configuration.value())
-                            )
-                        };
+                                fmt::join(newBuild.Regions, ", ")),
+                            channelID,
+                            60,
+                            dpp::channel_type::CHANNEL_PUBLIC_THREAD,
+                            false,
+                            1000
+                        );
 
-                        dpp::component currentRow;
+                        // For each file tracked, create a button.
                         database.trackedFiles.ForEach([&](auto trackedFile) {
-                            std::filesystem::path trackedFilePath { db::get<tracked_file::file_path>(trackedFile) };
+                            std::filesystem::path trackedFilePath{ db::get<tracked_file::file_path>(trackedFile) };
 
                             std::optional<tact::data::FileLocation> fileKey = product->FindFile(trackedFilePath.string());
                             if (!fileKey.has_value() || fileKey->keyCount() == 0)
                                 return;
 
-                            // Use the first key.
-                            std::optional<tact::data::ArchiveFileLocation> fileLocation = product->FindArchive((*fileKey)[0]);
-                            if (!fileLocation.has_value())
-                                return;
-
-                            std::string remoteAdress = proxyServer->GenerateAdress(productName, fileLocation.value(),
-                                trackedFilePath.filename().string(), fileLocation->fileSize());
-
-                            currentRow.add_component(dpp::component()
-                                .set_type(dpp::cot_button)
-                                .set_label(trackedFilePath.filename().string())
-                                .set_url(remoteAdress)
+                            dpp::message message;
+                            message.channel_id = buildThread.id;
+                            message.add_embed(dpp::embed{ }
+                                .set_title(fmt::format("Download `{}`.", trackedFilePath.filename().string()))
+                                .set_description(fmt::format("{} possible links.", fileKey->keyCount()))
                             );
 
-                            if (currentRow.components.size() == 5) {
-                                msg.add_component(currentRow);
-                                currentRow = { }; // Reset the row
+                            for (std::size_t i = 0; i < fileKey->keyCount(); ++i) {
+                                std::optional<tact::data::ArchiveFileLocation> fileLocation = product->FindArchive((*fileKey)[i]);
+                                if (!fileLocation.has_value())
+                                    continue;
+
+                                std::string remoteAdress = proxyServer->GenerateAdress(productName, fileLocation.value(),
+                                    trackedFilePath.filename().string(), fileLocation->fileSize());
+
+                                message.add_component(dpp::component()
+                                    .set_type(dpp::cot_button)
+                                    .set_label(fmt::format("Mirror #{}", i))
+                                    .set_url(remoteAdress)
+                                );
                             }
 
-                            if (msg.components.size() == 5) {
-                                dpp::message createdMessage = bot.bot.message_create_sync(msg);
-                                // Create a new message.
-                                msg = dpp::message {
-                                    dpp::snowflake { channelID },
-                                    fmt::format("Download links (cont.) of tracked files for `{}` (`{}`).",
-                                        db::get<build::build_name>(newBuild.Configuration.value()),
-                                        db::get<build::build_config>(newBuild.Configuration.value())
-                                    )
-                                }.set_reference(createdMessage.id);
-                            }
+                            // Create the button and send it.
+                            bot.bot.message_create_sync(message);
                         });
-
-                        if (currentRow.components.size() > 0)
-                            msg.add_component(currentRow);
-
-                        bot.bot.message_create(msg);
                     });
                 }, 2min);
             }
         }
 
         // Immediately post Ribbit update notifications to subscribed channels.
-        database.boundChannels.ForEach([&](auto entity) {
-            if (db::get<bound_channel::product_name>(entity) != productName)
-                return;
-
-            uint64_t channelID = db::get<bound_channel::channel_id>(entity);
-
-            dpp::message message {
-                dpp::snowflake{ channelID },
-                fmt::format("Builds update for product `{0}` has been detected (**{1:%Y-%m-%d}** at **{1:%H:%M:%S}**).", productName, std::chrono::system_clock::now()),
-            };
-
-            for (NewBuild const& newBuild : newBuilds) {
-                dpp::embed embed;
-                embed.set_title(fmt::format("`{}` ({})", db::get<build::build_name>(newBuild.Configuration.value()), fmt::join(newBuild.Regions, ", ")))
-                    .add_field("Build Configuration", fmt::format("`{}`", db::get<build::build_config>(newBuild.Configuration.value())))
-                    .add_field("CDN Configuration", fmt::format("`{}`", db::get<build::cdn_config>(newBuild.Configuration.value())))
-                    .set_color(0x00FFFF00u);
-
-                message.add_embed(embed);
-            }
-
-            bot.bot.message_create(message);
-        });
+        // database.boundChannels.ForEach([&](auto entity) {
+        //     if (db::get<bound_channel::product_name>(entity) != productName)
+        //         return;
+        // 
+        //     uint64_t channelID = db::get<bound_channel::channel_id>(entity);
+        // 
+        //     dpp::message message {
+        //         dpp::snowflake{ channelID },
+        //         fmt::format("Builds update for product `{0}` has been detected (**{1:%Y-%m-%d}** at **{1:%H:%M:%S}**).", productName, std::chrono::system_clock::now()),
+        //     };
+        // 
+        //     for (NewBuild const& newBuild : newBuilds) {
+        //         dpp::embed embed;
+        //         embed.set_title(fmt::format("`{}` ({})", db::get<build::build_name>(newBuild.Configuration.value()), fmt::join(newBuild.Regions, ", ")))
+        //             .add_field("Build Configuration", fmt::format("`{}`", db::get<build::build_config>(newBuild.Configuration.value())))
+        //             .add_field("CDN Configuration", fmt::format("`{}`", db::get<build::cdn_config>(newBuild.Configuration.value())))
+        //             .set_color(0x00FFFF00u);
+        // 
+        //         message.add_embed(embed);
+        //     }
+        // 
+        //     bot.bot.message_create(message);
+        // });
     });
 
     // Start updating ribbit state

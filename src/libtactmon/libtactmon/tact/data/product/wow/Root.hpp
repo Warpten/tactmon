@@ -50,7 +50,7 @@ namespace libtactmon::tact::data::product::wow {
             ptPT = 0x00010000,
         };
 
-        static std::optional<Root> Parse(io::IReadableStream& stream, size_t contentKeySize);
+        static std::optional<Root> Parse(io::IReadableStream& stream, std::size_t contentKeySize);
 
     private:
         Root() = default;
@@ -63,7 +63,7 @@ namespace libtactmon::tact::data::product::wow {
         std::optional<tact::CKey> FindFile(uint32_t fileDataID) const;
         std::optional<tact::CKey> FindFile(std::string_view fileName) const;
 
-        size_t size() const;
+        std::size_t size() const;
 
         struct Entry {
             tact::CKey ContentKey;

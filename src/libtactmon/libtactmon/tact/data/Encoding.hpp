@@ -1,5 +1,6 @@
 #pragma once
 
+#include "libtactmon/detail/Export.hpp"
 #include "libtactmon/tact/CKey.hpp"
 #include "libtactmon/tact/EKey.hpp"
 #include "libtactmon/tact/data/FileLocation.hpp"
@@ -17,7 +18,7 @@ namespace libtactmon::io {
 namespace libtactmon::tact::data {
     struct Empty { };
 
-    struct Encoding final {
+    struct LIBTACTMON_API Encoding final {
         explicit Encoding(io::IReadableStream& stream);
         Encoding(Encoding&& other) noexcept;
 
@@ -26,11 +27,11 @@ namespace libtactmon::tact::data {
         Encoding& operator = (Encoding&& other) noexcept;
 
     public:
-        size_t GetContentKeySize() const;
+        [[nodiscard]] std::size_t GetContentKeySize() const;
 
-        size_t count() const;
+        [[nodiscard]] std::size_t count() const;
 
-        std::optional<tact::data::FileLocation> FindFile(tact::CKey const& ckey) const;
+        [[nodiscard]] std::optional<tact::data::FileLocation> FindFile(tact::CKey const& ckey) const;
 
     private:
         struct Header {
@@ -44,7 +45,7 @@ namespace libtactmon::tact::data {
             uint32_t ContentKeySize = 0;
             uint32_t ESpecBlockSize = 0;
 
-            Header(io::IReadableStream& stream);
+            explicit Header(io::IReadableStream& stream);
         };
 
 
@@ -52,8 +53,8 @@ namespace libtactmon::tact::data {
         struct Page {
             Page() = default;
 
-            Page(io::IReadableStream& stream, Header const& header, size_t pageOffset, size_t pageEnd) {
-                size_t hashSize = T::HashSize(header);
+            Page(io::IReadableStream& stream, Header const& header, std::size_t pageOffset, std::size_t pageEnd) {
+                std::size_t hashSize = T::HashSize(header);
 
                 if constexpr (!Indexed) {
                     stream.SkipRead(hashSize + 0x10);
@@ -63,7 +64,7 @@ namespace libtactmon::tact::data {
                     stream.Read(std::span{ _index.get(), hashSize + 0x10 }, std::endian::little);
                 }
 
-                size_t position = stream.GetReadCursor();
+                std::size_t position = stream.GetReadCursor();
                 stream.SeekRead(pageOffset);
 
                 while (stream.GetReadCursor() < pageEnd) {
@@ -80,13 +81,13 @@ namespace libtactmon::tact::data {
             }
 
             T const& operator [] (size_t index) const { return _entries.at(index); }
-            size_t size() const { return _entries.size(); }
+            [[nodiscard]] std::size_t size() const { return _entries.size(); }
 
         private:
             std::vector<T> _entries;
 
             //! Because I can't be bothered specializing on the boolean.
-            std::conditional_t<Indexed,
+            [[no_unique_address]] std::conditional_t<Indexed,
                 std::unique_ptr<uint8_t[]>,
                 Empty
             > _index;
@@ -99,15 +100,15 @@ namespace libtactmon::tact::data {
 
             CEKeyPageTable& operator = (CEKeyPageTable&& other) noexcept;
 
-            operator bool() const;
+            explicit operator bool() const;
 
-            static size_t HashSize(Header const& header);
+            static std::size_t HashSize(Header const& header);
 
-            size_t keyCount() const { return _keyCount; }
-            size_t fileSize() const { return _fileSize; }
+            [[nodiscard]] std::size_t keyCount() const { return _keyCount; }
+            [[nodiscard]] std::size_t fileSize() const { return _fileSize; }
 
-            tact::EKey ekey(size_t index, Encoding const& owner) const;
-            tact::CKey ckey(Encoding const& owner) const;
+            [[nodiscard]] tact::EKey ekey(size_t index, Encoding const& owner) const;
+            [[nodiscard]] tact::CKey ckey(Encoding const& owner) const;
 
         private:
             friend struct Encoding;
@@ -124,9 +125,9 @@ namespace libtactmon::tact::data {
 
             EKeySpecPageTable& operator = (EKeySpecPageTable&& other) noexcept;
 
-            operator bool() const;
+            explicit operator bool() const;
 
-            static size_t HashSize(Header const& header);
+            static std::size_t HashSize(Header const& header);
 
         private:
             std::vector<uint8_t> _ekey;

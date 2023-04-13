@@ -1,5 +1,7 @@
 #pragma once
 
+#include "libtactmon/detail/Export.hpp"
+
 #include <array>
 #include <cstdint>
 #include <memory>
@@ -13,7 +15,7 @@ namespace libtactmon::tact {
     /**
      * Represents a content key.
      */
-    struct CKey final {
+    struct LIBTACTMON_API CKey final {
         /**
          * Tries to construct an content key from a hex string.
          * 
@@ -41,9 +43,9 @@ namespace libtactmon::tact {
         /**
          * Returns a hex string representation of this content key.
          */
-        std::string ToString() const;
+        [[nodiscard]] std::string ToString() const;
 
-        std::span<uint8_t const> data() const { return std::span<uint8_t const> { _data.get(), _size }; }
+        [[nodiscard]] std::span<uint8_t const> data() const { return std::span<uint8_t const> { _data.get(), _size }; }
 
         friend bool operator == (CKey const& left, CKey const& right) noexcept;
 
@@ -53,6 +55,6 @@ namespace libtactmon::tact {
         }
     private:
         std::unique_ptr<uint8_t[]> _data;
-        size_t _size = 0;
+        std::size_t _size = 0;
     };
 }

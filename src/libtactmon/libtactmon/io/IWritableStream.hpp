@@ -14,7 +14,7 @@ namespace libtactmon::io {
         /**
          * Returns the position of the write cursor within the stream.
          */
-        virtual size_t GetWriteCursor() const = 0;
+        [[nodiscard]] virtual std::size_t GetWriteCursor() const = 0;
 
         /**
          * Sets the position of the write cursor.
@@ -22,14 +22,14 @@ namespace libtactmon::io {
          * @param[in] offset The desired position of the write cursor.
          * @returns The new position of the write cursor.
          */
-        virtual size_t SeekWrite(size_t offset) = 0;
+        virtual std::size_t SeekWrite(std::size_t offset) = 0;
         
         /**
          * Moves the write cursor by a specific offset.
          * 
          * @param[in] offset The amount of bytes by which to shift the write cursor.
          */
-        virtual void SkipWrite(size_t offset) = 0;
+        virtual void SkipWrite(std::size_t offset) = 0;
 
         /**
          * Writes a value to the stream, with the given endianness.
@@ -38,7 +38,7 @@ namespace libtactmon::io {
          * @param[in] endianness The endianness to use. By default, the native endianness is used.
          */
         template <typename T> requires (utility::is_span_v<T> || std::is_trivial_v<T>)
-        size_t Write(T const value, std::endian endianness = std::endian::native) {
+        std::size_t Write(T const value, std::endian endianness = std::endian::native) {
             if constexpr (utility::is_span_v<T>) {
                 return _WriteSpan(std::as_bytes(value), endianness, sizeof(T));
             } else {
@@ -47,12 +47,12 @@ namespace libtactmon::io {
             }
         }
 
-        size_t WriteString(std::string_view value) {
+        std::size_t WriteString(std::string_view value) {
             return Write(std::span { value });
         }
 
-        size_t WriteCString(std::string_view value) {
-            size_t bytesWritten = WriteString(value);
+        std::size_t WriteCString(std::string_view value) {
+            std::size_t bytesWritten = WriteString(value);
             if (bytesWritten == value.length())
                 bytesWritten += Write(uint8_t(0));
             return bytesWritten;
@@ -63,7 +63,7 @@ namespace libtactmon::io {
 
     private:
         template <typename T>
-        size_t _WriteSpan(std::span<const T> valueSpan, std::endian endianness, size_t elementSize) {
+        std::size_t _WriteSpan(std::span<const T> valueSpan, std::endian endianness, std::size_t elementSize) {
             std::span<std::byte> writtenBytes = _WriteImpl(std::as_bytes(valueSpan));
 
             if (endianness != std::endian::native) {

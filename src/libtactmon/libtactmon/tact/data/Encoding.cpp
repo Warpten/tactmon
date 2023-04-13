@@ -71,11 +71,11 @@ namespace libtactmon::tact::data {
         return !_ckey.empty() && !_ekeys.empty();
     }
 
-    /* static */ size_t Encoding::CEKeyPageTable::HashSize(Header const& header) {
+    /* static */ std::size_t Encoding::CEKeyPageTable::HashSize(Header const& header) {
         return header.ContentKeySize;
     }
 
-    tact::EKey Encoding::CEKeyPageTable::ekey(size_t index, Encoding const& owner) const {
+    tact::EKey Encoding::CEKeyPageTable::ekey(std::size_t index, Encoding const& owner) const {
         return tact::EKey { std::span<const uint8_t> { _ekeys.data() + index * owner._header.EncodingKeySize, owner._header.EncodingKeySize } };
     }
     tact::CKey Encoding::CEKeyPageTable::ckey(Encoding const& owner) const {
@@ -106,7 +106,7 @@ namespace libtactmon::tact::data {
     }
 
     Encoding::EKeySpecPageTable::EKeySpecPageTable(io::IReadableStream& stream, Header const& header) {
-        size_t encodingKeySize = HashSize(header);
+        std::size_t encodingKeySize = HashSize(header);
         if (!stream.CanRead(encodingKeySize + 4 + 5))
             return;
 
@@ -117,7 +117,7 @@ namespace libtactmon::tact::data {
         _fileSize = ReadUInt40(stream, std::endian::big);
     }
 
-    /* static */ size_t Encoding::EKeySpecPageTable::HashSize(Header const& header) {
+    /* static */ std::size_t Encoding::EKeySpecPageTable::HashSize(Header const& header) {
         return header.EncodingKeySize;
     }
 
@@ -129,52 +129,51 @@ namespace libtactmon::tact::data {
 
         stream.SkipRead(_header.ESpecBlockSize); // Skip ESpec strings
 
-        size_t pageStart = stream.GetReadCursor() + _header.CEKey.PageCount * (_header.EncodingKeySize + 0x10);
+        std::size_t pageStart = stream.GetReadCursor() + static_cast<std::size_t>(_header.CEKey.PageCount) * (0x10uLL + _header.EncodingKeySize);
 
         _cekeyPages.reserve(_header.CEKey.PageCount);
 
-        for (size_t i = 0; i < _header.CEKey.PageCount; ++i) {
-            size_t pageOffset = pageStart + i * _header.CEKey.PageSize;
-            size_t pageEnd = pageOffset + _header.CEKey.PageSize;
+        for (std::size_t i = 0; i < _header.CEKey.PageCount; ++i) {
+            std::size_t pageOffset = pageStart + i * _header.CEKey.PageSize;
+            std::size_t pageEnd = pageOffset + _header.CEKey.PageSize;
 
             _cekeyPages.emplace_back(stream, _header, pageOffset, pageEnd);
         }
     }
 
     Encoding::Encoding(Encoding&& other) noexcept
-        : _header(std::move(other._header)), _cekeyPages(std::move(other._cekeyPages)), _keySpecPageTables(std::move(other._keySpecPageTables))
+        : _header(other._header), _cekeyPages(std::move(other._cekeyPages)), _keySpecPageTables(std::move(other._keySpecPageTables))
     {
     }
 
     Encoding& Encoding::operator = (Encoding&& other) noexcept {
-        _header = std::move(other._header);
+        _header = other._header;
         _cekeyPages = std::move(other._cekeyPages);
         _keySpecPageTables = std::move(other._keySpecPageTables);
 
         return *this;
     }
 
-    Encoding::~Encoding() {
-    }
+    Encoding::~Encoding() = default;
 
-    size_t Encoding::count() const {
-        size_t value = 0;
+    std::size_t Encoding::count() const {
+        std::size_t value = 0;
         for (const auto & ceKeyPage : _cekeyPages)
             value += ceKeyPage.size();
         return value;
     }
 
-    size_t Encoding::GetContentKeySize() const {
+    std::size_t Encoding::GetContentKeySize() const {
         return _header.ContentKeySize;
     }
 
     std::optional<tact::data::FileLocation> Encoding::FindFile(tact::CKey const& contentKey) const {
         for (Page<CEKeyPageTable> const& page : _cekeyPages) {
-            for (size_t j = 0; j < page.size(); ++j) {
+            for (std::size_t j = 0; j < page.size(); ++j) {
                 auto&& entry = page[j].ckey(*this);
 
                 if (entry == contentKey)
-                    return tact::data::FileLocation { page[j].fileSize(), page[j].keyCount(), std::span<uint8_t> { const_cast<uint8_t*>(page[j]._ekeys.data()), page[j].keyCount() * _header.EncodingKeySize }};
+                    return tact::data::FileLocation { page[j].fileSize(), page[j].keyCount(), std::span { page[j]._ekeys.data(), page[j].keyCount() * _header.EncodingKeySize } };
             }
         }
 

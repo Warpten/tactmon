@@ -19,11 +19,16 @@ namespace libtactmon::crypto {
         };
     }
 
-    template <detail::HashImpl::Creator Creator, size_t Size>
+    template <detail::HashImpl::Creator Creator, std::size_t Size>
     struct Hash final {
-        constexpr static const size_t DigestLength = Size;
+        constexpr static const std::size_t DigestLength = Size;
         using Digest = std::array<uint8_t, Size>;
 
+        /**
+         * Computes the digest of many values.
+         *
+         * This is equivalent to H(A + B + ... + Z)
+         */
         template <typename... Ts>
         static Digest Of(Ts&&... pack) {
             Hash hash{ };
@@ -87,7 +92,7 @@ namespace libtactmon::crypto {
             EVP_DigestUpdate(_context, data.data(), data.size());
         }
 
-        template <size_t N>
+        template <std::size_t N>
         void UpdateData(std::array<uint8_t const, N> data) {
             EVP_DigestUpdate(_context, data.data(), N);
         }

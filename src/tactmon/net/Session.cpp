@@ -73,12 +73,6 @@ namespace net {
     bool Session::ProcessRequest(http::request_parser<http::empty_body> const& request) {
         boost::system::error_code ec;
 
-        std::vector<std::string_view> tokens = libtactmon::detail::Tokenize(std::string_view { request.get().target() }, '/');
-        if (!tokens.empty())
-            tokens.erase(tokens.begin());
-
-        http::response<http::dynamic_body> response;
-
         auto writeError = [this, &response](http::status responseCode, std::string_view body) {
             response.result(responseCode);
             response.set(http::field::content_type, "text/plain");
@@ -86,12 +80,21 @@ namespace net {
 
             beast::ostream(response.body()) << body;
 
-            this->BeginWrite(http::message_generator { std::move(response) });
+            this->BeginWrite(http::message_generator{ std::move(response) });
             return true;
         };
 
+        if (request.get().target().find('\\') != std::string::npos)
+            return writeError(http::status::bad_request, "Don't try to exploit me");
+
+        std::vector<std::string_view> tokens = libtactmon::detail::Tokenize(std::string_view { request.get().target() }, '/', false);
+        if (!tokens.empty())
+            tokens.erase(tokens.begin());
+
+        http::response<http::dynamic_body> response;
+
         if (tokens.size() != 6)
-            return writeError(http::status::not_found, "Malformed request");
+            return writeError(http::status::bad_request, "Malformed request");
 
         FileQueryParams params;
         params.Product = tokens[0];
@@ -147,7 +150,7 @@ namespace net {
             // Call asio::write instead of beast, because we want the data to get out instantly.
             boost::asio::write(_stream.socket(), boost::asio::buffer(data.data(), data.size()));
         }, [&](size_t bytesRead) {
-            // Update remote range header; This will make sure we currectly resume from another CDN if the current one fails.
+            // Update remote range header; This will make sure we currectly resume from another CDN if the inflight one fails.
             params.Offset += bytesRead;
             params.Length -= bytesRead;
         });
@@ -168,7 +171,8 @@ namespace net {
                 continue;
 
             http::response_parser<beast::user::blte_body> remoteResponse;
-            remoteResponse.body_limit({ });
+            remoteResponse.body_limit({ }); // TODO: Use this actually to request chunks of data from Blizzard and do that in fixed intervals
+                                            //       (will maybe reduce overhead on Blizzard's side .... /s)
             remoteResponse.get().body() = parserState;
 
             // Read header from Blizzard CDN now.
@@ -208,61 +212,57 @@ namespace net {
             std::string remotePath = fmt::format("/{}/data/{}/{}/{}", cdn.Path, archiveName.substr(0, 2), archiveName.substr(2, 2), archiveName);
 
             for (std::string_view host : cdn.Hosts) {
-                auto validationTask = std::make_shared<boost::packaged_task<std::optional<result_type>>>([&, remotePath, host]() -> std::optional<result_type>
-                    {
-                        beast::error_code ec;
+                auto validationTask = std::make_shared<boost::packaged_task<std::optional<result_type>>>([&, remotePath, host]() -> std::optional<result_type> {
+                    beast::error_code ec;
 
-                        auto strand = boost::asio::make_strand(workers.executor());
+                    auto strand = boost::asio::make_strand(workers.executor());
 
-                        boost::asio::ip::tcp::resolver resolver(strand);
-                        beast::tcp_stream remoteStream(strand);
-                        remoteStream.connect(resolver.resolve(host, "80"), ec);
-                        if (ec.failed())
-                            return std::nullopt;
-
-                        auto checkExistence = [&](http::verb method) -> bool
-                        {
-                            http::request<http::empty_body> remoteRequest(method, remotePath, 11);
-                            remoteRequest.set(http::field::host, host);
-                            if (length != 0)
-                                remoteRequest.set(http::field::range, fmt::format("{}-{}", offset, offset + length - 1));
-
-                            http::write(remoteStream, remoteRequest, ec);
-                            if (ec.failed())
-                                return false;
-
-                            beast::flat_buffer buffer { 1024 };
-                            http::response_parser<http::dynamic_body> response;
-                            response.body_limit({ });
-                            http::read_header(remoteStream, buffer, response, ec);
-                            if (ec.failed())
-                                return false;
-
-                            switch (response.get().result()) {
-                                case http::status::not_found:
-                                case http::status::range_not_satisfiable:
-                                case http::status::method_not_allowed:
-                                    return false;
-                                default:
-                                    break;
-                            }
-
-                            return true;
-                        };
-
-                        if (checkExistence(http::verb::head) || checkExistence(http::verb::get))
-                            return std::pair { host, remotePath };
-
+                    boost::asio::ip::tcp::resolver resolver(strand);
+                    beast::tcp_stream remoteStream(strand);
+                    remoteStream.connect(resolver.resolve(host, "80"), ec);
+                    if (ec.failed())
                         return std::nullopt;
-                    });
+
+                    auto checkExistence = [&](http::verb method) -> bool
+                    {
+                        http::request<http::empty_body> remoteRequest(method, remotePath, 11);
+                        remoteRequest.set(http::field::host, host);
+                        if (length != 0)
+                            remoteRequest.set(http::field::range, fmt::format("{}-{}", offset, offset + length - 1));
+
+                        http::write(remoteStream, remoteRequest, ec);
+                        if (ec.failed())
+                            return false;
+
+                        beast::flat_buffer buffer { 1024 };
+                        http::response_parser<http::dynamic_body> response;
+                        response.body_limit({ });
+                        http::read_header(remoteStream, buffer, response, ec);
+                        if (ec.failed())
+                            return false;
+
+                        switch (response.get().result()) {
+                            case http::status::not_found:
+                            case http::status::range_not_satisfiable:
+                            case http::status::method_not_allowed:
+                                return false;
+                            default:
+                                break;
+                        }
+
+                        return true;
+                    };
+
+                    if (checkExistence(http::verb::head) || checkExistence(http::verb::get))
+                        return std::pair { host, remotePath };
+
+                    return std::nullopt;
+                });
 
                 archiveFutures.push_back(validationTask->get_future());
 
                 boost::asio::post(workers.pool_executor(), [validationTask]() { (*validationTask)(); });
-                break; // For testing
             }
-
-            break; // For testing
         }
 
         std::unordered_map<std::string_view, std::string> resultSet;
@@ -302,7 +302,6 @@ namespace net {
 
     void Session::HandleWrite(bool keepAlive, beast::error_code ec, std::size_t bytesTransferred) {
         boost::ignore_unused(bytesTransferred);
-
         if (ec.failed())
             return;
 
@@ -313,3 +312,4 @@ namespace net {
             BeginRead();
     }
 }
+

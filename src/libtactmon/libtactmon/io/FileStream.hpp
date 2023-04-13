@@ -8,25 +8,25 @@
 
 namespace libtactmon::io {
     struct FileStream final : IReadableStream {
-        explicit FileStream(std::filesystem::path filePath);
+        explicit FileStream(const std::filesystem::path& filePath);
 
     public: // IStream
-        size_t GetLength() const override;
-        operator bool() const override { return _stream.is_open(); }
+        [[nodiscard]] std::size_t GetLength() const override;
+        explicit operator bool() const override { return _stream.is_open(); }
 
     public: // IReadableStream
-        size_t SeekRead(size_t offset) override;
-        size_t GetReadCursor() const override;
-        void SkipRead(size_t offset) override { _cursor += offset; }
-        bool CanRead(size_t count) const override { return _cursor + count <= _stream.size(); }
+        std::size_t SeekRead(std::size_t offset) override;
+        [[nodiscard]] std::size_t GetReadCursor() const override;
+        void SkipRead(std::size_t offset) override { _cursor += offset; }
+        [[nodiscard]] bool CanRead(std::size_t count) const override { return _cursor + count <= _stream.size(); }
 
-        std::span<std::byte const> Data() const override { return std::span { reinterpret_cast<std::byte const*>(_stream.data() + _cursor), _stream.size() - _cursor }; }
+        [[nodiscard]] std::span<std::byte const> Data() const override { return std::span { reinterpret_cast<std::byte const*>(_stream.data() + _cursor), _stream.size() - _cursor }; }
 
     protected: // IReadableStream
-        size_t _ReadImpl(std::span<std::byte> bytes) override;
+        std::size_t _ReadImpl(std::span<std::byte> bytes) override;
 
     private:
         boost::iostreams::mapped_file_source _stream { };
-        size_t _cursor = 0;
+        std::size_t _cursor = 0;
     };
 }

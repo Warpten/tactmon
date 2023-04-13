@@ -15,12 +15,15 @@ namespace libtactmon::tact {
 }
 
 namespace libtactmon::net {
+    /**
+     * A download task for a file that writes the result to the disk.
+     */
     struct FileDownloadTask final : DownloadTask<boost::beast::http::file_body, io::FileStream> {
         FileDownloadTask(std::string_view resourcePath, tact::Cache& localCache) noexcept
             : DownloadTask(resourcePath), _localCache(localCache)
         { }
 
-        FileDownloadTask(std::string_view resourcePath, size_t offset, size_t length, tact::Cache& localCache) noexcept
+        FileDownloadTask(std::string_view resourcePath, std::size_t offset, std::size_t length, tact::Cache& localCache) noexcept
             : DownloadTask(resourcePath, offset, length), _localCache(localCache)
         { }
 

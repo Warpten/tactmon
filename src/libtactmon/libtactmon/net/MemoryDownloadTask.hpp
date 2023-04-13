@@ -9,6 +9,9 @@
 #include <boost/system/error_code.hpp>
 
 namespace libtactmon::net {
+    /**
+     * A download task that loads a resource to system memory.
+     */
     struct MemoryDownloadTask : DownloadTask<boost::beast::http::dynamic_body, io::GrowableMemoryStream> {
         using DownloadTask::DownloadTask;
 

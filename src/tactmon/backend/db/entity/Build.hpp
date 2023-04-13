@@ -1,9 +1,14 @@
 #ifndef BACKEND_DB_ENTITY_BUILD_HPP__
 #define BACKEND_DB_ENTITY_BUILD_HPP__
 
-#include "backend/db/DSL.hpp"
-#include "backend/db/PreparedStatement.hpp"
-#include "backend/db/Queries.hpp"
+#include "backend/db/orm/Column.hpp"
+#include "backend/db/orm/Entity.hpp"
+#include "backend/db/orm/PreparedStatement.hpp"
+#include "backend/db/orm/Selectors.hpp"
+#include "backend/db/orm/delete/Query.hpp"
+#include "backend/db/orm/insert/Query.hpp"
+#include "backend/db/orm/select/Query.hpp"
+#include "backend/db/orm/Shared.hpp"
 
 #include <cstdint>
 #include <string>
@@ -37,7 +42,7 @@ namespace backend::db::entity::build {
          */
         using Select = db::PreparedStatement<"Builds.Select", db::select::Query<
             Entity,
-            db::From<Entity>
+            Entity
         >>;
 
         /**
@@ -45,11 +50,11 @@ namespace backend::db::entity::build {
          */
         using SelByName = db::PreparedStatement<"Builds.SelByName", db::select::Query<
             Entity,
-            db::From<Entity>,
+            Entity,
             db::Where<
-                db::And<
-                    db::Equals<build_name>,
-                    db::Equals<region>
+                db::Conjunction<
+                    db::Equals<build_name, db::Parameter>,
+                    db::Equals<region, db::Parameter>
                 >
             >
         >>;
@@ -59,9 +64,9 @@ namespace backend::db::entity::build {
          */
         using SelById = db::PreparedStatement<"Builds.SelById", db::select::Query<
             Entity,
-            db::From<Entity>,
+            Entity,
             db::Where<
-                db::Equals<id>
+                db::Equals<id, db::Parameter>
             >
         >>;
 
@@ -70,9 +75,9 @@ namespace backend::db::entity::build {
          */
         using SelByProduct = db::PreparedStatement<"Builds.SelByProduct", db::select::Query<
             dto::BuildName,
-            db::From<Entity>,
+            Entity,
             db::Where<
-                db::Equals<product_name>
+                db::Equals<product_name, db::Parameter>
             >
         >>;
 
@@ -81,21 +86,22 @@ namespace backend::db::entity::build {
          */
         using SelStatistics = db::PreparedStatement<"Builds.SelStatistics", db::select::Query<
             dto::BuildStatistics,
-            db::From<Entity>,
+            Entity,
             db::Where<
-                db::Equals<product_name>
+                db::Equals<product_name, db::Parameter>
             >,
             db::OrderBy<
-                db::OrderByClause<false, id>
+                db::OrderClause<id, false>
             >,
-            db::Limit<1, 0>
+            db::Limit<db::Constant<1>>,
+            db::Offset<db::Constant<0>>
         >>;
         
         using Insert = db::PreparedStatement<"Builds.Insert", db::insert::Query<
             Entity,
-            Returning<Entity>,
-            region, product_name, build_name, build_config, cdn_config, detected_at
-        >>;
+            insert::Value<region>, insert::Value<product_name>, insert::Value<build_name>,
+            insert::Value<build_config>, insert::Value<cdn_config>, insert::Value<detected_at>
+        >::Returning<Entity::projection_type>>;
     }
 }
 

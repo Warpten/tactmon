@@ -10,18 +10,24 @@ namespace libtactmon::detail {
     template <typename CharT, typename Traits = std::char_traits<CharT>>
     std::vector<std::basic_string_view<CharT, Traits>> Tokenize(
         std::basic_string_view<CharT, Traits> input,
-        std::basic_string_view<CharT, Traits> token)
+        std::basic_string_view<CharT, Traits> token,
+        bool removeEmptyTokens)
     {
         std::vector<std::basic_string_view<CharT, Traits>> result;
 
         while (!input.empty()) {
             auto pos = input.find(token);
             if (pos == std::basic_string_view<CharT, Traits>::npos) {
-                result.push_back(input);
+                if (!removeEmptyTokens || !input.empty())
+                    result.push_back(input);
+
                 break;
             }
             else {
-                result.push_back(input.substr(0, pos));
+                auto elem = input.substr(0, pos);
+                if (!removeEmptyTokens || !elem.empty())
+                    result.push_back(elem);
+
                 input.remove_prefix(pos + token.length());
             }
         }
@@ -39,7 +45,7 @@ namespace libtactmon::detail {
 
         while (!input.empty()) {
             std::basic_string_view<CharT, Traits>* selectedToken = nullptr;
-            size_t tokenPosition = std::numeric_limits<size_t>::max();
+            std::size_t tokenPosition = std::numeric_limits<std::size_t>::max();
 
             for (std::basic_string_view<CharT, Traits> token : tokens) {
                 auto pos = input.find(token);
@@ -50,11 +56,14 @@ namespace libtactmon::detail {
             }
 
             if (selectedToken == nullptr) {
-                result.push_back(input);
+                if (!removeEmptyTokens || !input.empty())
+                    result.push_back(input);
+
                 break;
             } else {
                 if (!removeEmptyTokens || tokenPosition > 0)
                     result.push_back(input.substr(0, tokenPosition));
+
                 input.remove_prefix(tokenPosition + selectedToken->length());
             }
         }
@@ -65,18 +74,24 @@ namespace libtactmon::detail {
     template <typename CharT, typename Traits = std::char_traits<CharT>>
     std::vector<std::basic_string_view<CharT, Traits>> Tokenize(
         std::basic_string_view<CharT, Traits> input,
-        CharT token)
+        CharT token,
+        bool removeEmptyTokens)
     {
         std::vector<std::basic_string_view<CharT, Traits>> result;
 
         while (!input.empty()) {
             auto pos = input.find(token);
             if (pos == std::basic_string_view<CharT, Traits>::npos) {
-                result.push_back(input);
+                if (!removeEmptyTokens || !input.empty())
+                    result.push_back(input);
+
                 break;
             }
             else {
-                result.push_back(input.substr(0, pos));
+                std::basic_string_view<CharT, Traits> elem = input.substr(0, pos);
+                if (!removeEmptyTokens || !elem.empty())
+                    result.push_back(elem);
+
                 input.remove_prefix(pos + 1);
             }
         }
@@ -84,7 +99,7 @@ namespace libtactmon::detail {
         return result;
     }
 
-    template <typename CharT, size_t N, typename Traits = std::char_traits<CharT>>
+    template <typename CharT, std::size_t N, typename Traits = std::char_traits<CharT>>
     std::vector<std::basic_string_view<CharT, Traits>> Tokenize(
         std::basic_string_view<CharT, Traits> input,
         std::span<const CharT, N> tokens,
@@ -93,7 +108,7 @@ namespace libtactmon::detail {
         std::vector<std::basic_string_view<CharT, Traits>> result;
 
         while (!input.empty()) {
-            size_t tokenPosition = std::numeric_limits<size_t>::max();
+            std::size_t tokenPosition = std::numeric_limits<std::size_t>::max();
 
             for (CharT token : tokens) {
                 auto pos = input.find(token);
@@ -102,7 +117,7 @@ namespace libtactmon::detail {
                 }
             }
 
-            if (tokenPosition == std::numeric_limits<size_t>::max()) {
+            if (tokenPosition == std::numeric_limits<std::size_t>::max()) {
                 result.push_back(input);
                 break;
             }

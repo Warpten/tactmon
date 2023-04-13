@@ -15,7 +15,7 @@ namespace libtactmon::tact::data::product::wow {
         std::optional<std::span<const std::byte>> data;
     };
 
-    std::optional<Root::Block> ParseBlock(PageInfo const& pageInfo, size_t contentKeySize, bool interleave, bool canSkip) {
+    std::optional<Root::Block> ParseBlock(PageInfo const& pageInfo, std::size_t contentKeySize, bool interleave, bool canSkip) {
         Root::Block block;
         block.Content = pageInfo.contentFlags;
         block.Locales = pageInfo.localeFlags;
@@ -30,7 +30,7 @@ namespace libtactmon::tact::data::product::wow {
         uint32_t fileDataID = -1;
 
         if (interleave) {
-            for (size_t i = 0; i < pageInfo.numRecords; ++i) {
+            for (std::size_t i = 0; i < pageInfo.numRecords; ++i) {
                 fileDataID += utility::to_endianness<std::endian::little>(fileDataIDs[i]) + 1;
 
                 std::span<const uint8_t> hashSpan = stream.Data<uint8_t>().subspan(0, contentKeySize);
@@ -46,7 +46,7 @@ namespace libtactmon::tact::data::product::wow {
             stream.SkipRead(hashSpan.size());
 
             if (!canSkip || (static_cast<uint32_t>(block.Content) & static_cast<uint32_t>(Root::ContentFlags::NoNameHash)) == 0) {
-                for (size_t i = 0; i < pageInfo.numRecords; ++i) {
+                for (std::size_t i = 0; i < pageInfo.numRecords; ++i) {
                     fileDataID += utility::to_endianness<std::endian::little>(fileDataIDs[i]) + 1;
 
                     uint64_t nameHash = stream.Read<uint64_t>(std::endian::little); // Jenkins96 of the file's path
@@ -55,7 +55,7 @@ namespace libtactmon::tact::data::product::wow {
                 }
             }
             else {
-                for (size_t i = 0; i < pageInfo.numRecords; ++i) {
+                for (std::size_t i = 0; i < pageInfo.numRecords; ++i) {
                     fileDataID += utility::to_endianness<std::endian::little>(fileDataIDs[i]) + 1;
                     block.entries.emplace_back(tact::CKey{ hashSpan.subspan(i * contentKeySize, contentKeySize) }, fileDataID, 0);
                 }
@@ -65,7 +65,7 @@ namespace libtactmon::tact::data::product::wow {
         return block;
     }
 
-    /* static */ std::optional<Root> Root::Parse(io::IReadableStream& stream, size_t contentKeySize) {
+    /* static */ std::optional<Root> Root::Parse(io::IReadableStream& stream, std::size_t contentKeySize) {
         if (!stream.CanRead(sizeof(uint32_t)))
             return std::nullopt;
 
@@ -99,7 +99,7 @@ namespace libtactmon::tact::data::product::wow {
             page.contentFlags = static_cast<ContentFlags>(stream.Read<uint32_t>(std::endian::little));
             page.localeFlags = static_cast<LocaleFlags>(stream.Read<uint32_t>(std::endian::little));
 
-            size_t length = sizeof(uint32_t) * page.numRecords; // u32 fileDataID[numRecords]
+            std::size_t length = sizeof(uint32_t) * page.numRecords; // u32 fileDataID[numRecords]
             if (interleave) {
                 length += contentKeySize * page.numRecords; // u8 contentKeys[contentKeySize][numRecords]
                 length += sizeof(uint64_t) * page.numRecords; // u64 nameHash[numRecords]
@@ -168,8 +168,8 @@ namespace libtactmon::tact::data::product::wow {
         return *this;
     }
 
-    size_t Root::size() const {
-        size_t result = 0;
+    std::size_t Root::size() const {
+        std::size_t result = 0;
         for (Block const& block : _blocks)
             result += block.entries.size();
 

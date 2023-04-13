@@ -54,10 +54,6 @@ namespace frontend::commands {
     protected:
         template <typename T>
         static std::optional<T> GetParameter(dpp::slashcommand_t const& evnt, std::string const& name) {
-            // auto topLevelValue = evnt.get_parameter<T>(name);
-            // if (std::holds_alternative<T>(topLevelValue))
-            //     return std::get<T>(topLevelValue);
-            // 
             dpp::command_interaction interaction = evnt.command.get_command_interaction();
             for (dpp::command_data_option const& option : interaction.options) {
                 std::optional<T> childValue = GetParameter<T>(option, name);

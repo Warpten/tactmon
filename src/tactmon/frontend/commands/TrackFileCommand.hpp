@@ -8,7 +8,7 @@ namespace frontend::commands {
 
         bool Matches(dpp::interaction const& evnt) const override;
 
-        dpp::slashcommand GetRegistrationInfo(dpp::cluster& bot) const override;
+        [[nodiscard]] dpp::slashcommand GetRegistrationInfo(dpp::cluster& bot) const override;
 
         void HandleSlashCommand(dpp::slashcommand_t const& evnt, frontend::Discord& cluster) override;
     };

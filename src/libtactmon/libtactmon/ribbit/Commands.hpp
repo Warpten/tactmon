@@ -1,5 +1,7 @@
 #pragma once
 
+#include "libtactmon/detail/ctre.hpp"
+#include "libtactmon/detail/Export.hpp"
 #include "libtactmon/ribbit/Enums.hpp"
 #include "libtactmon/ribbit/types/BGDL.hpp"
 #include "libtactmon/ribbit/types/CDNs.hpp"
@@ -26,8 +28,6 @@
 #include <fmt/format.h>
 
 #include <spdlog/spdlog.h>
-
-#include "libtactmon/detail/ctre.hpp"
 
 namespace libtactmon::ribbit {
     namespace detail {
@@ -75,7 +75,7 @@ namespace libtactmon::ribbit {
             constexpr static const std::string_view Value = "v1";
 
             template <typename C>
-            static auto Parse(std::string_view payload, std::shared_ptr<spdlog::logger> logger)
+            static auto Parse(std::string_view payload, spdlog::logger* logger)
                 -> std::optional<typename C::ValueType>
             {
                 std::vector<std::string_view> messageParts = ParseCore(payload, logger);
@@ -89,14 +89,14 @@ namespace libtactmon::ribbit {
             }
 
         private:
-            static std::vector<std::string_view> ParseCore(std::string_view input, std::shared_ptr<spdlog::logger> logger);
+            static std::vector<std::string_view> ParseCore(std::string_view input, spdlog::logger* logger);
         };
 
         template <> struct VersionTraits<Version::V2> {
             constexpr static const std::string_view Value = "v2";
 
             template <typename C>
-            static auto Parse(std::string_view payload, std::shared_ptr<spdlog::logger> logger)
+            static auto Parse(std::string_view payload, spdlog::logger* logger)
                 -> std::optional<typename C::ValueType>
             {
                 std::vector<std::string_view> messageParts = ParseCore(payload, logger);
@@ -110,7 +110,7 @@ namespace libtactmon::ribbit {
             }
 
         private:
-            static std::vector<std::string_view> ParseCore(std::string_view input, std::shared_ptr<spdlog::logger> logger);
+            static std::vector<std::string_view> ParseCore(std::string_view input, spdlog::logger* logger);
         };
 
         template <Command C, Version V, typename Args> class command_executor_impl;
@@ -120,11 +120,11 @@ namespace libtactmon::ribbit {
             using VersionTraits = detail::VersionTraits<V>;
 
         public:
-            static auto Execute(boost::asio::any_io_executor executor, Region region, Args&&... args) {
-                return Execute(executor, nullptr, region, std::forward<Args&&>(args)...);
+            static auto Execute(boost::asio::any_io_executor executor, Region region, Args... args) {
+                return Execute(executor, nullptr, region, std::forward<Args>(args)...);
             }
 
-            static auto Execute(boost::asio::any_io_executor executor, std::shared_ptr<spdlog::logger> logger, Region region, Args&&... args)
+            static auto Execute(boost::asio::any_io_executor executor, spdlog::logger* logger, Region region, Args... args)
                 -> std::optional<typename CommandTraits::ValueType>
             {
                 namespace asio = boost::asio;
@@ -162,7 +162,7 @@ namespace libtactmon::ribbit {
 
                 { // Read Ribbit response
                     boost::asio::streambuf buf;
-                    size_t bytesTransferred = asio::read(socket, buf, ec);
+                    std::size_t bytesTransferred = asio::read(socket, buf, ec);
                     boost::ignore_unused(bytesTransferred);
                     if (ec && ec != boost::asio::error::eof) {
                         if (logger != nullptr)
@@ -181,7 +181,7 @@ namespace libtactmon::ribbit {
     }
 
     template <Command C, Version V, typename Args = typename detail::CommandTraits<C>::Args>
-    struct CommandExecutor final : detail::command_executor_impl<C, V, Args> { };
+    struct LIBTACTMON_API CommandExecutor final : detail::command_executor_impl<C, V, Args> { };
 
     template <Version V = Version::V1>
     using CDNs = CommandExecutor<Command::ProductCDNs, V>;

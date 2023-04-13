@@ -1,5 +1,6 @@
 #pragma once
 
+#include "libtactmon/detail/Export.hpp"
 #include "libtactmon/tact/CKey.hpp"
 
 #include <cstdint>
@@ -16,37 +17,45 @@ namespace libtactmon::io {
 }
 
 namespace libtactmon::tact::data {
-    struct Install final {
+    struct LIBTACTMON_API Install final {
         static std::optional<Install> Parse(io::IReadableStream& stream);
 
-        struct Tag final {
+        struct LIBTACTMON_API Tag final {
             friend struct Install;
 
-            Tag(io::IReadableStream& stream, size_t bitmaskSize, std::string_view name);
+            Tag(io::IReadableStream& stream, std::size_t bitmaskSize, std::string&& name);
 
             Tag(Tag&& other) noexcept;
             Tag& operator = (Tag&& other) noexcept;
 
-            Tag(Tag const&) = delete;
-            Tag& operator = (Tag const&) = delete;
+            Tag(Tag const&);
+            Tag& operator = (Tag const&);
 
         public:
-            std::string_view name() const { return _name; }
-            uint8_t type() const { return _type; }
+            [[nodiscard]] std::string_view name() const { return _name; }
+            [[nodiscard]] uint8_t type() const { return _type; }
 
-            bool Matches(size_t fileIndex) const;
+            [[nodiscard]] bool Matches(std::size_t fileIndex) const;
 
         private:
-            std::string_view _name;
+            std::string _name;
             uint8_t _type;
 
-            size_t _bitmaskSize;
+            std::size_t _bitmaskSize;
             std::unique_ptr<uint8_t[]> _bitmask;
         };
 
-        size_t size() const { return _entries.size(); }
+        /**
+         * Returns the number of file entries in this manifest.
+         */
+        [[nodiscard]] std::size_t size() const { return _entries.size(); }
 
-        std::optional<tact::CKey> FindFile(std::string_view fileName) const;
+        /**
+         * Returns the content key of a file in this install manifest, or an empty manifest if no information could be found for said file.
+         *
+         * @param[in] fileName The complete path to the file for which the caller expects a content key.
+         */
+        [[nodiscard]] std::optional<tact::CKey> FindFile(std::string_view fileName) const;
 
     private:
         Install();
@@ -54,23 +63,22 @@ namespace libtactmon::tact::data {
         struct Entry {
             friend struct Install;
 
-            Entry(io::IReadableStream& stream, size_t hashSize, std::string const& name);
+            Entry(io::IReadableStream& stream, std::size_t hashSize, std::string const& name);
 
-            std::string_view name() const { return _name; }
+            [[nodiscard]] std::string_view name() const { return _name; }
 
-            tact::CKey const& ckey() const { return _hash; }
+            [[nodiscard]] tact::CKey const& ckey() const { return _hash; }
 
         private:
             std::string _name;
-            size_t _fileSize;
+            std::size_t _fileSize;
             
             tact::CKey _hash;
 
             std::vector<Tag*> _tags;
         };
 
-        std::list<std::string> _tagNames; // Actual storage for tag names
-        std::unordered_map<std::string_view, Tag> _tags;
+        std::vector<Tag> _tags;
 
         std::vector<Entry> _entries;
     };

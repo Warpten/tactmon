@@ -41,7 +41,10 @@ namespace backend {
             // Reinitialize expiry timer if this build is requested
             loadedProduct->expirationTimer = std::chrono::high_resolution_clock::now() + lifetime;
 
-            handler(loadedProduct->product);
+            if (loadedProduct->product.IsLoading())
+                loadedProduct->product.AddListener(handler);
+            else
+                handler(loadedProduct->product);
             return true;
         }
 
@@ -50,10 +53,8 @@ namespace backend {
             return false;
 
         auto itr = _products.insert(_products.end(), std::make_shared<Record>(factoryItr->second(), std::chrono::high_resolution_clock::now() + 15min));
+        (*itr)->product.AddListener(handler);
         bool success = (*itr)->product.Load(configuration);
-
-        if (success)
-            handler((*itr)->product);
 
         return success;
     }

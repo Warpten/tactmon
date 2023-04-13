@@ -3,8 +3,8 @@
 namespace libtactmon::io {
     SpanStream::SpanStream(std::span<const std::byte> data) : _data(data) { }
 
-    size_t SpanStream::_ReadImpl(std::span<std::byte> bytes) {
-        size_t length = std::min(bytes.size(), _data.size() - _cursor);
+    std::size_t SpanStream::_ReadImpl(std::span<std::byte> bytes) {
+        std::size_t length = std::min(bytes.size(), _data.size() - _cursor);
 
         std::copy_n(Data().subspan(length).data(), length, bytes.data());
         _cursor += length;
@@ -15,14 +15,14 @@ namespace libtactmon::io {
         : IReadableStream(), _data(data)
     { }
 
-    size_t MemoryStream::SeekRead(size_t offset) {
+    std::size_t MemoryStream::SeekRead(std::size_t offset) {
         _cursor = std::min(_data.size(), offset);
 
         return _cursor;
     }
 
-    size_t MemoryStream::_ReadImpl(std::span<std::byte> bytes) {
-        size_t length = std::min(bytes.size(), _data.size() - _cursor);
+    std::size_t MemoryStream::_ReadImpl(std::span<std::byte> bytes) {
+        std::size_t length = std::min(bytes.size(), _data.size() - _cursor);
 
         bytes = std::span { reinterpret_cast<std::byte*>(_data.data()) + _cursor, length };
         _cursor += length;
@@ -37,18 +37,18 @@ namespace libtactmon::io {
         : IReadableStream(), IWritableStream(), _data(data.begin(), data.end())
     { }
 
-    size_t GrowableMemoryStream::SeekRead(size_t offset) {
+    std::size_t GrowableMemoryStream::SeekRead(std::size_t offset) {
         return _readCursor = std::min(offset, _data.size());
     }
 
-    size_t GrowableMemoryStream::SeekWrite(size_t offset) {
+    std::size_t GrowableMemoryStream::SeekWrite(std::size_t offset) {
         _writeCursor = offset;
         _data.resize(offset);
         return _writeCursor;
     }
 
-    size_t GrowableMemoryStream::_ReadImpl(std::span<std::byte> bytes) {
-        size_t length = std::min(bytes.size(), _data.size() - _readCursor);
+    std::size_t GrowableMemoryStream::_ReadImpl(std::span<std::byte> bytes) {
+        std::size_t length = std::min(bytes.size(), _data.size() - _readCursor);
 
         std::copy_n(Data().data(), length, bytes.begin());
         _readCursor += length;

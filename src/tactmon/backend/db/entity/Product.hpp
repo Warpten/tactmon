@@ -1,9 +1,15 @@
 #ifndef BACKEND_DB_ENTITY_PRODUCT_HPP__
 #define BACKEND_DB_ENTITY_PRODUCT_HPP__
 
-#include "backend/db/DSL.hpp"
-#include "backend/db/PreparedStatement.hpp"
-#include "backend/db/Queries.hpp"
+#include "backend/db/orm/Column.hpp"
+#include "backend/db/orm/Entity.hpp"
+#include "backend/db/orm/Shared.hpp"
+#include "backend/db/orm/PreparedStatement.hpp"
+#include "backend/db/orm/delete/Query.hpp"
+#include "backend/db/orm/insert/Query.hpp"
+#include "backend/db/orm/select/Query.hpp"
+#include "backend/db/orm/update/Query.hpp"
+#include "backend/db/orm/update/Set.hpp"
 
 #include <cstdint>
 #include <string>
@@ -21,7 +27,7 @@ namespace backend::db::entity::product {
          */
         using Select = db::PreparedStatement<"Products.Select", db::select::Query<
             Entity,
-            db::From<Entity>
+            Entity
         >>;
 
         /**
@@ -29,9 +35,9 @@ namespace backend::db::entity::product {
          */
         using SelByName = db::PreparedStatement<"Products.SelByName", db::select::Query<
             Entity,
-            db::From<Entity>,
+            Entity,
             db::Where<
-                db::Equals<name>
+                db::Equals<name, db::Parameter>
             >
         >>;
 
@@ -40,24 +46,24 @@ namespace backend::db::entity::product {
          */
         using SelById = db::PreparedStatement<"Products.SelById", db::select::Query<
             Entity,
-            db::From<Entity>,
+            Entity,
             db::Where<
-                db::Equals<id>
+                db::Equals<id, db::Parameter>
             >
         >>;
 
         using Insert = db::PreparedStatement<"Products.Insert", db::insert::Query<
             Entity,
-            Ignore,
-            name, sequence_id
+            insert::Value<name>, insert::Value<sequence_id>
         >>;
 
         using Update = db::PreparedStatement<"Products.Update", db::update::Query<
             Entity,
-            db::Where<
-                db::Equals<name>
-            >,
-            sequence_id
+            db::update::Set<
+                db::Equals<sequence_id, db::Parameter>
+            >
+        >::Where<
+            db::Equals<name, db::Parameter>
         >>;
     }
 }

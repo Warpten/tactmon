@@ -3,7 +3,6 @@
 #include "libtactmon/io/IReadableStream.hpp"
 
 #include <charconv>
-#include <functional>
 #include <string_view>
 #include <vector>
 
@@ -13,12 +12,13 @@ namespace libtactmon::tact::config {
     struct ConfigHandler {
         std::string_view Token;
 
-        std::function<bool(BuildConfig&, std::vector<std::string_view>)> Handler;
+        using HandlerType = bool(*)(BuildConfig&, std::vector<std::string_view>);
+        HandlerType Handler;
     };
 
     // Not all properties are modeled here.
     static const ConfigHandler Handlers[] = {
-        { "root", 
+        { "root",
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 2)
                     return false;
@@ -107,14 +107,14 @@ namespace libtactmon::tact::config {
         stream.SeekRead(0);
         
         std::string_view contents { stream.Data<char>().data(), stream.GetLength() };
-        std::vector<std::string_view> lines = detail::Tokenize(contents, '\n');
+        std::vector<std::string_view> lines = detail::Tokenize(contents, '\n', true);
         if (lines.empty())
             return std::nullopt;
 
         BuildConfig config { };
 
         for (std::string_view line : lines) {
-            if (line.empty() || line[0] == '#')
+            if (line[0] == '#')
                 continue;
 
             static const char Separators[] = { ' ', '=' };

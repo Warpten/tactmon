@@ -1,5 +1,6 @@
 #pragma once
 
+#include "libtactmon/detail/Export.hpp"
 #include "libtactmon/io/FileStream.hpp"
 
 #include <filesystem>
@@ -11,14 +12,19 @@ namespace libtactmon::tact {
     /**
      * Represents a portion of the local filesystem that stores copies of files from Blizzard CDNs.
      */
-    struct Cache final {
-        explicit Cache(std::filesystem::path root);
+    struct LIBTACTMON_API Cache final {
+        explicit Cache(const std::filesystem::path& root);
 
         /**
          * Resolves a resource on disk.
+         *
+         * @param[in] resourcePath Relative path to the resource.
+         * @param[in] handler      A Callable that will attempt to parse the resource.
          */
-        template <typename T>
-        std::optional<T> Resolve(std::string_view resourcePath, std::function<std::optional<T>(io::FileStream&)> handler) {
+        template <typename Handler>
+        auto Resolve(std::string_view resourcePath, Handler handler)
+            -> std::invoke_result_t<Handler, io::FileStream&>
+        {
             std::filesystem::path fullResourcePath = GetAbsolutePath(resourcePath);
 
             if (!std::filesystem::is_regular_file(fullResourcePath))
@@ -37,12 +43,12 @@ namespace libtactmon::tact {
         /**
          * Resolves the absolute path to the specific resource. Does not check for the resource's existence!
          */
-        std::filesystem::path GetAbsolutePath(std::string_view relativePath) const;
+        [[nodiscard]] std::filesystem::path GetAbsolutePath(std::string_view relativePath) const;
 
         /**
          * Returns a stream around a file, allowing to write to it. If the file does not exist, it is created before this function returns.
          */
-        io::FileStream OpenWrite(std::string_view relativePath) const;
+        [[nodiscard]] io::FileStream OpenWrite(std::string_view relativePath) const;
 
         /**
          * Deletes a file from the cache.

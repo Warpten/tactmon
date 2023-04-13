@@ -1,9 +1,12 @@
 #ifndef BACKEND_DB_ENTITY_BOUND_CHANNEL_HPP__
 #define BACKEND_DB_ENTITY_BOUND_CHANNEL_HPP__
 
-#include "backend/db/DSL.hpp"
-#include "backend/db/PreparedStatement.hpp"
-#include "backend/db/Queries.hpp"
+#include "backend/db/orm/Entity.hpp"
+#include "backend/db/orm/Shared.hpp"
+#include "backend/db/orm/PreparedStatement.hpp"
+#include "backend/db/orm/delete/Query.hpp"
+#include "backend/db/orm/insert/Query.hpp"
+#include "backend/db/orm/select/Query.hpp"
 
 #include <cstdint>
 #include <string>
@@ -22,21 +25,20 @@ namespace backend::db::entity::bound_channel {
         */
         using Select = db::PreparedStatement<"BoundChannels.Select", db::select::Query<
             Entity,
-            db::From<Entity>
+            Entity
         >>;
 
         using Insert = db::PreparedStatement<"BoundChannels.Insert", db::insert::Query<
             Entity,
-            Ignore,
-            guild_id, channel_id, product_name
+            insert::Value<guild_id>, insert::Value<channel_id>, insert::Value<product_name>
         >>;
 
         using Delete = db::PreparedStatement<"BoundChannels.Delete", db::del::Query<
             Entity,
             db::Where<
-                db::And<
-                    db::Equals<channel_id>,
-                    db::Equals<product_name>
+                db::Conjunction<
+                    db::Equals<channel_id, db::Parameter>,
+                    db::Equals<product_name, db::Parameter>
                 >
             >
         >>;

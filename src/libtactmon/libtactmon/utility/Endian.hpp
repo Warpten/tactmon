@@ -40,7 +40,7 @@ namespace libtactmon::utility {
     constexpr T to_endianness(T value) {
         if constexpr (From == To)
             return value;
-
-        return byteswap(value);
+        else
+            return byteswap(value);
     }
 }

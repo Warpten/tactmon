@@ -1,13 +1,3 @@
-# This file is part of the TrinityCore Project. See AUTHORS file for Copyright information
-#
-# This file is free software; as a special exception the author gives
-# unlimited permission to copy and/or distribute it, with or without
-# modifications, as long as this notice is preserved.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
-# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
 if(WIN32)
   set(BOOST_DEBUG ON)
   if(DEFINED ENV{BOOST_ROOT})
@@ -16,7 +6,10 @@ if(WIN32)
       ${BOOST_ROOT}/lib${PLATFORM}-msvc-14.2 )
   endif()
 
-  set(Boost_USE_STATIC_LIBS        ON)
+  if (NOT BUILD_SHARED_LIBS)
+    set(Boost_USE_STATIC_LIBS        ON)
+  endif ()
+
   set(Boost_USE_MULTITHREADED      ON)
   set(Boost_USE_STATIC_RUNTIME     OFF)
 endif()
