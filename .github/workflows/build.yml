@@ -103,7 +103,6 @@ jobs:
           configurePresetAdditionalArgs: "['-DCMAKE_TOOLCHAIN_FILE=${{ matrix.vcpkg.path }}/scripts/buildsystems/vcpkg.cmake']"
           buildPreset: 'ninja-multiconfiguration-vcpkg'
           buildPresetAdditionalArgs: "['--config Release']"
-        continue-on-error: true
 
       # Extract artifacts and upload to GitHub.
       - name: Archive release artifacts
@@ -113,7 +112,6 @@ jobs:
           path: |
             ${{ github.workspace }}/builds/ninja-multiconfiguration-vcpkg/src/libtactmon/Release
             ${{ github.workspace }}/builds/ninja-multiconfiguration-vcpkg/src/tactmon/Release
-        continue-on-error: true
 
       - name: Upload release asset
         if: github.event_name == 'release' && (github.event.action == 'published' || github.event.action == 'created')

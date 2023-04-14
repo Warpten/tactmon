@@ -1,8 +1,7 @@
 #include "libtactmon/io/FileStream.hpp"
 
 namespace libtactmon::io {
-    FileStream::FileStream(const std::filesystem::path& filePath)
-        : IStream()
+    FileStream::FileStream(const std::filesystem::path& filePath) : IReadableStream()
     {
         try {
             _stream.open(filePath.string());

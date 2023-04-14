@@ -14,7 +14,7 @@ add_library(libtactmon ${PRIVATE_SOURCES})
 
 if (NOT BUILD_SHARED_LIBS)
   target_compile_definitions(libtactmon
-    PRIVATE
+    PUBLIC
       LIBTACTMON_STATIC_BUILD
   )
 endif ()
@@ -29,8 +29,6 @@ target_include_directories(libtactmon
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE
-    # ${CMAKE_SOURCE_DIR}/dep/zlib
-
     ${Boost_INCLUDE_DIR}
 )
 
