@@ -1,17 +1,16 @@
 #include "libtactmon/crypto/Jenkins.hpp"
 #include "libtactmon/crypto/lookup3.hpp"
 
-#include <algorithm>
-
 namespace libtactmon::crypto {
     uint32_t JenkinsHash(std::string_view path) {
         std::string normalizedPath { path };
-        std::transform(normalizedPath.begin(), normalizedPath.end(), normalizedPath.begin(), [](char c) {
-            if (c >= 'a' && c <= 'z')
-                return static_cast<char>(c + 'A' - 'a');
-            return c;
-        });
-        std::replace(normalizedPath.begin(), normalizedPath.end(), '/', '\\');
+
+        for (std::string::value_type& c : normalizedPath) {
+            if (c == '/')
+                c = '\\';
+            else if (c >= 'a' && c <= 'z')
+                c += 'A' - 'a';
+        }
 
         uint32_t pc = 0;
         uint32_t pb = 0;
