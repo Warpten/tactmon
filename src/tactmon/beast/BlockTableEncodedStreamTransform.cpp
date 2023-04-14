@@ -4,6 +4,8 @@
 
 #include <zlib.h>
 
+#include <libtactmon/utility/Endian.hpp>
+
 namespace boost::beast::user {
     BlockTableEncodedStreamTransform::BlockTableEncodedStreamTransform(OutputHandler handler, InputFeedback feedback) 
         : _handler(handler), _feedback(feedback), _ms()
@@ -29,7 +31,7 @@ namespace boost::beast::user {
                     _headerSize = _ms.Read<uint32_t>(std::endian::big);
 
                     _engine.UpdateData(signature);
-                    _engine.UpdateData(utility::byteswap(_headerSize));
+                    _engine.UpdateData(libtactmon::utility::byteswap(_headerSize));
 
                     _step = Step::ChunkHeaders;
                     break;
@@ -40,7 +42,7 @@ namespace boost::beast::user {
                         return size;
 
                     uint32_t flagsChunkCount = _ms.Read<uint32_t>(std::endian::big);
-                    _engine.UpdateData(utility::byteswap(flagsChunkCount));
+                    _engine.UpdateData(libtactmon::utility::byteswap(flagsChunkCount));
 
                     uint8_t flags = (flagsChunkCount & 0xFF000000) >> 24;
                     uint32_t chunkCount = flagsChunkCount & 0x00FFFFFF;
@@ -56,13 +58,13 @@ namespace boost::beast::user {
                         _chunks[i].decompressedSize = _ms.Read<uint32_t>(std::endian::big);
                         _ms.Read(_chunks[i].checksum, std::endian::little);
 
-                        _engine.UpdateData(utility::byteswap(_chunks[i].compressedSize));
-                        _engine.UpdateData(utility::byteswap(_chunks[i].decompressedSize));
+                        _engine.UpdateData(libtactmon::utility::byteswap(_chunks[i].compressedSize));
+                        _engine.UpdateData(libtactmon::utility::byteswap(_chunks[i].decompressedSize));
                         _engine.UpdateData(_chunks[i].checksum);
                     }
 
                     _engine.Finalize();
-                    crypto::MD5::Digest engineDigest = _engine.GetDigest();
+                    libtactmon::crypto::MD5::Digest engineDigest = _engine.GetDigest();
 
                     // Validate header checksum against EKey
 
@@ -79,8 +81,8 @@ namespace boost::beast::user {
                         return size;
 
                     // Compute chunk MD5 and validate
-                    crypto::MD5::Digest chunkDigest = [&]() {
-                        crypto::MD5 chunkEngine;
+                    libtactmon::crypto::MD5::Digest chunkDigest = [&]() {
+                        libtactmon::crypto::MD5 chunkEngine;
                         chunkEngine.UpdateData(_ms.Data().subspan(0, chunkInfo.compressedSize));
                         chunkEngine.Finalize();
 
@@ -88,7 +90,7 @@ namespace boost::beast::user {
                     }();
 
                     // Validate chunkDigest against checksum
-                    if (chunkDigest != chunkInfo[i].checksum) {
+                    if (chunkDigest != chunkInfo.checksum) {
                         ec = boost::beast::http::error::body_limit;
                         return size;
                     }

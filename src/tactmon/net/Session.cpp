@@ -72,6 +72,7 @@ namespace net {
 
     bool Session::ProcessRequest(http::request_parser<http::empty_body> const& request) {
         boost::system::error_code ec;
+        http::response<http::dynamic_body> response;
 
         auto writeError = [this, &response](http::status responseCode, std::string_view body) {
             response.result(responseCode);
@@ -90,8 +91,6 @@ namespace net {
         std::vector<std::string_view> tokens = libtactmon::detail::Tokenize(std::string_view { request.get().target() }, '/', false);
         if (!tokens.empty())
             tokens.erase(tokens.begin());
-
-        http::response<http::dynamic_body> response;
 
         if (tokens.size() != 6)
             return writeError(http::status::bad_request, "Malformed request");

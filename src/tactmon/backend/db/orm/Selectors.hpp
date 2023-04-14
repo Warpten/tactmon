@@ -77,7 +77,7 @@ namespace backend::db {
      * @tparam COMPONENT A component that will be aliased to a name.
      */
     template <utility::Literal TOKEN, typename COMPONENT>
-    struct Alias final {
+    struct Alias {
         using parameter_types = typename COMPONENT::parameter_types;
         using value_type = typename COMPONENT::value_type;
 

@@ -132,7 +132,7 @@ namespace frontend {
             return;
 
         // std::vector<dpp::slashcommand> commands;
-        for (std::shared_ptr<commands::ICommand> command : _commands) {
+        for (auto&& command : _commands) {
             dpp::slashcommand registrationInfo = command->GetRegistrationInfo(bot);
             auto [needsUpdate, hash, newVersion] = RequiresSynchronization(registrationInfo);
             if (needsUpdate) {
@@ -163,7 +163,7 @@ namespace frontend {
         try {
             evnt.thinking(false);
 
-            for (std::shared_ptr<frontend::commands::ICommand> command : _commands)
+            for (auto&& command : _commands)
                 if (command->OnSlashCommand(evnt, *this))
                     return;
 
@@ -183,7 +183,7 @@ namespace frontend {
 
     void Discord::HandleAutoCompleteEvent(dpp::autocomplete_t const& evnt) {
         try {
-            for (std::shared_ptr<frontend::commands::ICommand> command : _commands) {
+            for (auto&& command : _commands) {
                 if (command->OnAutoComplete(evnt, *this))
                     return;
             }
@@ -197,7 +197,7 @@ namespace frontend {
 
     void Discord::HandleSelectClickEvent(dpp::select_click_t const& evnt) {
         try {
-            for (std::shared_ptr<frontend::commands::ICommand> command : _commands) {
+            for (auto&& command : _commands) {
                 if (command->OnSelectClick(evnt, *this))
                     return;
             }
