@@ -154,7 +154,7 @@ namespace net {
             params.Length -= bytesRead;
         });
 
-        for (auto [cdn, remotePath] : availableRemoteArchives) {
+        for (auto& [cdn, remotePath] : availableRemoteArchives) {
             beast::tcp_stream remoteStream { _stream.get_executor() };
             remoteStream.connect(resolver.resolve(cdn, "80"), ec);
             if (ec.failed())
@@ -293,7 +293,7 @@ namespace net {
             _outgoingQueue.erase(_outgoingQueue.begin());
 
             bool keepAlive = msg.keep_alive();
-            beast::async_write(_stream, std::move(msg), std::bind(&Session::HandleWrite, this->shared_from_this(), keepAlive, std::placeholders::_1, std::placeholders::_2));
+            beast::async_write(_stream, std::move(msg), std::bind_front(&Session::HandleWrite, this->shared_from_this(), keepAlive));
         }
 
         return wasFull;

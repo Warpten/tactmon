@@ -29,7 +29,7 @@ namespace libtactmon::utility {
     void unhex(std::string_view input, std::span<uint8_t> data) {
         DEBUG_ASSERT(input.size() == data.size() * 2u, "Unable to dehex string; check allocation");
 
-        static const uint_fast8_t LOOKUP[] = {
+        static const uint_fast8_t LOOKUP[256] = {
             /*  0 */ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             /*  8 */ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             /* 16 */ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -46,13 +46,8 @@ namespace libtactmon::utility {
         };
 
         for (std::size_t i = 0; i < input.size(); i += 2) {
-            DEBUG_ASSERT((input[i] >= 'a' && input[i] <= 'f') || (input[i] >= '0' && input[i] <= '9') || (input[i] >= 'A' && input[i] <= 'F'), "Nibble not in range");
-
             uint8_t loPart = static_cast<uint8_t>(input[i + 1]);
             uint8_t hiPart = static_cast<uint8_t>(input[i]);
-
-            DEBUG_ASSERT(loPart <= 103, "Non hex input");
-            DEBUG_ASSERT(hiPart <= 103, "Non hex input");
 
             data[i / 2] = LOOKUP[loPart] | (LOOKUP[hiPart] << 4);
         }

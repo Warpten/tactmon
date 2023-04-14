@@ -19,9 +19,14 @@
 # endif
 #endif // TACTMON_NO_UNIQUE_ADDRESS
 
-#ifdef __clang__
+// This file abuses out-of-order initializers to avoid having to reorder parameters when constructing a tuple from existing values
+// We therefore disable this warning on Clang.
+#if defined(__clang__)
 # pragma clang diagnostic push
 # pragma clang diagnostic ignored "-Wreorder-ctor"
+#elif defined(__GNUC__) || defined(__GNUG__)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wreorder"
 #endif
 
 namespace utility {
@@ -58,7 +63,7 @@ namespace utility {
 
         template <std::size_t I, typename T> struct indexed { };
 
-        // Plug alignment_of with std::alignment_of and overload indexed<I, T> specialization
+        // Plug alignment_of with std::alignment_of and overload indexed<I, T> specialization (explicitely specializing std::alignment_of is UB)
         template <typename T> struct alignment_of {
             constexpr static const std::size_t value = std::alignment_of<T>::value;
         };
@@ -123,9 +128,11 @@ namespace utility {
             template <std::size_t O, std::size_t I, typename T>
             constexpr static auto select_leaf_back(tuple_leaf<O, I, T>) -> tuple_leaf<O, I, T>;
 
+            // Storage leaf for the front-facing index I.
             template <std::size_t I>
             using leaf_for_front = decltype(select_leaf_front<I>(std::declval<tuple_storage>()));
 
+            // Storage leaf for the back-facing index I.
             template <std::size_t I>
             using leaf_for_back = decltype(select_leaf_back<I>(std::declval<tuple_storage>()));
         public:
@@ -212,6 +219,11 @@ namespace utility {
 
     template <typename... Ts> tuple<Ts&&...> forward_as_tuple(Ts&&... args) noexcept;
 
+    /**
+     * The tuple itself.
+     *
+     * This is <b>not</b> a drop-in replacement for `std::tuple`. Almost all of the constructors and assignment operators are missing.
+     */
     template <typename... Ts>
     class tuple final : private detail::make_tuple_storage<Ts...> {
         using storage_t = detail::make_tuple_storage<Ts...>;
@@ -220,6 +232,13 @@ namespace utility {
         template <typename T> friend struct detail::select_base_impl_t;
 
     public:
+        //! This technically allows an user to do whatever the fuck they want!
+        //! Given tuple<int, int, float>, this is fine:
+        //! tuple<int, int, float> foo { 1, 2.0f, 3 }
+        //! What is actually the order of these values?
+        //! If you're trying to fix this, the real reason this happens is in the constructor
+        //! overload of storage_t.
+        //! Maybe just drop Us... and use Ts... ?
         template <typename... Us>
         explicit constexpr tuple(Us&&... args)
             : storage_t(std::index_sequence_for<Us...> { }, std::forward<Us>(args)...)
@@ -387,8 +406,10 @@ namespace utility {
     }
 }
 
-#ifdef __clang__
+#if defined(__clang__)
 # pragma clang diagnostic pop
+#elif defined(__GNUC__) || defined(__GNUG__)
+# pragma GCC diagnostic pop
 #endif
 
 #undef TACTMON_NO_UNIQUE_ADDRESS

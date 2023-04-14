@@ -5,8 +5,6 @@
 
 namespace libtactmon::tact {
     bool EKey::TryParse(std::string_view value, EKey& target) {
-        // TODO: assert that the input target is empty
-
         target._size = value.size() / 2;
         target._data = std::make_unique<uint8_t[]>(target._size);
 

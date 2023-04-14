@@ -45,7 +45,7 @@ namespace libtactmon::ribbit::detail {
 
         // Found a MIME boundary, split the body
         std::string boundaryDelimiter = fmt::format("--{}\r\n", *mimeBoundary);
-        return libtactmon::detail::Tokenize(input, std::string_view{boundaryDelimiter}, true);
+        return libtactmon::detail::Tokenize(input, std::string_view { boundaryDelimiter }, true);
     }
 
     /* static */ std::vector<std::string_view> VersionTraits<Version::V2>::ParseCore(std::string_view input, spdlog::logger* logger) {

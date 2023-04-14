@@ -8,7 +8,7 @@ namespace libtactmon::tact::data {
         : _archiveName(hash), _keySizeBytes(0)
     {
         std::vector<uint8_t> hashBytes(hash.size() / 2u, 0x00);
-        libtactmon::utility::unhex(hash, std::span{ hashBytes });
+        libtactmon::utility::unhex(hash, std::span { hashBytes });
 
         std::size_t checksumSize = 0x10;
         while (checksumSize > 0) {
