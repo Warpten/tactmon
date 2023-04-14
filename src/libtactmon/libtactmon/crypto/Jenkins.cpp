@@ -1,6 +1,8 @@
 #include "libtactmon/crypto/Jenkins.hpp"
 #include "libtactmon/crypto/lookup3.hpp"
 
+#include <string>
+
 namespace libtactmon::crypto {
     uint32_t JenkinsHash(std::string_view path) {
         std::string normalizedPath { path };
