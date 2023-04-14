@@ -1,8 +1,7 @@
 #include "libtactmon/tact/EKey.hpp"
+#include "libtactmon/utility/Hex.hpp"
 
 #include <utility>
-
-#include <boost/algorithm/hex.hpp>
 
 namespace libtactmon::tact {
     bool EKey::TryParse(std::string_view value, EKey& target) {
@@ -11,14 +10,7 @@ namespace libtactmon::tact {
         target._size = value.size() / 2;
         target._data = std::make_unique<uint8_t[]>(target._size);
 
-        auto itr = boost::algorithm::unhex(value.begin(), value.end(), target._data.get());
-        if (itr != target._data.get() + target._size) {
-            target._size = 0;
-            target._data.release();
-
-            return false;
-        }
-
+        libtactmon::utility::unhex(value, std::span<uint8_t> { target._data.get(), target._size });
         return true;
     }
 

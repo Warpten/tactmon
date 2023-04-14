@@ -1,9 +1,9 @@
 #include "libtactmon/tact/detail/Key.hpp"
+#include "libtactmon/utility/Hex.hpp"
 
 #include <algorithm>
 #include <utility>
 
-#include <boost/algorithm/hex.hpp>
 #include <boost/algorithm/string.hpp>
 
 namespace libtactmon::tact::detail {
@@ -26,17 +26,7 @@ namespace libtactmon::tact::detail {
     }
 
     std::string Key::ToString() const {
-        std::string value;
-        value.reserve(_size * 2u);
-
-        boost::algorithm::hex(_data.get(), _data.get() + _size, std::back_inserter(value));
-        std::transform(value.begin(), value.end(), value.begin(), [](char c) {
-            if (c >= 'a' && c <= 'f')
-                return static_cast<char>(c + 'A' - 'a');
-            return c;
-        });
-
-        return value;
+        return libtactmon::utility::hex(std::span<const uint8_t> { _data.get(), _size });
     }
 
     Key& Key::operator = (Key&& other) noexcept {

@@ -4,6 +4,8 @@
 #include <concepts>
 #include <cstdint>
 #include <span>
+#include <string>
+#include <string_view>
 #include <type_traits>
 #include <vector>
 

@@ -7,6 +7,8 @@
 
 #include <fmt/format.h>
 
+#include <libtactmon/utility/Hex.hpp>
+
 namespace net {
     namespace asio = boost::asio;
     namespace beast = boost::beast;
@@ -32,9 +34,7 @@ namespace net {
     }
 
     std::string Server::GenerateAdress(std::string_view product, std::span<const uint8_t> location, std::string_view fileName, size_t decompressedSize) const {
-        std::string hexstr;
-        boost::algorithm::hex(location.data(), location.data() + location.size(), std::back_inserter(hexstr));
-        boost::algorithm::to_lower(hexstr);
+        std::string hexstr = libtactmon::utility::hex(location);
 
         return fmt::format("{}/{}/{}/{}/{}/{}/{}", _documentRoot,
             product,

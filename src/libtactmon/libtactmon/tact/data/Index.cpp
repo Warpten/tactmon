@@ -1,15 +1,14 @@
-#include "libtactmon/tact/data/Index.hpp"
-#include "libtactmon/io/IReadableStream.hpp"
 #include "libtactmon/crypto/Hash.hpp"
-
-#include <boost/algorithm/hex.hpp>
+#include "libtactmon/io/IReadableStream.hpp"
+#include "libtactmon/tact/data/Index.hpp"
+#include "libtactmon/utility/Hex.hpp"
 
 namespace libtactmon::tact::data {
     Index::Index(std::string_view hash, io::IReadableStream& stream)
         : _archiveName(hash), _keySizeBytes(0)
     {
-        std::vector<uint8_t> hashBytes;
-        boost::algorithm::unhex(hash.begin(), hash.end(), std::back_inserter(hashBytes));
+        std::vector<uint8_t> hashBytes(hash.size() / 2u, 0x00);
+        libtactmon::utility::unhex(hash, std::span{ hashBytes });
 
         std::size_t checksumSize = 0x10;
         while (checksumSize > 0) {
