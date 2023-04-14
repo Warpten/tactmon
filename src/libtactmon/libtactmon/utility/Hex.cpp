@@ -10,7 +10,11 @@ namespace libtactmon::utility {
             uint8_t loPart = data[i] & 0xF;
             uint8_t hiPart = data[i] >> 4;
 
-            static const char alphabet[] = "0123456789abcdef";
+            static const char alphabet[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+
+            DEBUG_ASSERT(loPart <= 0xF, "Non hex input");
+            DEBUG_ASSERT(hiPart <= 0xF, "Non hex input");
+
             output[i * 2] = alphabet[hiPart];
             output[i * 2 + 1] = alphabet[loPart];
         }
@@ -46,6 +50,9 @@ namespace libtactmon::utility {
 
             uint8_t loPart = static_cast<uint8_t>(input[i + 1]);
             uint8_t hiPart = static_cast<uint8_t>(input[i]);
+
+            DEBUG_ASSERT(loPart <= 103, "Non hex input");
+            DEBUG_ASSERT(hiPart <= 103, "Non hex input");
 
             data[i / 2] = LOOKUP[loPart] | (LOOKUP[hiPart] << 4);
         }
