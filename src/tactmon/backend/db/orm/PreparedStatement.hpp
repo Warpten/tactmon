@@ -34,9 +34,9 @@ namespace backend::db {
 
         public:
             /**
-             * Executes this statement, binding the provided parameters.
+             * Executes this statement with the provided parameters.
              *
-             * @param connection The connection on which to execute the query.
+             * @param pool       A connection pool from which a connection will be rented from to execute this statement.
              * @param ...args    Bound parameters for the query.
              *
              * @returns A single record if exactly one is returned by the query; an empty optional otherwise.
@@ -49,9 +49,9 @@ namespace backend::db {
             }
 
             /**
-             * Executes this statement, binding the provided parameters.
+             * Executes this statement with the provided parameters.
              *
-             * @param connection The connection on which to execute the query.
+             * @param pool    A connection pool from which a connection will be rented from to execute this statement.
              * @param ...args Bound parameters for the query.
              * 
              * @returns A collection of elements as read from the database.
@@ -64,7 +64,7 @@ namespace backend::db {
             }
 
             /**
-             * Executes this statement, binding the provided parameters.
+             * Executes this statement with the provided parameters.
              *
              * @param work    A transactional unit of work within which the query will be executed.
              * @param ...args Bound parameters for the query.
@@ -93,7 +93,7 @@ namespace backend::db {
             }
 
             /**
-             * Executes this statement, binding the provided parameters.
+             * Executes this statement with the provided parameters.
              *
              * @param work    A transactional unit of work within which the query will be executed.
              * @param ...args Bound parameters for the query.

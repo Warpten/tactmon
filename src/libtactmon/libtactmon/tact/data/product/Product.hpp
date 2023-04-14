@@ -129,7 +129,6 @@ namespace libtactmon::tact::data::product {
         [[nodiscard]] std::optional<tact::data::ArchiveFileLocation> FindArchive(tact::EKey const& ekey) const;
 
     private:
-        boost::asio::any_io_executor _executor;
         std::string _productName;
 
     private:

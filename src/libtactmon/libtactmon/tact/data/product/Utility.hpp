@@ -23,7 +23,7 @@ namespace libtactmon::tact::data::product {
      */
     struct ResourceResolver {
         ResourceResolver(boost::asio::any_io_executor executor, tact::Cache& localCache)
-            : _executor(executor), _localCache(localCache)
+            : _executor(std::move(executor)), _localCache(localCache)
         { }
 
         /**
@@ -92,8 +92,10 @@ namespace libtactmon::tact::data::product {
             return std::nullopt;
         }
 
-    private:
+    protected:
         boost::asio::any_io_executor _executor;
+
+    public:
         tact::Cache& _localCache;
     };
 }

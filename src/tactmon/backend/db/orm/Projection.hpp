@@ -70,10 +70,7 @@ namespace backend::db {
             return detail::VariadicRenderable<", ", COLUMNS...>::render_to(ss, p);
         }
 
-    public:
-        /**
-        * Provides structured-binding access to this projection.
-        */
+    public: // Element accessors.
         template <std::size_t I> requires (I < sizeof...(COLUMNS))
         auto&& get() const {
             return utility::get<I>(_columns.columns_).value_;

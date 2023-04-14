@@ -3,6 +3,11 @@
 #include <fmt/format.h>
 
 namespace backend {
+
+    Connection::Connection(Pool& pool, pqxx::connection connection) : _pool(pool), _connection(std::move(connection))
+    {
+    }
+
     Pool::Pool(std::string_view username, std::string_view password, std::string_view host, uint64_t port, std::string_view name) {
         std::string connectionString = fmt::format("user={} password={} host={} port={} dbname={} target_session_attrs=read-write",
             username, password, host, port, name);

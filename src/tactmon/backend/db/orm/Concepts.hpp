@@ -22,7 +22,7 @@ namespace backend::db::concepts {
     namespace detail {
         template <typename T> struct IsTuple : std::false_type { };
         template <typename... Ts> struct IsTuple<utility::tuple<Ts...>> : std::true_type { };
-        template <> struct IsTuple<utility::tuple<>> : std::false_type { };
+        template <> struct IsTuple<utility::tuple<>> : std::true_type { };
     }
 
     template <typename T>

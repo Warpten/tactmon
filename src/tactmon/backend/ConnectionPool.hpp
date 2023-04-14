@@ -17,7 +17,7 @@ namespace backend {
     class Connection final {
         friend struct Pool;
 
-        Connection(Pool& pool, pqxx::connection connection) : _pool(pool), _connection(std::move(connection)) { }
+        Connection(Pool& pool, pqxx::connection connection);
         
     public:
         ~Connection();

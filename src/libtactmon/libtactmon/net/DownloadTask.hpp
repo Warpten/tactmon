@@ -69,7 +69,7 @@ namespace libtactmon::net {
          *
          * @returns An optional containing the parsed response or an empty optional if an error occured.
          */
-        std::optional<R> Run(boost::asio::any_io_executor executor,
+        std::optional<R> Run(boost::asio::any_io_executor const& executor,
             std::string_view host,
             spdlog::logger* logger = nullptr)
         {
