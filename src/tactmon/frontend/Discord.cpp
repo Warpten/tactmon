@@ -19,7 +19,6 @@
 
 #include <spdlog/spdlog.h>
 
-#include <boost/algorithm/string.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/range/adaptor/filtered.hpp>
 #include <utility>

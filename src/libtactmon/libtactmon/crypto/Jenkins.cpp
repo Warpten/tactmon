@@ -1,12 +1,16 @@
 #include "libtactmon/crypto/Jenkins.hpp"
 #include "libtactmon/crypto/lookup3.hpp"
 
-#include <boost/algorithm/string/case_conv.hpp>
+#include <algorithm>
 
 namespace libtactmon::crypto {
     uint32_t JenkinsHash(std::string_view path) {
-        std::string normalizedPath{ path };
-        boost::algorithm::to_upper(normalizedPath);
+        std::string normalizedPath { path };
+        std::transform(normalizedPath.begin(), normalizedPath.end(), normalizedPath.begin(), [](char c) {
+            if (c >= 'a' && c <= 'z')
+                return static_cast<char>(c + 'A' - 'a');
+            return c;
+        });
         std::replace(normalizedPath.begin(), normalizedPath.end(), '/', '\\');
 
         uint32_t pc = 0;

@@ -1,5 +1,6 @@
 #include "libtactmon/tact/detail/Key.hpp"
 
+#include <algorithm>
 #include <utility>
 
 #include <boost/algorithm/hex.hpp>
@@ -29,7 +30,11 @@ namespace libtactmon::tact::detail {
         value.reserve(_size * 2u);
 
         boost::algorithm::hex(_data.get(), _data.get() + _size, std::back_inserter(value));
-        boost::algorithm::to_lower(value);
+        std::transform(value.begin(), value.end(), value.begin(), [](char c) {
+            if (c >= 'a' && c <= 'f')
+                return static_cast<char>(c + 'A' - 'a');
+            return c;
+        });
 
         return value;
     }

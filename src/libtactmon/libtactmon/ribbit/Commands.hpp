@@ -14,8 +14,6 @@
 #include <sstream>
 #include <string_view>
 
-#include <boost/algorithm/string.hpp>
-#include <boost/algorithm/string_regex.hpp>
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/buffers_iterator.hpp>
@@ -142,7 +140,7 @@ namespace libtactmon::ribbit {
                 if (logger != nullptr)
                     logger->info("Loading {}:{}/{}.", host, 1119, command);
 
-                tcp::resolver r{ executor };
+                tcp::resolver r { executor };
                 asio::connect(socket, r.resolve(host, "1119"), ec);
 
                 if (ec) {

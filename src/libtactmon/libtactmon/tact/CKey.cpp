@@ -3,7 +3,6 @@
 #include <utility>
 
 #include <boost/algorithm/hex.hpp>
-#include <boost/algorithm/string.hpp>
 
 namespace libtactmon::tact {
     bool CKey::TryParse(std::string_view value, CKey& target) {

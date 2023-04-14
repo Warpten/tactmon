@@ -1,3 +1,4 @@
+#include "libtactmon/detail/Tokenizer.hpp"
 #include "libtactmon/ribbit/types/CDNs.hpp"
 #include "libtactmon/ribbit/Commands.hpp"
 
@@ -6,8 +7,7 @@
 
 namespace libtactmon::ribbit::types::cdns {
     std::optional<Record> Record::Parse(std::string_view input) {
-        std::vector<std::string> tokens;
-        boost::split(tokens, input, boost::is_any_of("|"), boost::token_compress_off);
+        std::vector<std::string_view> tokens = libtactmon::detail::Tokenize(input, '|', false);
         if (tokens.size() != 5)
             return std::nullopt;
 
