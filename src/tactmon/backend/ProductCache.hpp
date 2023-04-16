@@ -53,7 +53,7 @@ namespace backend {
         /**
          * Returns the amount of loaded products.
          */
-        size_t size() const { return _products.size(); }
+        [[nodiscard]] std::size_t size() const { return _products.size(); }
 
         bool IsAwareOf(std::string const& productName) const;
 

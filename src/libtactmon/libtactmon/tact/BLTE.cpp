@@ -12,11 +12,11 @@
 #include <spdlog/spdlog.h>
 
 struct ChunkHeader {
-    uint32_t CompressedSize;
-    uint32_t DecompressedSize;
+    std::size_t CompressedSize = 0;
+    std::size_t DecompressedSize = 0;
     std::array<uint8_t, 16> Checksum;
 
-    std::size_t Offset; // Calculated
+    std::size_t Offset = 0; // Calculated
 };
 
 namespace libtactmon::tact {

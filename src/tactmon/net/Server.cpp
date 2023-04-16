@@ -13,7 +13,7 @@ namespace net {
     namespace asio = boost::asio;
     namespace beast = boost::beast;
 
-    Server::Server(asio::ip::tcp::endpoint endpoint, size_t acceptorThreads, std::string const& documentRoot) noexcept
+    Server::Server(asio::ip::tcp::endpoint endpoint, std::size_t acceptorThreads, std::string const& documentRoot) noexcept
         : _service(acceptorThreads), _acceptor(boost::asio::make_strand(_service)), _threadPool(acceptorThreads), _threadCount(acceptorThreads),
         _guard(boost::asio::make_work_guard(_service)), _documentRoot(documentRoot)
     {
@@ -33,7 +33,7 @@ namespace net {
 
     }
 
-    std::string Server::GenerateAdress(std::string_view product, std::span<const uint8_t> location, std::string_view fileName, size_t decompressedSize) const {
+    std::string Server::GenerateAdress(std::string_view product, std::span<const uint8_t> location, std::string_view fileName, std::size_t decompressedSize) const {
         std::string hexstr = libtactmon::utility::hex(location);
 
         return fmt::format("{}/{}/{}/{}/{}/{}/{}", _documentRoot,
@@ -42,7 +42,7 @@ namespace net {
             fileName);
     }
 
-    std::string Server::GenerateAdress(std::string_view product, libtactmon::tact::data::ArchiveFileLocation const& location, std::string_view fileName, size_t decompressedSize) const {
+    std::string Server::GenerateAdress(std::string_view product, libtactmon::tact::data::ArchiveFileLocation const& location, std::string_view fileName, std::size_t decompressedSize) const {
         return fmt::format("{}/{}/{}/{}/{}/{}/{}", _documentRoot,
             product,
             location.name(), location.offset(), location.fileSize(), decompressedSize,
@@ -52,7 +52,7 @@ namespace net {
     void Server::Run() {
         asio::dispatch(_acceptor.get_executor(), std::bind_front(&Server::BeginAccept, this->shared_from_this()));
 
-        for (size_t i = 0; i < _threadCount; ++i)
+        for (std::size_t i = 0; i < _threadCount; ++i)
             asio::post(_threadPool, std::bind(&Server::RunThread, this->shared_from_this()));
     }
 

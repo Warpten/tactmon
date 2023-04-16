@@ -16,8 +16,6 @@ namespace libtactmon::io {
 }
 
 namespace libtactmon::tact::data {
-    struct Empty { };
-
     struct LIBTACTMON_API Encoding final {
         explicit Encoding(io::IReadableStream& stream);
         Encoding(Encoding&& other) noexcept;
@@ -34,6 +32,8 @@ namespace libtactmon::tact::data {
         [[nodiscard]] std::optional<tact::data::FileLocation> FindFile(tact::CKey const& ckey) const;
 
     private:
+        struct Empty { };
+
         struct Header {
             uint16_t Signature = 0;
             uint8_t Version = 0;
@@ -80,7 +80,7 @@ namespace libtactmon::tact::data {
                 stream.SeekRead(position);
             }
 
-            [[nodiscard]] T const& operator [] (size_t index) const { return _entries.at(index); }
+            [[nodiscard]] T const& operator [] (std::size_t index) const { return _entries.at(index); }
             [[nodiscard]] std::size_t size() const { return _entries.size(); }
 
         private:
@@ -93,21 +93,20 @@ namespace libtactmon::tact::data {
             > _index;
         };
 
-
         struct CEKeyPageTable final {
             CEKeyPageTable(io::IReadableStream& stream, Header const& header);
             CEKeyPageTable(CEKeyPageTable&& other) noexcept;
 
             CEKeyPageTable& operator = (CEKeyPageTable&& other) noexcept;
 
-            explicit operator bool() const;
+            [[nodiscard]] explicit operator bool() const;
 
-            static std::size_t HashSize(Header const& header);
+            [[nodiscard]] static std::size_t HashSize(Header const& header);
 
             [[nodiscard]] std::size_t keyCount() const { return _keyCount; }
             [[nodiscard]] std::size_t fileSize() const { return _fileSize; }
 
-            [[nodiscard]] tact::EKey ekey(size_t index, Encoding const& owner) const;
+            [[nodiscard]] tact::EKey ekey(std::size_t index, Encoding const& owner) const;
             [[nodiscard]] tact::CKey ckey(Encoding const& owner) const;
 
         private:
@@ -125,9 +124,9 @@ namespace libtactmon::tact::data {
 
             EKeySpecPageTable& operator = (EKeySpecPageTable&& other) noexcept;
 
-            explicit operator bool() const;
+            [[nodiscard]] explicit operator bool() const;
 
-            static std::size_t HashSize(Header const& header);
+            [[nodiscard]] static std::size_t HashSize(Header const& header);
 
         private:
             std::vector<uint8_t> _ekey;

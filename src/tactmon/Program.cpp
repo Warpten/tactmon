@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
 void Execute(boost::program_options::variables_map vm) {
     // 1. General application context.
     utility::ThreadPool threadPool { vm["thread-count"].as<uint16_t>() };
-    for (size_t i = 0; i < threadPool.size(); ++i)
+    for (std::size_t i = 0; i < threadPool.size(); ++i)
         threadPool.PostWork([](boost::asio::io_context& service) { service.run(); });
 
     // 2. Setup interrupts handler, enqueue infinite work.
@@ -132,7 +132,7 @@ void Execute(boost::program_options::variables_map vm) {
 
     // 5. Initialize HTTP proxy.
     std::shared_ptr<net::Server> proxyServer = [&]() -> std::shared_ptr<net::Server> {
-        size_t threadCount = vm["http-thread-count"].as<uint16_t>();
+        std::size_t threadCount = vm["http-thread-count"].as<uint16_t>();
         if (threadCount == 0)
             return nullptr;
 

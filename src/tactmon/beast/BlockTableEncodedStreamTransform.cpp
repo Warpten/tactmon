@@ -11,7 +11,7 @@ namespace boost::beast::user {
         : _handler(handler), _feedback(feedback), _ms()
     { }
 
-    std::size_t BlockTableEncodedStreamTransform::Parse(uint8_t const* data, size_t size, boost::beast::error_code& ec) {
+    std::size_t BlockTableEncodedStreamTransform::Parse(uint8_t const* data, std::size_t size, boost::beast::error_code& ec) {
         _ms.Write(std::span { data, size });
         _feedback(size);
 
@@ -53,7 +53,7 @@ namespace boost::beast::user {
 
                     _chunks.resize(chunkCount);
 
-                    for (size_t i = 0; i < chunkCount; ++i) {
+                    for (std::size_t i = 0; i < chunkCount; ++i) {
                         _chunks[i].compressedSize = _ms.Read<uint32_t>(std::endian::big) - 1;
                         _chunks[i].decompressedSize = _ms.Read<uint32_t>(std::endian::big);
                         _ms.Read(_chunks[i].checksum, std::endian::little);
@@ -146,7 +146,7 @@ namespace boost::beast::user {
                         {
                             // Nested BLTE stream
                             // Forward the output handler, but ignore the input feedback, since it's already handled by the block content parser.
-                            BlockTableEncodedStreamTransform nestedReader { _handler, [](size_t) { } };
+                            BlockTableEncodedStreamTransform nestedReader { _handler, [](std::size_t) { } };
                             nestedReader.Parse(_ms.Data<uint8_t>().data(), chunkInfo.compressedSize, ec);
                             _ms.SkipRead(chunkInfo.compressedSize);
                             break;

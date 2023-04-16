@@ -95,13 +95,13 @@ namespace frontend::commands {
                 return;
             }
             std::string_view fileNameComponent = [&]() {
-                size_t separatorPos = file.find_last_of("/\\");
+                std::size_t separatorPos = file.find_last_of("/\\");
                 if (separatorPos != std::string::npos)
                     return std::string_view{ file }.substr(separatorPos + 1);
                 return std::string_view{ file };
             }();
 
-            for (size_t i = 0; i < fileLocation->keyCount(); ++i) {
+            for (std::size_t i = 0; i < fileLocation->keyCount(); ++i) {
                 std::optional<libtactmon::tact::data::ArchiveFileLocation> indexLocation = productHandler->FindArchive((*fileLocation)[i]);
                 if (!indexLocation.has_value())
                     continue;

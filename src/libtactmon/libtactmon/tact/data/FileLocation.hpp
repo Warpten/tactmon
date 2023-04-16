@@ -28,7 +28,7 @@ namespace libtactmon::tact::data {
         /**
          * Returns one of the encoding keys for the associated file.
          */
-        EKey operator [] (std::size_t index) const;
+        [[nodiscard]] EKey operator [] (std::size_t index) const;
 
     private:
         std::size_t _fileSize;

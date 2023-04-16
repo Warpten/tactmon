@@ -12,7 +12,7 @@ namespace utility {
 
         std::string ToString() const { return Value; }
 
-        constexpr static const size_t Size = N;
+        constexpr static const std::size_t Size = N;
         char Value[N];
     };
 

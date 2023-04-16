@@ -23,7 +23,7 @@ namespace backend::db::detail {
         }
 
     private:
-        template <std::size_t I, size_t PARAMETER>
+        template <std::size_t I, std::size_t PARAMETER>
         static auto render_(std::ostream& strm, std::integral_constant<std::size_t, PARAMETER> p) {
             if constexpr (I >= sizeof...(COMPONENTS))
                 return p;

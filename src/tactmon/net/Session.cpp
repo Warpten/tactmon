@@ -25,7 +25,7 @@ namespace http = beast::http;
 
 namespace net {
     // Maximum number of messages in queue
-    constexpr static const size_t QueueLimit = 8;
+    constexpr static const std::size_t QueueLimit = 8;
 
     Session::Session(boost::asio::ip::tcp::socket&& socket) noexcept : _stream(std::move(socket)) {
         _outgoingQueue.reserve(QueueLimit);
@@ -148,7 +148,7 @@ namespace net {
         auto parserState = std::make_shared<beast::user::BlockTableEncodedStreamTransform>([&](std::span<uint8_t const> data) {
             // Call asio::write instead of beast, because we want the data to get out instantly.
             boost::asio::write(_stream.socket(), boost::asio::buffer(data.data(), data.size()));
-        }, [&](size_t bytesRead) {
+        }, [&](std::size_t bytesRead) {
             // Update remote range header; This will make sure we currectly resume from another CDN if the inflight one fails.
             params.Offset += bytesRead;
             params.Length -= bytesRead;
@@ -200,7 +200,7 @@ namespace net {
         return false;
     }
 
-    std::unordered_map<std::string_view, std::string> Session::CollectAvailableCDNs(libtactmon::ribbit::types::CDNs& cdns, std::string_view archiveName, size_t offset, size_t length) {
+    std::unordered_map<std::string_view, std::string> Session::CollectAvailableCDNs(libtactmon::ribbit::types::CDNs& cdns, std::string_view archiveName, std::size_t offset, std::size_t length) {
         utility::ThreadPool workers{ 4 };
 
         using result_type = std::pair<std::string_view, std::string>;

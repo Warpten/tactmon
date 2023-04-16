@@ -105,7 +105,7 @@ namespace frontend::commands {
             if (optionValue.empty())
                 return false;
 
-            size_t suggestionCount = 0;
+            std::size_t suggestionCount = 0;
             dpp::interaction_response interactionResponse{ dpp::ir_autocomplete_reply };
             cluster.db.products.WithValues([&interactionResponse, &suggestionCount, &optionValue](auto entries) {
                 for (entity::product::Entity const& entry : entries) {
@@ -174,7 +174,7 @@ namespace frontend::commands {
 
             std::optional<std::string> productFilter = context.get<std::string>("product");
 
-            size_t suggestionCount = 0;
+            std::size_t suggestionCount = 0;
             dpp::interaction_response interactionResponse{ dpp::ir_autocomplete_reply };
             cluster.db.trackedFiles.WithValues([&](auto entries) {
                 for (tracked_file::Entity const& entry : entries) {

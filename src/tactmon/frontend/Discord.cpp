@@ -31,7 +31,7 @@ namespace frontend {
     namespace build = entity::build;
     namespace command_state = entity::command_state;
 
-    Discord::Discord(size_t threadCount, std::string const& token,
+    Discord::Discord(std::size_t threadCount, std::string const& token,
         backend::ProductCache& productManager, backend::Database& database, std::shared_ptr<net::Server> proxyServer)
         : _threadPool(threadCount), httpServer(std::move(proxyServer)), productManager(productManager), db(database), bot(token)
     {
@@ -64,8 +64,8 @@ namespace frontend {
         bot.shutdown();
     }
 
-    /* static */ size_t Discord::Hash(dpp::slashcommand const& command) {
-        size_t hash = 0;
+    /* static */ std::size_t Discord::Hash(dpp::slashcommand const& command) {
+        std::size_t hash = 0;
         boost::hash_combine(hash, command.name);
         boost::hash_combine(hash, command.description);
         auto hashOption = [&hash](dpp::command_option const& opt, auto self) -> void {
@@ -85,11 +85,11 @@ namespace frontend {
         return hash;
     }
 
-    std::tuple<bool, size_t, uint32_t> Discord::RequiresSynchronization(dpp::slashcommand const& command) const {
+    std::tuple<bool, std::size_t, uint32_t> Discord::RequiresSynchronization(dpp::slashcommand const& command) const {
         std::optional<command_state::Entity> databaseRecord = db.commandStates.FindCommand(command.name);
 
         // Compute the command's unversioned hash.
-        size_t baseHash = Hash(command);
+        std::size_t baseHash = Hash(command);
 
         // If the command doesn't have a record, it's a new one; always update and publish to Discord's backend.
         if (!databaseRecord.has_value())
@@ -98,7 +98,7 @@ namespace frontend {
         // Retrieve the command version and append it to the hash function.
         uint32_t commandVersion = db::get<command_state::version>(databaseRecord.value());
 
-        size_t versionedHash = baseHash;
+        std::size_t versionedHash = baseHash;
         boost::hash_combine(versionedHash, commandVersion);
 
         // And finally return relevant information.

@@ -113,7 +113,7 @@ namespace backend::db {
 // Structured bindings requirement
 template <utility::Literal NAME, utility::Literal SCHEMA, typename... COMPONENTS>
 struct std::tuple_size<backend::db::Entity<NAME, SCHEMA, COMPONENTS...>> {
-    constexpr static const size_t value = sizeof...(COMPONENTS);
+    constexpr static const std::size_t value = sizeof...(COMPONENTS);
 };
 
 template <std::size_t I, utility::Literal NAME, utility::Literal SCHEMA, typename... COMPONENTS>

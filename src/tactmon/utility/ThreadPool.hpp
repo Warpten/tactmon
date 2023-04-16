@@ -11,7 +11,7 @@
 
 namespace utility {
     struct ThreadPool final {
-        explicit ThreadPool(size_t threadCount) noexcept : _size(threadCount), _service(threadCount), _pool(threadCount), _guard(boost::asio::make_work_guard(_service)) {
+        explicit ThreadPool(std::size_t threadCount) noexcept : _size(threadCount), _service(threadCount), _pool(threadCount), _guard(boost::asio::make_work_guard(_service)) {
         }
 
         void PostWork(std::function<void(boost::asio::io_context&, boost::asio::executor_work_guard<boost::asio::io_context::executor_type> const&)> work) {
@@ -24,7 +24,7 @@ namespace utility {
             });
         }
 
-        size_t size() const { return _size; }
+        [[nodiscard]] std::size_t size() const { return _size; }
 
         void Interrupt() {
             _guard.reset();
@@ -57,7 +57,7 @@ namespace utility {
         boost::asio::any_io_executor pool_executor() { return _pool.get_executor(); }
 
     private:
-        size_t _size;
+        std::size_t _size;
         boost::asio::io_context _service;
         boost::asio::thread_pool _pool;
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type> _guard;

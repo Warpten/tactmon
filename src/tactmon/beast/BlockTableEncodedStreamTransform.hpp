@@ -15,7 +15,7 @@
 namespace boost::beast::user {
     struct BlockTableEncodedStreamTransform final : std::enable_shared_from_this<BlockTableEncodedStreamTransform> {
         using OutputHandler = std::function<void(std::span<const uint8_t>)>;
-        using InputFeedback = std::function<void(size_t)>;
+        using InputFeedback = std::function<void(std::size_t)>;
 
         BlockTableEncodedStreamTransform(BlockTableEncodedStreamTransform const&) = delete;
         BlockTableEncodedStreamTransform(BlockTableEncodedStreamTransform&&) noexcept = delete;
@@ -24,7 +24,7 @@ namespace boost::beast::user {
 
         BlockTableEncodedStreamTransform(OutputHandler handler, InputFeedback feedback);
 
-        std::size_t Parse(uint8_t const* data, size_t size, boost::beast::error_code& ec);
+        std::size_t Parse(uint8_t const* data, std::size_t size, boost::beast::error_code& ec);
 
     private:
         enum Step : uint32_t {

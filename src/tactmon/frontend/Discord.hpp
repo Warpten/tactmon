@@ -23,7 +23,7 @@ namespace frontend {
     struct Discord final {
         friend struct commands::ICommand;
 
-        Discord(size_t threadCount, std::string const& token,
+        Discord(std::size_t threadCount, std::string const& token,
             backend::ProductCache& manager, backend::Database& database, std::shared_ptr<net::Server> proxyServer);
         ~Discord();
 
@@ -46,7 +46,7 @@ namespace frontend {
         void HandleAutoCompleteEvent(dpp::autocomplete_t const& evnt);
 
     private:
-        static size_t Hash(dpp::slashcommand const& command) ;
+        static std::size_t Hash(dpp::slashcommand const& command) ;
 
         /**
          * Returns a tuple describing if and how a command should be resynchronized with Discord.
@@ -56,7 +56,7 @@ namespace frontend {
          *          [1] The command's new versioned hash.
          *          [2] The command's new version.
          */
-        std::tuple<bool, size_t, uint32_t> RequiresSynchronization(dpp::slashcommand const& command) const;
+        std::tuple<bool, std::size_t, uint32_t> RequiresSynchronization(dpp::slashcommand const& command) const;
 
         template <typename T>
         void RunAsync(T&& value) {

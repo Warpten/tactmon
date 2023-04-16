@@ -28,13 +28,13 @@ namespace net {
         std::size_t _threadCount;
 
     public:
-        Server(boost::asio::ip::tcp::endpoint endpoint, size_t acceptorThreads, std::string const& documentRoot) noexcept;
+        Server(boost::asio::ip::tcp::endpoint endpoint, std::size_t acceptorThreads, std::string const& documentRoot) noexcept;
         void Run();
 
         void Stop();
 
-        std::string GenerateAdress(std::string_view product, std::span<const uint8_t> location, std::string_view fileName, size_t decompressedSize) const;
-        std::string GenerateAdress(std::string_view product, libtactmon::tact::data::ArchiveFileLocation const& location, std::string_view fileName, size_t decompressedSize) const;
+        std::string GenerateAdress(std::string_view product, std::span<const uint8_t> location, std::string_view fileName, std::size_t decompressedSize) const;
+        std::string GenerateAdress(std::string_view product, libtactmon::tact::data::ArchiveFileLocation const& location, std::string_view fileName, std::size_t decompressedSize) const;
 
     private:
         void RunThread();
