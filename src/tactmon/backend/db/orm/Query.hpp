@@ -2,8 +2,9 @@
 
 #include <algorithm>
 #include <array>
-#include <string>
 #include <sstream>
+#include <string>
+#include <string_view>
 #include <utility>
 
 #include "backend/db/orm/Concepts.hpp"
@@ -11,6 +12,10 @@
 namespace backend::db {
     template <typename T>
     struct IQuery {
+        using parameter_types = typename T::parameter_types;
+        using transaction_type = typename T::transaction_type;
+        using result_type = typename T::result_type;
+
         static std::string render() {
             // static_assert(concepts::StreamRenderable<T>);
 
@@ -19,15 +24,8 @@ namespace backend::db {
             return ss.str();
         }
 
-        constexpr static auto make_query_string() {
-            std::string input = "";
-            auto [query, offset] = T::render_to_v2(input, std::integral_constant<std::size_t, 1> { });
-            std::array<char, query.size() + 1> arr;
-            std::copy_n(query.data(), query.size(), arr.data());
-            arr[query.size()] = 0;
-            return arr;
+        static std::string ToString() {
+            return T::render_to_v2("", std::integral_constant<std::size_t, 1> { }).first;
         }
-
-        constexpr static const auto QueryString = make_query_string();
     };
 }
