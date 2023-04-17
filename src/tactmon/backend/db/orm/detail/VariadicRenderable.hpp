@@ -22,7 +22,28 @@ namespace backend::db::detail {
             return render_<0>(stream, p);
         }
 
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return render_v2_<0>(prev, p);
+        }
+
     private:
+        template <std::size_t I, std::size_t PARAMETER>
+        constexpr static auto render_v2_(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            if constexpr (I >= sizeof...(COMPONENTS))
+                return std::make_pair(prev, p);
+            else if constexpr (I > 0) {
+                return std::apply([](std::string const str, auto u) {
+                    return render_v2_<I + 1>(str, u);
+                }, utility::tuple_element_t<I, utility::tuple<COMPONENTS...>>::render_to_v2(prev + TOKEN.Value, p));
+            }
+            else {
+                return std::apply([](std::string const str, auto u) {
+                    return render_v2_<I + 1>(str, u);
+                }, utility::tuple_element_t<I, utility::tuple<COMPONENTS...>>::render_to_v2(prev, p));
+            }
+        }
+        
         template <std::size_t I, std::size_t PARAMETER>
         static auto render_(std::ostream& strm, std::integral_constant<std::size_t, PARAMETER> p) {
             if constexpr (I >= sizeof...(COMPONENTS))

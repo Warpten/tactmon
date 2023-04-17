@@ -26,6 +26,16 @@ namespace backend::db::select {
             template <std::size_t I>
             static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>);
 
+            template <std::size_t I>
+            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
+                auto [next, u] = P::render_to_v2(prev + "SELECT ", p);
+                auto [next2, u2] = E::render_to_v2(next + " FROM ", u);
+                if constexpr (sizeof...(CS) > 0)
+                    return db::detail::VariadicRenderable<" ", CS...>::render_to_v2(next2 + ' ', u2);
+                else
+                    return db::detail::VariadicRenderable<" ", CS...>::render_to_v2(next2, u2);
+            }
+
         public:
             using parameter_types = decltype(utility::tuple_cat(
                 std::declval<typename P::parameter_types>(),
@@ -49,6 +59,13 @@ namespace backend::db::select {
 
                 template <std::size_t I>
                 static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>);
+
+
+                template <std::size_t I>
+                constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
+                    auto [next, u] = db::detail::VariadicRenderable<", ", ES...>::render_to_v2(prev + "WITH ", p);
+                    return QueryImpl<R, P, E, CS...>::render_to_v2(next + ' ', u);
+                }
 
             public:
                 using parameter_types = decltype(utility::tuple_cat(

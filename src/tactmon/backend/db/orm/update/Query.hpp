@@ -20,6 +20,12 @@ namespace backend::db::update {
         template <std::size_t I>
         static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>);
 
+        template <std::size_t I>
+        static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
+            auto [next, u] = ENTITY::render_to_v2(prev + "UPDATE ", p);
+            return SET::render_to_v2(next + ' ', u);
+        }
+
     public:
         using parameter_types = typename ENTITY::parameter_types;
         using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
@@ -34,6 +40,12 @@ namespace backend::db::update {
                 auto queryOffset = Query<ENTITY, SET>::render_to(ss, std::integral_constant<std::size_t, 1> { });
                 ss << " WHERE ";
                 return CRITERIA::render_to(ss, queryOffset);
+            }
+
+            template <std::size_t I>
+            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
+                auto [next, u] = Query<ENTITY, SET>::render_to(prev, p);
+                return CRITERIA::render_to_v2(next + " WHERE ", u);
             }
 
         public:

@@ -20,6 +20,18 @@ namespace backend::db::select {
 
         template <std::size_t I>
         static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>);
+
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            if constexpr (RECURSIVE) {
+                auto [next, u] = QUERY::render_to_v2(prev + "RECURSIVE " + ALIAS.Value + " AS (", p);
+                return std::make_pair(next + ")", u);
+            }
+            else {
+                auto [next, u] = QUERY::render_to_v2(prev + ALIAS.Value + " AS (", p);
+                return std::make_pair(next + ")", u);
+            }
+        }
     };
 
     template <utility::Literal ALIAS, bool RECURSIVE, typename QUERY>

@@ -26,6 +26,11 @@ namespace backend::db::insert {
             ss << "ON CONSTRAINT " << NAME.Value;
             return p;
         }
+
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return std::make_pair(prev + "ON CONSTRAINT " + NAME.Value, p);
+        }
     };
 
     using Excluded = db::Raw<utility::Literal { "EXCLUDED" }>;
@@ -37,6 +42,28 @@ namespace backend::db::insert {
 
         using parameter_types = typename parameter_type::parameter_types;
     };
+
+    namespace detail {
+        template <std::size_t I, typename C>
+        auto render_conflict_clause(std::ostream& ss, std::integral_constant<std::size_t, I> p, C) {
+            return C::render_to(ss, p);
+        }
+
+        template <std::size_t I, utility::Literal N>
+        auto render_conflict_clause(std::ostream& ss, std::integral_constant<std::size_t, I> p, OnConstraint<N>) {
+            return OnConstraint<N>::render_to(ss, p);
+        }
+
+        template <std::size_t I, typename C>
+        auto render_conflict_clause_v2(std::string prev, std::integral_constant<std::size_t, I> p, C) {
+            return C::render_to_v2(prev, p);
+        }
+
+        template <std::size_t I, utility::Literal N>
+        auto render_conflict_clause_v2(std::string prev, std::integral_constant<std::size_t, I> p, OnConstraint<N>) {
+            return OnConstraint<N>::render_to_v2(prev, p);
+        }
+    }
 
     /**
      * An INSERT query.
@@ -53,11 +80,19 @@ namespace backend::db::insert {
             ss << "INSERT INTO ";
             auto projectionOffset = ENTITY::render_to(ss, p);
             ss << " (";
-            auto componentsOffset = detail::VariadicRenderable<", ", typename COLUMNS::column_type...>::render_to(ss, projectionOffset);
+            auto componentsOffset = db::detail::VariadicRenderable<", ", typename COLUMNS::column_type...>::render_to(ss, projectionOffset);
             ss << ") VALUES (";
-            auto valueOffset = detail::VariadicRenderable<", ", typename COLUMNS::parameter_type...>::render_to(ss, componentsOffset);
+            auto valueOffset = db::detail::VariadicRenderable<", ", typename COLUMNS::parameter_type...>::render_to(ss, componentsOffset);
             ss << ')';
             return valueOffset;
+        }
+
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            auto [next, u] = ENTITY::render_to_v2(prev + "INSERT INTO ", p);
+            auto [next2, u2] = db::detail::VariadicRenderable<", ", typename COLUMNS::column_type...>::render_to_v2(next + " (", u);
+            auto [next3, u3] = db::detail::VariadicRenderable<", ", typename COLUMNS::parameter_type...>::render_to_v2(next2 + ") VALUES (", u2);
+            return std::make_pair(next3 + ')', u3);
         }
 
     public:
@@ -69,10 +104,10 @@ namespace backend::db::insert {
         using result_type = ENTITY;
 
         template <typename PROJECTION>
-        friend struct Returning;
+        friend class Returning;
 
-        template <typename COMPONENT>
-        friend struct OnConflict;
+        template <typename, typename>
+        friend class OnConflict;
 
         template <typename PROJECTION>
         class Returning : public IQuery<Returning<PROJECTION>> {
@@ -83,6 +118,12 @@ namespace backend::db::insert {
                 auto queryOffset = Query<ENTITY, COLUMNS...>::render_to(ss, p);
                 ss << " RETURNING ";
                 return PROJECTION::render_to(ss, queryOffset);
+            }
+
+            template <std::size_t PARAMETER>
+            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                auto [next, u] = Query<ENTITY, COLUMNS...>::render_to_v2(prev, p);
+                return PROJECTION::render_to_v2(next + " RETURNING ", u);
             }
 
         public:
@@ -105,7 +146,20 @@ namespace backend::db::insert {
             friend struct IQuery<OnConflict<CONFLICTING, COMPONENT>>;
 
             template <std::size_t I>
-            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p);
+            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
+                auto queryOffset = Query<ENTITY, COLUMNS...>::render_to(ss, p);
+                ss << " ON CONFLICT (";
+                auto clauseOffset = CONFLICTING::render_to(ss, queryOffset);
+                ss << ") DO ";
+                return detail::render_conflict_clause(ss, clauseOffset, COMPONENT{ });
+            }
+
+            template <std::size_t PARAMETER>
+            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                auto [next, u] = Query<ENTITY, COLUMNS...>::render_to_v2(prev, p);
+                auto [next2, u2] = CONFLICTING::render_to_v2(next + " ON CONFLICT (", u);
+                return detail::render_conflict_clause_v2(next2 + ") DO ", u2, COMPONENT{ });
+            }
 
         public:
             using parameter_types = decltype(utility::tuple_cat(
@@ -125,6 +179,11 @@ namespace backend::db::insert {
                     return COMPONENT::render_to(ss, baseOffset);
                 }
 
+                template <std::size_t PARAMETER>
+                constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                    auto [next, u] = OnConflict<CONFLICTING, COMPONENT>::render_to_v2(prev, p);
+                    return COMPONENT::render_to_v2(next + " RETURNING ", u);
+                }
             public:
                 using parameter_types = decltype(utility::tuple_cat(
                     std::declval<typename ENTITY::parameter_types>(),
@@ -157,13 +216,21 @@ namespace backend::db::insert {
         template <std::size_t P>
         static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, P> p) {
             ss << "UPDATE SET ";
-            return detail::VariadicRenderable<
+            return db::detail::VariadicRenderable<
                 ", ",
                 Equals<
                     COMPONENTS, // typename COMPONENTS::template BindToProjection<ENTITY>,
                     typename COMPONENTS::template BindToProjection<Excluded>
                 >...
             >::render_to(ss, p);
+        }
+
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return db::detail::VariadicRenderable<", ", Equals<
+                COMPONENTS,
+                typename COMPONENTS::template BindToProjection<Excluded>
+            >...>::render_to_v2(prev + "UPDATE SET ", p);
         }
     };
 
@@ -177,6 +244,11 @@ namespace backend::db::insert {
         static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>) {
             ss << "NOTHING";
         }
+
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return std::make_pair(prev + "NOTHING", p);
+        }
     };
 
     /**
@@ -189,26 +261,4 @@ namespace backend::db::insert {
     template <typename ENTITY, typename... COLUMNS>
     using Replace = typename Query<ENTITY, COLUMNS...>::template OnConflict<UpdateFromExcluded<ENTITY, typename COLUMNS::column_type...>>;
 
-    namespace detail {
-        template <std::size_t I, typename C>
-        auto render_conflict_clause(std::ostream& ss, std::integral_constant<std::size_t, I> p, C) {
-            return C::render_to(ss, p);
-        }
-
-        template <std::size_t I, utility::Literal N>
-        auto render_conflict_clause(std::ostream& ss, std::integral_constant<std::size_t, I> p, OnConstraint<N>) {
-            return OnConstraint<N>::render_to(ss, p);
-        }
-    }
-
-    template <typename ENTITY, typename... COLUMNS>
-    template <typename CONFLICTING, typename COMPONENT>
-    template <std::size_t I>
-    /* static */ auto Query<ENTITY, COLUMNS...>::OnConflict<CONFLICTING, COMPONENT>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
-        auto queryOffset = Query<ENTITY, COLUMNS...>::render_to(ss, p);
-        ss << " ON CONFLICT (";
-        auto clauseOffset = CONFLICTING::render_to(ss, queryOffset);
-        ss << ") DO ";
-        return detail::render_conflict_clause(ss, clauseOffset, COMPONENT{ });
-    }
 }

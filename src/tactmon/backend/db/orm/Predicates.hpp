@@ -30,6 +30,12 @@ namespace backend::db {
                 ss << TOKEN.Value;
                 return bound_parameter_type::render_to(ss, componentOffset);
             }
+
+            template <std::size_t PARAMETER>
+            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                auto [next, u] = COMPONENT::render_to_v2(prev, p);
+                return bound_parameter_type::render_to_v2(next + TOKEN.Value, u);
+            }
         };
 
         /**
@@ -45,6 +51,12 @@ namespace backend::db {
                 auto componentOffset = CRITERIA::render_to(ss, p);
                 ss << END.Value;
                 return componentOffset;
+            }
+
+            template <std::size_t PARAMETER>
+            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                auto [next, u] = CRITERIA::render_to_v2(prev + BEGIN.Value, p);
+                return std::make_pair(next + END.Value, u);
             }
         };
     }

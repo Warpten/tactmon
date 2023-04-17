@@ -70,6 +70,11 @@ namespace backend::db {
             return detail::VariadicRenderable<", ", COLUMNS...>::render_to(ss, p);
         }
 
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return detail::VariadicRenderable<", ", COLUMNS...>::render_to_v2(prev, p);
+        }
+
     public: // Element accessors.
         template <std::size_t I> requires (I < sizeof...(COLUMNS))
         auto&& get() const {

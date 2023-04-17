@@ -30,6 +30,11 @@ namespace backend::db {
             ss << "WHERE ";
             return COMPONENT::render_to(ss, p);
         }
+
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return COMPONENT::render_to_v2(prev + "WHERE ", p);
+        }
     };
 
     /**
@@ -49,6 +54,12 @@ namespace backend::db {
             auto predicateOffset = detail::VariadicRenderable<" AND ", COMPONENTS...>::render_to(ss, p);
             ss << ')';
             return predicateOffset;
+        }
+
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            auto [next, u] = detail::VariadicRenderable<" AND ", COMPONENTS...>::render_to_v2(prev + '(', p);
+            return std::make_pair(next + ')', u);
         }
     };
 
@@ -70,6 +81,12 @@ namespace backend::db {
             ss << ')';
             return predicateOffset;
         }
+
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            auto [next, u] = detail::VariadicRenderable<" OR ", COMPONENTS...>::render_to_v2(prev + '(', p);
+            return std::make_pair(next + ')', u);
+        }
     };
 
     /**
@@ -88,6 +105,11 @@ namespace backend::db {
                 ss << '$' << I;
 
                 return std::integral_constant<std::size_t, I + 1> { };
+            }
+
+            template <std::size_t PARAMETER>
+                constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                return std::make_pair(prev + '$' + std::to_string(PARAMETER), std::integral_constant<std::size_t, PARAMETER + 1> { });
             }
         };
     };
@@ -110,6 +132,11 @@ namespace backend::db {
                 ss << '$' << I;
                 return p;
             }
+
+            template <std::size_t PARAMETER>
+            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                return std::make_pair(prev + '$' + std::to_string(I), p);
+            }
         };
     };
 
@@ -128,6 +155,11 @@ namespace backend::db {
             ss << V;
             return p;
         }
+
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return std::make_pair(prev + std::to_string(V), p);
+        }
     };
 
     /**
@@ -141,6 +173,11 @@ namespace backend::db {
         static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
             ss << "OFFSET ";
             return COMPONENT::render_to(ss, p);
+        }
+
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return COMPONENT::render_to_v2(prev + "OFFSET ", p);
         }
     };
 
@@ -156,6 +193,11 @@ namespace backend::db {
             ss << "LIMIT ";
             return COMPONENT::render_to(ss, p);
         }
+
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return COMPONENT::render_to_v2(prev + "LIMIT ", p);
+        }
     };
 
     /**
@@ -170,6 +212,12 @@ namespace backend::db {
             auto componentOffset = COMPONENT::render_to(ss, p);
             ss << (ASCENDING ? " ASC" : " DESC");
             return componentOffset;
+        }
+
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            auto [next, u] = COMPONENT::render_to_v2(prev, p);
+            return std::make_pair(ASCENDING ? next + " ASC" : next + " DESC", u);
         }
     };
 
@@ -195,6 +243,11 @@ namespace backend::db {
             ss << "ORDER BY ";
             return detail::VariadicRenderable<", ", COMPONENTS...>::render_to(ss, p);
         }
+
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return detail::VariadicRenderable<", ", COMPONENTS...>::render_to_v2(prev + "ORDER BY ", p);
+        }
     };
 
     /**
@@ -210,6 +263,11 @@ namespace backend::db {
         static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
             ss << "GROUP BY ";
             return detail::VariadicRenderable<", ", COMPONENTS...>::render_to(ss, p);
+        }
+
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return detail::VariadicRenderable<", ", COMPONENTS...>::render_to_v2(prev + "GROUP BY ", p);
         }
     };
 }

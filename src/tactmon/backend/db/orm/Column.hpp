@@ -25,6 +25,11 @@ namespace backend::db {
             return p;
         }
 
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return std::make_pair(prev + ' ' + NAME.Value, p);
+        }
+
         /**
          * Binds a column to a projection (or an entity).
          */
@@ -35,6 +40,12 @@ namespace backend::db {
 
             template <std::size_t PARAMETER>
             static auto render_to(std::ostream& stream, std::integral_constant<std::size_t, PARAMETER> p);
+
+            template <std::size_t PARAMETER>
+            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                auto [next, u] = PROJECTION::render_to_v2(prev, p);
+                return std::make_pair(next + '.' + NAME.Value, u);
+            }
 
             template <typename> using BindToProjection = Of<PROJECTION>;
         };
