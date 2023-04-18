@@ -55,12 +55,12 @@ namespace backend::db::insert {
         }
 
         template <std::size_t I, typename C>
-        auto render_conflict_clause_v2(std::string prev, std::integral_constant<std::size_t, I> p, C) {
+        constexpr auto render_conflict_clause_v2(std::string prev, std::integral_constant<std::size_t, I> p, C) {
             return C::render_to_v2(prev, p);
         }
 
         template <std::size_t I, utility::Literal N>
-        auto render_conflict_clause_v2(std::string prev, std::integral_constant<std::size_t, I> p, OnConstraint<N>) {
+        constexpr auto render_conflict_clause_v2(std::string prev, std::integral_constant<std::size_t, I> p, OnConstraint<N>) {
             return OnConstraint<N>::render_to_v2(prev, p);
         }
 

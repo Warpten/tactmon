@@ -24,8 +24,17 @@ namespace backend::db {
             return ss.str();
         }
 
-        static std::string ToString() {
+        constexpr static std::string ToString() {
             return T::render_to_v2("", std::integral_constant<std::size_t, 1> { }).first;
         }
+
+    private:
+        template <std::size_t... Is>
+        constexpr static std::array<char, sizeof...(Is) + 1> AsStaticString(std::string const queryString, std::index_sequence<Is...>) {
+            return std::array { queryString[Is]..., '\0'};
+        }
+
+    public:
+        constexpr static const auto AsString = AsStaticString(ToString(), std::make_index_sequence<ToString().size()> { });
     };
 }

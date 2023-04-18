@@ -6,16 +6,20 @@
 #include <ostream>
 #include <utility>
 
-/**
- * Shared statement components.
- *
- * 1. WHERE clause
- * 2. Conjunction clause ($1 AND $2 AND ...)
- * 3. Disjunction clause ($1 OR $2 OR ...)
- * 4. Parameters
- */
-
 namespace backend::db {
+    namespace detail {
+        template <uint8_t... Digits>
+        struct ToChars {
+            constexpr static const char Value[] = { ('0' + Digits)..., '\0' };
+        };
+
+        template <std::size_t Remainder, std::size_t... Digits>
+        struct Explode : Explode<Remainder / 10, Remainder % 10, Digits...> { };
+
+        template <std::size_t... Digits>
+        struct Explode<0, Digits...> : ToChars<Digits...> { };
+    }
+
     /**
      * A WHERE clause.
      *
@@ -109,7 +113,7 @@ namespace backend::db {
 
             template <std::size_t PARAMETER>
                 constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-                return std::make_pair(prev + '$' + std::to_string(PARAMETER), std::integral_constant<std::size_t, PARAMETER + 1> { });
+                return std::make_pair(prev + "$" + detail::Explode<PARAMETER>::Value, std::integral_constant<std::size_t, PARAMETER + 1> { });
             }
         };
     };
@@ -135,7 +139,7 @@ namespace backend::db {
 
             template <std::size_t PARAMETER>
             constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-                return std::make_pair(prev + '$' + std::to_string(I), p);
+                return std::make_pair(prev + '$' + detail::Explode<I>::Value, p);
             }
         };
     };
@@ -158,7 +162,7 @@ namespace backend::db {
 
         template <std::size_t PARAMETER>
         constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-            return std::make_pair(prev + std::to_string(V), p);
+            return std::make_pair(prev + detail::Explode<V>::Value, p);
         }
     };
 

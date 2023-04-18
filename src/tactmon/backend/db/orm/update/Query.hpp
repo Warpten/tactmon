@@ -14,6 +14,7 @@ namespace backend::db::update {
     }
 
     namespace detail {
+        // Basic implementation of an UPDATE query.
         template <typename ENTITY, concepts::IsSet SET>
         struct QueryImpl {
             template <std::size_t I>
@@ -33,6 +34,7 @@ namespace backend::db::update {
             using result_type = void;
         };
 
+        // Basic implementation of a WHERE clause on top of an UPDATE query.
         template <typename QUERYBASE, typename CRITERIA>
         struct WhereImpl final {
             template <std::size_t I>
