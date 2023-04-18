@@ -29,7 +29,8 @@ jobs:
       DOWNLOAD_ROOT: ${{ github.workspace }}/wget-root
     steps:
       - uses: actions/checkout@v3
-        submodules: 'true'
+        with:
+          submodules: 'true'
 
       - name: "Create directory '${{ env.DOWNLOAD_ROOT }}'"
         run: mkdir -p $DOWNLOAD_ROOT
