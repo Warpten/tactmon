@@ -20,13 +20,17 @@ namespace backend::db::select {
 
     namespace detail {
         template <typename R, typename P, typename E, typename... CS>
-        class QueryImpl : public IQuery<QueryImpl<R, P, E, CS...>> {
-            friend struct IQuery<QueryImpl<R, P, E, CS...>>;
-
+        struct QueryImpl {
             template <std::size_t I>
-            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>);
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, I> p) {
+                auto [next, u] = P::render_to(prev + "SELECT ", p);
+                auto [next2, u2] = E::render_to(next + " FROM ", u);
+                if constexpr (sizeof...(CS) > 0)
+                    return db::detail::VariadicRenderable<" ", CS...>::render_to(next2 + ' ', u2);
+                else
+                    return db::detail::VariadicRenderable<" ", CS...>::render_to(next2, u2);
+            }
 
-        public:
             using parameter_types = decltype(utility::tuple_cat(
                 std::declval<typename P::parameter_types>(),
                 std::declval<typename E::parameter_types>(),
@@ -34,52 +38,30 @@ namespace backend::db::select {
             ));
             using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_only>;
             using result_type = R;
-
-            /**
-             * Introduces CTEs into a given query.
-             *
-             * @tparam ES... A sequence of specializations of @p CTE.
-             *
-             * @remarks This implementation is a bit backwards; if your CTEs include positional parameters from the main query, they need to be
-             *          declared in the CTE first. That is, parameters in the main query should be specializations of @p BoundParameter.
-             */
-            template <concepts::IsCTE... ES>
-            class With final : public IQuery<With<ES...>> {
-                friend struct IQuery<With<ES...>>;
-
-                template <std::size_t I>
-                static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>);
-
-            public:
-                using parameter_types = decltype(utility::tuple_cat(
-                    std::declval<typename P::parameter_types>(),
-                    std::declval<typename E::parameter_types>(),
-                    std::declval<typename CS::parameter_types>()...,
-                    std::declval<typename ES::parameter_types>()...
-                ));
-            };
         };
 
-        template <typename R, typename P, typename E, typename... CS>
-        template <std::size_t I>
-        /* static */ auto QueryImpl<R, P, E, CS...>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I>) {
-            ss << "SELECT "; auto projectionOffset = P::render_to(ss, std::integral_constant<std::size_t, 1> { });
-            ss << " FROM ";  auto entityOffset = E::render_to(ss, projectionOffset);
+        /**
+         * Introduces CTEs into a given query.
+         *
+         * @tparam ES... A sequence of specializations of @p CTE.
+         *
+         * @remarks This implementation is a bit backwards; if your CTEs include positional parameters from the main query, they need to be
+         *          declared in the CTE first. That is, parameters in the main query should be specializations of @p BoundParameter.
+         */
+        template <typename QUERYBASE, concepts::IsCTE... ES>
+        struct WithImpl final {
+            template <std::size_t I>
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, I> p) {
+                auto [next, u] = db::detail::VariadicRenderable<", ", ES...>::render_to(prev + "WITH ", p);
+                return QUERYBASE::render_to(next + ' ', u);
+            }
 
-            if constexpr (sizeof...(CS) > 0)
-                ss << ' ';
-            return db::detail::VariadicRenderable<" ", CS...>::render_to(ss, entityOffset);
-        }
-
-        template <typename R, typename P, typename E, typename... CS>
-        template <concepts::IsCTE... ES>
-        template <std::size_t I>
-        /* static */ auto QueryImpl<R, P, E, CS...>::With<ES...>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
-            ss << "WITH ";
-            auto cteOffset = db::detail::VariadicRenderable<", ", ES...>::render_to(ss, p);
-            ss << ' ';
-            return QueryImpl<R, P, E, CS...>::render_to(ss, cteOffset);
-        }
+        public:
+            using parameter_types = decltype(utility::tuple_cat(
+                std::declval<typename ES::parameter_types>()...,
+                std::declval<typename QUERYBASE::parameter_types>()
+            ));
+        };
     }
 
     /**
@@ -90,32 +72,24 @@ namespace backend::db::select {
      * @tparam COMPONENTS... Extraneous components used to generate the query.
      */
     template <typename PROJECTION, typename ENTITY, typename... COMPONENTS>
-    class Query final : detail::QueryImpl<PROJECTION, PROJECTION, ENTITY, COMPONENTS...> {
-        using Base = detail::QueryImpl<PROJECTION, PROJECTION, ENTITY, COMPONENTS...>;
-
-    public:
-        static std::string render() { return Base::render(); }
-
+    struct Query final : IQuery<detail::QueryImpl<PROJECTION, PROJECTION, ENTITY, COMPONENTS...>> {
         template <concepts::IsCTE... EXPRESSIONS>
-        using With = typename Base::template With<EXPRESSIONS...>;
-
-        using parameter_types = typename Base::parameter_types;
-        using transaction_type = typename Base::transaction_type;
-        using result_type = typename Base::result_type;
+        struct With final : IQuery<
+            detail::WithImpl<
+                detail::QueryImpl<PROJECTION, PROJECTION, ENTITY, COMPONENTS...>,
+                EXPRESSIONS...
+            >
+        > { };
     };
 
     template <typename ENTITY, typename... COMPONENTS>
-    class Query<ENTITY, ENTITY, COMPONENTS...> final : detail::QueryImpl<ENTITY, typename ENTITY::projection_type, ENTITY, COMPONENTS...> {
-        using Base = detail::QueryImpl<ENTITY, typename ENTITY::projection_type, ENTITY, COMPONENTS...>;
-
-    public:
-        static std::string render() { return Base::render(); }
-
+    struct Query<ENTITY, ENTITY, COMPONENTS...> final : IQuery<detail::QueryImpl<ENTITY, typename ENTITY::projection_type, ENTITY, COMPONENTS...>> {
         template <concepts::IsCTE... EXPRESSIONS>
-        using With = typename Base::template With<EXPRESSIONS...>;
-
-        using parameter_types = typename Base::parameter_types;
-        using transaction_type = typename Base::transaction_type;
-        using result_type = typename Base::result_type;
+        struct With final : IQuery<
+            detail::WithImpl<
+                detail::QueryImpl<ENTITY, typename ENTITY::projection_type, ENTITY, COMPONENTS...>,
+                EXPRESSIONS...
+            >
+        > { };
     };
 }

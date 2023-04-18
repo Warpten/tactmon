@@ -1,6 +1,4 @@
 #include "backend/Database.hpp"
-#include "backend/db/entity/Product.hpp"
-#include "backend/db/entity/TrackedFile.hpp"
 #include "backend/db/repository/Product.hpp"
 #include "backend/db/repository/TrackedFile.hpp"
 #include "frontend/commands/TrackFileCommand.hpp"
@@ -46,7 +44,7 @@ namespace frontend::commands {
         std::string filePath = GetParameter<std::string>(evnt, "filepath").value();
         std::optional<std::string> displayName = GetParameter<std::string>(evnt, "displayname");
 
-        bool alreadyChecked = cluster.db.trackedFiles.Any([&](auto const& entry) {
+        bool alreadyChecked = cluster.db.trackedFiles->Any([&](auto const& entry) {
             return db::get<tracked_file::product_name>(entry) == product
                 && db::get<tracked_file::file_path>(entry) == filePath;
         });
@@ -65,7 +63,7 @@ namespace frontend::commands {
                         .set_footer("This may take a minute to apply.", "")
                 ));
 
-                cluster.db.trackedFiles.Insert(std::move(product), std::move(filePath), std::move(displayName));
+                cluster.db.trackedFiles->Insert(std::move(product), std::move(filePath), std::move(displayName));
             }
         }
         else {
@@ -76,7 +74,7 @@ namespace frontend::commands {
                         .set_footer("This may take a minute to apply.", "")
                 ));
 
-                cluster.db.trackedFiles.Delete(std::move(product), std::move(filePath));
+                cluster.db.trackedFiles->Delete(std::move(product), std::move(filePath));
             }
             else {
                 evnt.edit_response(dpp::message().add_embed(

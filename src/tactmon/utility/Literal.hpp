@@ -10,6 +10,10 @@ namespace utility {
             std::copy_n(val, N, Value);
         }
 
+        constexpr Literal(std::array<char, N> val) {
+            std::copy_n(val.data(), N, Value);
+        }
+
         std::string ToString() const { return Value; }
 
         constexpr static const std::size_t Size = N;

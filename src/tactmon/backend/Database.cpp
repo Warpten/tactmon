@@ -1,13 +1,11 @@
 #include "backend/Database.hpp"
+#include "backend/db/repository/BoundChannel.hpp"
+#include "backend/db/repository/Build.hpp"
+#include "backend/db/repository/CommandState.hpp"
+#include "backend/db/repository/Product.hpp"
+#include "backend/db/repository/TrackedFile.hpp"
 
 #include "utility/Literal.hpp"
-
-#include <fmt/format.h>
-#include <optional>
-#include <sstream>
-#include <tuple>
-#include <type_traits>
-#include <vector>
 
 #include <pqxx/pqxx>
 
@@ -16,11 +14,13 @@ namespace backend {
         std::string_view username, std::string_view password, std::string_view host, uint64_t port, std::string_view name)
         : _connectionPool(username, password, host, port, name)
         , _threadPool(threadCount)
-        , builds(_threadPool, _connectionPool, logger)
-        , products(_threadPool, _connectionPool, logger)
-        , boundChannels(_threadPool, _connectionPool, logger)
-        , trackedFiles(_threadPool, _connectionPool, logger)
-        , commandStates(_connectionPool, logger)
+        , builds(std::make_unique<db::repository::Build>(_threadPool, _connectionPool, logger))
+        , products(std::make_unique<db::repository::Product>(_threadPool, _connectionPool, logger))
+        , boundChannels(std::make_unique<db::repository::BoundChannel>(_threadPool, _connectionPool, logger))
+        , trackedFiles(std::make_unique<db::repository::TrackedFile>(_threadPool, _connectionPool, logger))
+        , commandStates(std::make_unique<db::repository::CommandState>(_connectionPool, logger))
     {
     }
+
+    Database::~Database() = default;
 }

@@ -21,6 +21,7 @@ jobs:
           - os: ubuntu-latest
             triplet: x64-linux
             compiler: clang
+            compiler-version: 16
             vcpkg:
               path: /usr/local/share/vcpkg
               cache-path: /usr/local/share/vcpkg/binary-cache
@@ -29,6 +30,8 @@ jobs:
       DOWNLOAD_ROOT: ${{ github.workspace }}/wget-root
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: 'true'
 
       - name: "Create directory '${{ env.DOWNLOAD_ROOT }}'"
         run: mkdir -p $DOWNLOAD_ROOT
@@ -62,12 +65,12 @@ jobs:
         run: |
           sudo wget https://apt.llvm.org/llvm.sh -O $DOWNLOAD_ROOT/llvm.sh
           sudo chmod +x $DOWNLOAD_ROOT/llvm.sh
-          sudo $DOWNLOAD_ROOT/llvm.sh
-          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-15 100
+          sudo $DOWNLOAD_ROOT/llvm.sh ${{ matrix.compiler-version }}
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${{ matrix.compiler-version }} 100
           # Done in a separate pass because the default sets up clang++ as master alternative instead of slave to clang.
-          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-15 100
-          sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-15 100
-          sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-15 100
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${{ matrix.compiler-version }} 100
+          sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-${{ matrix.compiler-version }} 100
+          sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-${{ matrix.compiler-version }} 100
           sudo update-alternatives --display cc
         shell: bash
 

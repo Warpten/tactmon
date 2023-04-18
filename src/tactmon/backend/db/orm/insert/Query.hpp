@@ -21,10 +21,9 @@ namespace backend::db::insert {
     struct OnConstraint {
         using parameter_types = utility::tuple<>;
 
-        template <std::size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
-            ss << "ON CONSTRAINT " << NAME.Value;
-            return p;
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return std::make_pair(prev + "ON CONSTRAINT " + NAME.Value, p);
         }
     };
 
@@ -38,6 +37,70 @@ namespace backend::db::insert {
         using parameter_types = typename parameter_type::parameter_types;
     };
 
+    namespace detail {
+        template <std::size_t I, typename C>
+        constexpr auto render_conflict_clause_v2(std::string prev, std::integral_constant<std::size_t, I> p, C) {
+            return C::render_to(prev, p);
+        }
+
+        template <std::size_t I, utility::Literal N>
+        constexpr auto render_conflict_clause_v2(std::string prev, std::integral_constant<std::size_t, I> p, OnConstraint<N>) {
+            return OnConstraint<N>::render_to(prev, p);
+        }
+
+        template <typename ENTITY, typename... COLUMNS>
+        struct QueryImpl {
+            template <std::size_t PARAMETER>
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                auto [next, u] = ENTITY::render_to(prev + "INSERT INTO ", p);
+                auto [next2, u2] = db::detail::VariadicRenderable<", ", typename COLUMNS::column_type...>::render_to(next + " (", u);
+                auto [next3, u3] = db::detail::VariadicRenderable<", ", typename COLUMNS::parameter_type...>::render_to(next2 + ") VALUES (", u2);
+                return std::make_pair(next3 + ')', u3);
+            }
+
+            using parameter_types = decltype(utility::tuple_cat(
+                std::declval<typename ENTITY::parameter_types>(),
+                std::declval<typename COLUMNS::parameter_types>()...
+            ));
+            using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
+            using result_type = ENTITY;
+        };
+
+        template <typename QUERYBASE, typename CONFLICTING, typename COMPONENT>
+        struct OnConflictImpl final {
+            template <std::size_t PARAMETER>
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                auto [next, u] = QUERYBASE::render_to(prev, p);
+                auto [next2, u2] = CONFLICTING::render_to(next + " ON CONFLICT (", u);
+                return detail::render_conflict_clause_v2(next2 + ") DO ", u2, COMPONENT{ });
+            }
+
+            using parameter_types = decltype(utility::tuple_cat(
+                std::declval<typename QUERYBASE::parameter_types>(),
+                std::declval<typename COMPONENT::parameter_types>()
+            ));
+            using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
+            using result_type = typename QUERYBASE::result_type;
+        };
+
+        template <typename QUERYBASE, typename COMPONENT>
+        struct ReturningImpl final {
+            template <std::size_t PARAMETER>
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                auto [next, u] = QUERYBASE::render_to(prev, p);
+                return COMPONENT::render_to(next + " RETURNING ", u);
+            }
+
+            using parameter_types = decltype(utility::tuple_cat(
+                std::declval<typename QUERYBASE::parameter_types>(),
+                std::declval<typename COMPONENT::parameter_types>()
+            ));
+
+            using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
+            using result_type = typename QUERYBASE::result_type;
+        };
+    }
+
     /**
      * An INSERT query.
      *
@@ -45,97 +108,44 @@ namespace backend::db::insert {
      * @tparam COLUMNS... The columns that need to be assigned.
      */
     template <typename ENTITY, typename... COLUMNS>
-    class Query final : public IQuery<Query<ENTITY, COLUMNS...>> {
-        friend struct IQuery<Query<ENTITY, COLUMNS...>>;
-
-        template <std::size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
-            ss << "INSERT INTO ";
-            auto projectionOffset = ENTITY::render_to(ss, p);
-            ss << " (";
-            auto componentsOffset = detail::VariadicRenderable<", ", typename COLUMNS::column_type...>::render_to(ss, projectionOffset);
-            ss << ") VALUES (";
-            auto valueOffset = detail::VariadicRenderable<", ", typename COLUMNS::parameter_type...>::render_to(ss, componentsOffset);
-            ss << ')';
-            return valueOffset;
-        }
-
-    public:
-        using parameter_types = decltype(utility::tuple_cat(
-            std::declval<typename ENTITY::parameter_types>(),
-            std::declval<typename COLUMNS::parameter_types>()...
-        ));
-        using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
-        using result_type = ENTITY;
-
-        template <typename PROJECTION>
-        friend struct Returning;
-
-        template <typename COMPONENT>
-        friend struct OnConflict;
-
-        template <typename PROJECTION>
-        class Returning : public IQuery<Returning<PROJECTION>> {
-            friend struct IQuery<Returning<PROJECTION>>;
-
-            template <std::size_t I>
-            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
-                auto queryOffset = Query<ENTITY, COLUMNS...>::render_to(ss, p);
-                ss << " RETURNING ";
-                return PROJECTION::render_to(ss, queryOffset);
-            }
-
-        public:
-            using parameter_types = decltype(utility::tuple_cat(
-                std::declval<typename ENTITY::parameter_types>(),
-                std::declval<typename COLUMNS::parameter_types>()...,
-                std::declval<typename PROJECTION::parameter_types>()
-            ));
-            using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
-            using result_type = ENTITY;
-        };
-
+    struct Query final : IQuery<detail::QueryImpl<ENTITY, COLUMNS...>> {
         /**
          * An INSERT query with an ON CONFLICT clause.
          *
          * @tparam COMPONENT A conflict handling clause. See UpdateFromExcluded and DoNothing.
          */
+        template <typename PROJECTION>
+        struct Returning final : IQuery<
+            detail::ReturningImpl<
+                detail::QueryImpl<ENTITY, COLUMNS...>,
+                PROJECTION
+            >
+        > { };
+
+        /**
+         * A SQL INSERT query with a conflict handling clause.
+         *
+         * @param[in] CONFLICTING A component identifying the column whose value is conflicting with another record.
+         * @param[in] COMPONENT   A component describing how the conflict is handled.
+         */
         template <typename CONFLICTING, typename COMPONENT>
-        class OnConflict final : public IQuery<OnConflict<CONFLICTING, COMPONENT>> {
-            friend struct IQuery<OnConflict<CONFLICTING, COMPONENT>>;
-
-            template <std::size_t I>
-            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p);
-
-        public:
-            using parameter_types = decltype(utility::tuple_cat(
-                std::declval<typename ENTITY::parameter_types>(),
-                std::declval<typename COLUMNS::parameter_types>()...,
-                std::declval<typename COMPONENT::parameter_types>()
-            ));
-            using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
-            using result_type = ENTITY;
-
+        struct OnConflict final : IQuery<
+            detail::OnConflictImpl<
+                detail::QueryImpl<ENTITY, COLUMNS...>,
+                CONFLICTING,
+                COMPONENT
+            >
+        > {
             template <typename PROJECTION>
-            class Returning final : public IQuery<Returning<PROJECTION>> {
-                template <std::size_t P>
-                static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, P> p) {
-                    auto baseOffset = OnConflict<CONFLICTING, COMPONENT>::render_to(ss, p);
-                    ss << " RETURNING ";
-                    return COMPONENT::render_to(ss, baseOffset);
-                }
-
-            public:
-                using parameter_types = decltype(utility::tuple_cat(
-                    std::declval<typename ENTITY::parameter_types>(),
-                    std::declval<typename COLUMNS::parameter_types>()...,
-                    std::declval<typename COMPONENT::parameter_types>(),
-                    std::declval<typename PROJECTION::parameter_types>()
-                ));
-
-                using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
-                using result_type = ENTITY;
-            };
+            struct Returning final : IQuery<
+                detail::ReturningImpl<
+                    detail::OnConflictImpl<
+                        detail::QueryImpl<ENTITY, COLUMNS...>,
+                        CONFLICTING,
+                        COMPONENT
+                    >, PROJECTION
+                >
+            > { };
         };
     };
 
@@ -153,17 +163,12 @@ namespace backend::db::insert {
             std::declval<typename COMPONENTS::parameter_types>()...
         ));
 
-        // Generates a sensible ON CONFLICT DO UPDATE query that fixes the conflicting record to the given parameters.
-        template <std::size_t P>
-        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, P> p) {
-            ss << "UPDATE SET ";
-            return detail::VariadicRenderable<
-                ", ",
-                Equals<
-                    COMPONENTS, // typename COMPONENTS::template BindToProjection<ENTITY>,
-                    typename COMPONENTS::template BindToProjection<Excluded>
-                >...
-            >::render_to(ss, p);
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return db::detail::VariadicRenderable<", ", Equals<
+                COMPONENTS,
+                typename COMPONENTS::template BindToProjection<Excluded>
+            >...>::render_to(prev + "UPDATE SET ", p);
         }
     };
 
@@ -173,9 +178,9 @@ namespace backend::db::insert {
     struct DoNothing final {
         using parameter_types = utility::tuple<>;
 
-        template <std::size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>) {
-            ss << "NOTHING";
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return std::make_pair(prev + "NOTHING", p);
         }
     };
 
@@ -189,26 +194,4 @@ namespace backend::db::insert {
     template <typename ENTITY, typename... COLUMNS>
     using Replace = typename Query<ENTITY, COLUMNS...>::template OnConflict<UpdateFromExcluded<ENTITY, typename COLUMNS::column_type...>>;
 
-    namespace detail {
-        template <std::size_t I, typename C>
-        auto render_conflict_clause(std::ostream& ss, std::integral_constant<std::size_t, I> p, C) {
-            return C::render_to(ss, p);
-        }
-
-        template <std::size_t I, utility::Literal N>
-        auto render_conflict_clause(std::ostream& ss, std::integral_constant<std::size_t, I> p, OnConstraint<N>) {
-            return OnConstraint<N>::render_to(ss, p);
-        }
-    }
-
-    template <typename ENTITY, typename... COLUMNS>
-    template <typename CONFLICTING, typename COMPONENT>
-    template <std::size_t I>
-    /* static */ auto Query<ENTITY, COLUMNS...>::OnConflict<CONFLICTING, COMPONENT>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
-        auto queryOffset = Query<ENTITY, COLUMNS...>::render_to(ss, p);
-        ss << " ON CONFLICT (";
-        auto clauseOffset = CONFLICTING::render_to(ss, queryOffset);
-        ss << ") DO ";
-        return detail::render_conflict_clause(ss, clauseOffset, COMPONENT{ });
-    }
 }

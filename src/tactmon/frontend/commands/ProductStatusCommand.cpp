@@ -29,7 +29,7 @@ namespace frontend::commands {
     void ProductStatusCommand::HandleSlashCommand(dpp::slashcommand_t const& evnt, frontend::Discord& cluster) {
         std::string product = std::get<std::string>(evnt.get_parameter("product"));
 
-        auto entity = cluster.db.builds.GetStatisticsForProduct(product);
+        auto entity = cluster.db.builds->GetStatisticsForProduct(product);
         if (!entity.has_value()) {
             evnt.edit_response(fmt::format("No version found for the **{}** product.", product));
 

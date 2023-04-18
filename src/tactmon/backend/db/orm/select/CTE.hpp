@@ -18,20 +18,16 @@ namespace backend::db::select {
     struct CTE final {
         using parameter_types = typename QUERY::parameter_types;
 
-        template <std::size_t I>
-        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>);
-    };
-
-    template <utility::Literal ALIAS, bool RECURSIVE, typename QUERY>
-    template <std::size_t I>
-    /* static */ auto CTE<ALIAS, RECURSIVE, QUERY>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
-        if constexpr (RECURSIVE)
-            ss << "RECURSIVE ";
-
-        ss << ALIAS.Value << " AS (";
-        auto cteOffset = QUERY::render_to(ss, p);
-        ss << ')';
-
-        return cteOffset;
+        template <std::size_t PARAMETER>
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            if constexpr (RECURSIVE) {
+                auto [next, u] = QUERY::render_to(prev + "RECURSIVE " + ALIAS.Value + " AS (", p);
+                return std::make_pair(next + ")", u);
+            }
+            else {
+                auto [next, u] = QUERY::render_to(prev + ALIAS.Value + " AS (", p);
+                return std::make_pair(next + ")", u);
+            }
+        }
     };
 }

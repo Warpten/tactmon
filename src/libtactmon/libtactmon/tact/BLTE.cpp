@@ -112,12 +112,17 @@ namespace libtactmon::tact {
             }
             case 'Z':
             {
-                z_stream strm;
-                strm.zalloc = Z_NULL;
-                strm.zfree = Z_NULL;
-                strm.opaque = Z_NULL;
-                strm.avail_in = 0;
-                strm.next_in = Z_NULL;
+                z_stream strm {
+                    .next_in   = 0,
+                    .avail_in  = 0,
+                    .total_in  = 0,
+                    .next_out  = Z_NULL,
+                    .avail_out = 0,
+                    .total_out = 0,
+                    .zalloc    = Z_NULL,
+                    .zfree     = Z_NULL,
+                    .opaque    = Z_NULL,
+                };
                 int ret = inflateInit(&strm);
                 if (ret != Z_OK)
                     return false;

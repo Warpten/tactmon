@@ -59,6 +59,18 @@ namespace backend::db::repository {
              * @param[in] id The primary key of the entity to obtain.
              */
             std::optional<ENTITY> operator [] (typename PK::value_type id) const {
+                return Get(id);
+            }
+
+            /**
+             * Obtains a cached entity, ientified by its primary key.
+             *
+             * Note that this method returns a copy of the cached value. Whenever the cache upates, the changes to
+             * the entity will not be seen by a previously obtained value.
+             *
+             * @param[in] id The primary key of the entity to obtain.
+             */
+            std::optional<ENTITY> Get(typename PK::value_type id) const {
                 return WithMutex_([&]() -> std::optional<ENTITY> {
                     auto itr = _storage.find(id);
                     if (itr == _storage.end())
@@ -148,7 +160,7 @@ namespace backend::db::repository {
                     this->_storage.clear();
                     for (auto&& entity : storage)
                         this->_storage.emplace(entity.template get<PK>(), entity);
-                    });
+                });
 
                 _logger.debug("Cache for db::{} filled in {}.",
                     ENTITY::Name.Value, chrono::duration_cast<chrono::milliseconds>(sw.elapsed()));

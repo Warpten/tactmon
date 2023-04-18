@@ -47,7 +47,7 @@ namespace frontend::commands {
                     .set_description("The HTTP server for this command is disabled. How did you even manage to execute this command?")
             ));
 
-        auto buildEntry = cluster.db.builds.GetByBuildName(version, region);
+        auto buildEntry = cluster.db.builds->GetByBuildName(version, region);
         if (!buildEntry.has_value()) {
             evnt.edit_response(dpp::message().add_embed(
                 dpp::embed()

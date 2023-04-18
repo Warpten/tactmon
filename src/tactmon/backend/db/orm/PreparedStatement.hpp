@@ -137,13 +137,11 @@ namespace backend::db {
         typename QUERY::transaction_type, typename QUERY::result_type, typename QUERY::parameter_types>
     {
         static void Prepare(Pool& pool) {
-            std::string queryString = QUERY::render();
-
-            pool.Prepare(std::string_view { NAME.Value, NAME.Size - 1 }, queryString);
+            pool.Prepare(std::string_view{ NAME.Value, NAME.Size - 1 }, std::string_view{ QUERY::AsString.data(), QUERY::AsString.size() });
         }
 
         static void Prepare(Pool& pool, spdlog::async_logger& logger) {
-            std::string rendererQuery = QUERY::render();
+            std::string_view rendererQuery { QUERY::AsString.data(), QUERY::AsString.size() };
             logger.debug("Preparing query {}: '{}'", NAME.Value, rendererQuery);
 
             pool.Prepare(std::string_view { NAME.Value, NAME.Size - 1 }, rendererQuery);
