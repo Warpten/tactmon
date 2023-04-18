@@ -6,7 +6,6 @@ CollectSourceFiles(
 
 GroupSources(${CMAKE_CURRENT_SOURCE_DIR})
 
-find_package(dpp CONFIG REQUIRED)
 find_package(libpqxx REQUIRED)
 find_package(spdlog REQUIRED)
 
@@ -19,6 +18,7 @@ add_dependencies(tactmon
   openssl
   libtactmon
   libassert
+  dpp
 )
 
 target_include_directories(tactmon
@@ -54,7 +54,7 @@ set_target_properties(tactmon
 target_link_libraries(tactmon
   PRIVATE
     boost
-    dpp::dpp
+    dpp
     openssl
     libtactmon
     libpqxx::pqxx

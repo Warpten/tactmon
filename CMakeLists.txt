@@ -50,7 +50,8 @@ include(GroupSources)
 
 find_package(Threads REQUIRED)
 
+add_subdirectory(dep)
+add_subdirectory(submodules)
+
 # add sources
 add_subdirectory(src)
-
-add_subdirectory(dep)
