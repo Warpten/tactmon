@@ -7,8 +7,7 @@
     "frontend": {
       "description": "A self-hosted tact monitor with an HTTP and a Discord frontend.",
       "dependencies": [
-        "libpqxx",
-        "dpp"
+        "libpqxx"
       ]
     }
   },
@@ -27,13 +26,6 @@
     "boost-thread",
     "openssl",
     "zlib"
-  ],
-  "overrides": [
-    {
-      "name": "dpp",
-      "version": "10.0.20",
-      "port-version": 0
-    }
   ],
   "builtin-baseline": "7c729f5fcdd13ca5384f3053dd957e82c10ac2d5"
 }
