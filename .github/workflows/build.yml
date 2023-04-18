@@ -64,7 +64,7 @@ jobs:
         run: |
           sudo wget https://apt.llvm.org/llvm.sh -O $DOWNLOAD_ROOT/llvm.sh
           sudo chmod +x $DOWNLOAD_ROOT/llvm.sh
-          sudo $DOWNLOAD_ROOT/llvm.sh
+          sudo $DOWNLOAD_ROOT/llvm.sh 16
           sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-15 100
           # Done in a separate pass because the default sets up clang++ as master alternative instead of slave to clang.
           sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-15 100
