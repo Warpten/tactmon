@@ -18,9 +18,6 @@ namespace backend::db::update {
         template <typename ENTITY, concepts::IsSet SET>
         struct QueryImpl {
             template <std::size_t I>
-            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>);
-
-            template <std::size_t I>
             constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
                 auto [next, u] = ENTITY::render_to_v2(prev + "UPDATE ", p);
                 return SET::render_to_v2(next + ' ', u);
@@ -38,13 +35,6 @@ namespace backend::db::update {
         template <typename QUERYBASE, typename CRITERIA>
         struct WhereImpl final {
             template <std::size_t I>
-            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
-                auto queryOffset = QUERYBASE::render_to(ss, std::integral_constant<std::size_t, 1> { });
-                ss << " WHERE ";
-                return CRITERIA::render_to(ss, queryOffset);
-            }
-
-            template <std::size_t I>
             constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
                 auto [next, u] = QUERYBASE::render_to_v2(prev, p);
                 return CRITERIA::render_to_v2(next + " WHERE ", u);
@@ -58,15 +48,6 @@ namespace backend::db::update {
             using transaction_type = pqxx::transaction<pqxx::isolation_level::read_committed, pqxx::write_policy::read_write>;
             using result_type = void;
         };
-
-        template <typename ENTITY, concepts::IsSet SET>
-        template <std::size_t I>
-        /* static */ auto QueryImpl<ENTITY, SET>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
-            ss << "UPDATE ";
-            auto entityOffset = ENTITY::render_to(ss, p);
-            ss << ' ';
-            return SET::render_to(ss, entityOffset);
-        }
     }
 
     template <typename ENTITY, concepts::IsSet SET>

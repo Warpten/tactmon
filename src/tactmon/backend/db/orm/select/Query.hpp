@@ -22,9 +22,6 @@ namespace backend::db::select {
         template <typename R, typename P, typename E, typename... CS>
         struct QueryImpl {
             template <std::size_t I>
-            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>);
-
-            template <std::size_t I>
             constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
                 auto [next, u] = P::render_to_v2(prev + "SELECT ", p);
                 auto [next2, u2] = E::render_to_v2(next + " FROM ", u);
@@ -43,18 +40,6 @@ namespace backend::db::select {
             using result_type = R;
         };
 
-        template <typename R, typename P, typename E, typename... CS>
-        template <std::size_t I>
-        /* static */ auto QueryImpl<R, P, E, CS...>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I>) {
-            ss << "SELECT "; auto projectionOffset = P::render_to(ss, std::integral_constant<std::size_t, 1> { });
-            ss << " FROM ";  auto entityOffset = E::render_to(ss, projectionOffset);
-
-            if constexpr (sizeof...(CS) > 0)
-                ss << ' ';
-            return db::detail::VariadicRenderable<" ", CS...>::render_to(ss, entityOffset);
-        }
-
-
         /**
          * Introduces CTEs into a given query.
          *
@@ -65,10 +50,6 @@ namespace backend::db::select {
          */
         template <typename QUERYBASE, concepts::IsCTE... ES>
         struct WithImpl final {
-            template <std::size_t I>
-            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, I>);
-
-
             template <std::size_t I>
             constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
                 auto [next, u] = db::detail::VariadicRenderable<", ", ES...>::render_to_v2(prev + "WITH ", p);
@@ -81,15 +62,6 @@ namespace backend::db::select {
                 std::declval<typename QUERYBASE::parameter_types>()
             ));
         };
-
-        template <typename QUERYBASE, concepts::IsCTE... ES>
-        template <std::size_t I>
-        /* static */ auto WithImpl<QUERYBASE, ES...>::render_to(std::ostream& ss, std::integral_constant<std::size_t, I> p) {
-            ss << "WITH ";
-            auto cteOffset = db::detail::VariadicRenderable<", ", ES...>::render_to(ss, p);
-            ss << ' ';
-            return QUERYBASE::render_to(ss, cteOffset);
-        }
     }
 
     /**

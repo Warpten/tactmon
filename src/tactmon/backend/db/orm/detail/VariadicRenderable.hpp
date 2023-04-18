@@ -18,11 +18,6 @@ namespace backend::db::detail {
     template <utility::Literal TOKEN, typename... COMPONENTS>
     struct VariadicRenderable final {
         template <std::size_t PARAMETER>
-        static auto render_to(std::ostream& stream, std::integral_constant<std::size_t, PARAMETER> p) {
-            return render_<0>(stream, p);
-        }
-
-        template <std::size_t PARAMETER>
         constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
             return render_v2_<0>(prev, p);
         }
@@ -41,19 +36,6 @@ namespace backend::db::detail {
                 return std::apply([](std::string const str, auto u) {
                     return render_v2_<I + 1>(str, u);
                 }, utility::tuple_element_t<I, utility::tuple<COMPONENTS...>>::render_to_v2(prev, p));
-            }
-        }
-        
-        template <std::size_t I, std::size_t PARAMETER>
-        static auto render_(std::ostream& strm, std::integral_constant<std::size_t, PARAMETER> p) {
-            if constexpr (I >= sizeof...(COMPONENTS))
-                return p;
-            else {
-                if constexpr (I > 0)
-                    strm << TOKEN.Value;
-
-                auto ofs = utility::tuple_element_t<I, utility::tuple<COMPONENTS...>>::render_to(strm, p);
-                return render_<I + 1>(strm, ofs);
             }
         }
     };

@@ -39,9 +39,6 @@ namespace backend::db {
             using parameter_types = utility::tuple<>;
 
             template <std::size_t PARAMETER>
-            static auto render_to(std::ostream& stream, std::integral_constant<std::size_t, PARAMETER> p);
-
-            template <std::size_t PARAMETER>
             constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
                 auto [next, u] = PROJECTION::render_to_v2(prev, p);
                 return std::make_pair(next + '.' + NAME.Value, u);
@@ -53,14 +50,5 @@ namespace backend::db {
         template <typename PROJECTION>
         using BindToProjection = Of<PROJECTION>;
     };
-
-    template <utility::Literal NAME, typename TYPE>
-    template <typename PROJECTION>
-    template <std::size_t PARAMETER>
-    /* static */ auto Column<NAME, TYPE>::Of<PROJECTION>::render_to(std::ostream& stream, std::integral_constant<std::size_t, PARAMETER> p) {
-        auto projectionOffset = PROJECTION::render_to(stream, p);
-        stream << '.' << NAME.Value;
-        return projectionOffset;
-    }
 }
 

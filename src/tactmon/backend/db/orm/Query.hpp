@@ -16,19 +16,11 @@ namespace backend::db {
         using transaction_type = typename T::transaction_type;
         using result_type = typename T::result_type;
 
-        static std::string render() {
-            // static_assert(concepts::StreamRenderable<T>);
-
-            std::stringstream ss;
-            T::render_to(ss, std::integral_constant<std::size_t, 1> { });
-            return ss.str();
-        }
-
+    private:
         constexpr static std::string ToString() {
             return T::render_to_v2("", std::integral_constant<std::size_t, 1> { }).first;
         }
 
-    private:
         template <std::size_t... Is>
         constexpr static std::array<char, sizeof...(Is) + 1> AsStaticString(std::string const queryString, std::index_sequence<Is...>) {
             return std::array { queryString[Is]..., '\0'};

@@ -24,13 +24,6 @@ namespace backend::db {
                 std::declval<typename bound_parameter_type::parameter_types>()
             ));
 
-            template <std::size_t P>
-            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, P> p) {
-                auto componentOffset = COMPONENT::render_to(ss, p);
-                ss << TOKEN.Value;
-                return bound_parameter_type::render_to(ss, componentOffset);
-            }
-
             template <std::size_t PARAMETER>
             constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
                 auto [next, u] = COMPONENT::render_to_v2(prev, p);
@@ -44,14 +37,6 @@ namespace backend::db {
         template <utility::Literal BEGIN, utility::Literal END, typename CRITERIA>
         struct UnaryCriteria final {
             using parameter_types = typename CRITERIA::parameter_types;
-
-            template <std::size_t P>
-            static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, P> p) {
-                ss << BEGIN.Value;
-                auto componentOffset = CRITERIA::render_to(ss, p);
-                ss << END.Value;
-                return componentOffset;
-            }
 
             template <std::size_t PARAMETER>
             constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
