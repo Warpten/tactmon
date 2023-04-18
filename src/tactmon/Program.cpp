@@ -1,9 +1,16 @@
 #include "backend/Database.hpp"
+#include "backend/db/repository/BoundChannel.hpp"
+#include "backend/db/repository/Build.hpp"
+#include "backend/db/repository/TrackedFile.hpp"
+
 #include "backend/Product.hpp"
 #include "backend/ProductCache.hpp"
 #include "backend/RibbitMonitor.hpp"
+
 #include "frontend/Discord.hpp"
+
 #include "net/Server.hpp"
+
 #include "utility/Logging.hpp"
 #include "utility/ThreadPool.hpp"
 
@@ -181,9 +188,9 @@ void Execute(boost::program_options::variables_map vm) {
                 continue;
 
             std::optional<build::Entity> databaseRecord = [&]() -> std::optional<build::Entity> {
-                auto existingRow = database.builds.GetByBuildName(buildConfig->BuildName, version.Region);
+                auto existingRow = database.builds->GetByBuildName(buildConfig->BuildName, version.Region);
                 if (!existingRow.has_value())
-                    return database.builds.Insert(version.Region, productName, buildConfig->BuildName, version.BuildConfig, version.CDNConfig);
+                    return database.builds->Insert(version.Region, productName, buildConfig->BuildName, version.BuildConfig, version.CDNConfig);
 
                 return std::nullopt;
             }();
@@ -220,7 +227,7 @@ void Execute(boost::program_options::variables_map vm) {
                 productCache.LoadConfiguration(productName, newBuild.Configuration.value(), [&](backend::Product& product) {
                     // Iterate over each channel the bot is bound to and publish the links;
                     // do this only for the channels that are used to track a given product.
-                    database.boundChannels.ForEach([&](auto boundChannel) {
+                    database.boundChannels->ForEach([&](auto boundChannel) {
                         if (db::get<bound_channel::product_name>(boundChannel) != productName)
                             return;
 
@@ -239,7 +246,7 @@ void Execute(boost::program_options::variables_map vm) {
                         );
 
                         // For each file tracked, create a button.
-                        database.trackedFiles.ForEach([&](auto trackedFile) {
+                        database.trackedFiles->ForEach([&](auto trackedFile) {
                             std::filesystem::path trackedFilePath{ db::get<tracked_file::file_path>(trackedFile) };
 
                             std::optional<tact::data::FileLocation> fileKey = product->FindFile(trackedFilePath.string());
@@ -277,7 +284,7 @@ void Execute(boost::program_options::variables_map vm) {
         }
 
         // Immediately post Ribbit update notifications to subscribed channels.
-        // database.boundChannels.ForEach([&](auto entity) {
+        // database.boundChannels->ForEach([&](auto entity) {
         //     if (db::get<bound_channel::product_name>(entity) != productName)
         //         return;
         // 

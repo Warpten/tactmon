@@ -7,6 +7,8 @@ namespace backend::db {
     namespace detail2 { // Duplicated from Shared.hpp, need to move it somewhere else
         template <uint8_t... Digits>
         struct ToChars {
+            static_assert(((Digits <= 9) && ...));
+
             constexpr static const char Value[] = { ('0' + Digits)..., '\0' };
         };
 
@@ -43,7 +45,7 @@ namespace backend::db {
     template <typename COMPONENT> using Sum = Function<typename COMPONENT::value_type, "SUM", COMPONENT>;
 
     /**
-     * Basic implementation of mutators on a given component. See below for use cases.
+     * Basic implementation of mutators on a given comu'ponent. See below for use cases.
      */
     template <utility::Literal TOKEN, typename COMPONENT>
     struct Selector {

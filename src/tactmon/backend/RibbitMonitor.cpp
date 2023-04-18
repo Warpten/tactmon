@@ -1,4 +1,5 @@
 #include "backend/RibbitMonitor.hpp"
+#include "backend/db/repository/Product.hpp"
 
 #include <chrono>
 #include <optional>
@@ -39,9 +40,9 @@ namespace backend {
             if (!record.Flags.empty())
                 continue;
 
-            std::optional<db::entity::product::Entity> productState = _database.products.GetByName(record.Product);
+            std::optional<db::entity::product::Entity> productState = _database.products->GetByName(record.Product);
             if (!productState.has_value()) {
-                _database.products.Insert(record.Product, record.SequenceID);
+                _database.products->Insert(record.Product, record.SequenceID);
 
                 NotifyProductUpdate(record.Product, record.SequenceID);
             }
@@ -50,7 +51,7 @@ namespace backend {
 
                 if (previousSequenceID < record.SequenceID) {
                     // New SeqN, update database.
-                    _database.products.Update(record.Product, record.SequenceID);
+                    _database.products->Update(record.Product, record.SequenceID);
 
                     NotifyProductUpdate(record.Product, record.SequenceID);
                 }

@@ -5,7 +5,9 @@
 #include "frontend/commands/TrackFileCommand.hpp"
 #include "frontend/Discord.hpp"
 #include "backend/db/entity/Build.hpp"
+#include "backend/db/entity/CommandState.hpp"
 #include "backend/db/repository/Build.hpp"
+#include "backend/db/repository/CommandState.hpp"
 #include "utility/Logging.hpp"
 
 #include "utility/Literal.hpp"
@@ -86,7 +88,7 @@ namespace frontend {
     }
 
     std::tuple<bool, std::size_t, uint32_t> Discord::RequiresSynchronization(dpp::slashcommand const& command) const {
-        std::optional<command_state::Entity> databaseRecord = db.commandStates.FindCommand(command.name);
+        std::optional<command_state::Entity> databaseRecord = db.commandStates->FindCommand(command.name);
 
         // Compute the command's unversioned hash.
         std::size_t baseHash = Hash(command);
@@ -137,7 +139,7 @@ namespace frontend {
             if (needsUpdate) {
                 // Compute final updated hash and update the database with it.
                 boost::hash_combine(hash, newVersion);
-                db.commandStates.InsertOrUpdate(registrationInfo.name, hash, newVersion);
+                db.commandStates->InsertOrUpdate(registrationInfo.name, hash, newVersion);
 
                 // commands.emplace_back(std::move(registrationInfo));
                 bot.guild_command_create(registrationInfo, evnt.created->id);
