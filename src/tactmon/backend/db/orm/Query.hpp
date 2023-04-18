@@ -18,7 +18,7 @@ namespace backend::db {
 
     private:
         constexpr static std::string ToString() {
-            return T::render_to_v2("", std::integral_constant<std::size_t, 1> { }).first;
+            return T::render_to("", std::integral_constant<std::size_t, 1> { }).first;
         }
 
         template <std::size_t... Is>

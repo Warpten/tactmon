@@ -22,7 +22,7 @@ namespace backend::db::insert {
         using parameter_types = utility::tuple<>;
 
         template <std::size_t PARAMETER>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
             return std::make_pair(prev + "ON CONSTRAINT " + NAME.Value, p);
         }
     };
@@ -40,21 +40,21 @@ namespace backend::db::insert {
     namespace detail {
         template <std::size_t I, typename C>
         constexpr auto render_conflict_clause_v2(std::string prev, std::integral_constant<std::size_t, I> p, C) {
-            return C::render_to_v2(prev, p);
+            return C::render_to(prev, p);
         }
 
         template <std::size_t I, utility::Literal N>
         constexpr auto render_conflict_clause_v2(std::string prev, std::integral_constant<std::size_t, I> p, OnConstraint<N>) {
-            return OnConstraint<N>::render_to_v2(prev, p);
+            return OnConstraint<N>::render_to(prev, p);
         }
 
         template <typename ENTITY, typename... COLUMNS>
         struct QueryImpl {
             template <std::size_t PARAMETER>
-            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-                auto [next, u] = ENTITY::render_to_v2(prev + "INSERT INTO ", p);
-                auto [next2, u2] = db::detail::VariadicRenderable<", ", typename COLUMNS::column_type...>::render_to_v2(next + " (", u);
-                auto [next3, u3] = db::detail::VariadicRenderable<", ", typename COLUMNS::parameter_type...>::render_to_v2(next2 + ") VALUES (", u2);
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                auto [next, u] = ENTITY::render_to(prev + "INSERT INTO ", p);
+                auto [next2, u2] = db::detail::VariadicRenderable<", ", typename COLUMNS::column_type...>::render_to(next + " (", u);
+                auto [next3, u3] = db::detail::VariadicRenderable<", ", typename COLUMNS::parameter_type...>::render_to(next2 + ") VALUES (", u2);
                 return std::make_pair(next3 + ')', u3);
             }
 
@@ -69,9 +69,9 @@ namespace backend::db::insert {
         template <typename QUERYBASE, typename CONFLICTING, typename COMPONENT>
         struct OnConflictImpl final {
             template <std::size_t PARAMETER>
-            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-                auto [next, u] = QUERYBASE::render_to_v2(prev, p);
-                auto [next2, u2] = CONFLICTING::render_to_v2(next + " ON CONFLICT (", u);
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                auto [next, u] = QUERYBASE::render_to(prev, p);
+                auto [next2, u2] = CONFLICTING::render_to(next + " ON CONFLICT (", u);
                 return detail::render_conflict_clause_v2(next2 + ") DO ", u2, COMPONENT{ });
             }
 
@@ -86,9 +86,9 @@ namespace backend::db::insert {
         template <typename QUERYBASE, typename COMPONENT>
         struct ReturningImpl final {
             template <std::size_t PARAMETER>
-            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-                auto [next, u] = QUERYBASE::render_to_v2(prev, p);
-                return COMPONENT::render_to_v2(next + " RETURNING ", u);
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                auto [next, u] = QUERYBASE::render_to(prev, p);
+                return COMPONENT::render_to(next + " RETURNING ", u);
             }
 
             using parameter_types = decltype(utility::tuple_cat(
@@ -164,11 +164,11 @@ namespace backend::db::insert {
         ));
 
         template <std::size_t PARAMETER>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
             return db::detail::VariadicRenderable<", ", Equals<
                 COMPONENTS,
                 typename COMPONENTS::template BindToProjection<Excluded>
-            >...>::render_to_v2(prev + "UPDATE SET ", p);
+            >...>::render_to(prev + "UPDATE SET ", p);
         }
     };
 
@@ -179,7 +179,7 @@ namespace backend::db::insert {
         using parameter_types = utility::tuple<>;
 
         template <std::size_t PARAMETER>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
             return std::make_pair(prev + "NOTHING", p);
         }
     };

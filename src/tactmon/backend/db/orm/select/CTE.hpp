@@ -19,13 +19,13 @@ namespace backend::db::select {
         using parameter_types = typename QUERY::parameter_types;
 
         template <std::size_t PARAMETER>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
             if constexpr (RECURSIVE) {
-                auto [next, u] = QUERY::render_to_v2(prev + "RECURSIVE " + ALIAS.Value + " AS (", p);
+                auto [next, u] = QUERY::render_to(prev + "RECURSIVE " + ALIAS.Value + " AS (", p);
                 return std::make_pair(next + ")", u);
             }
             else {
-                auto [next, u] = QUERY::render_to_v2(prev + ALIAS.Value + " AS (", p);
+                auto [next, u] = QUERY::render_to(prev + ALIAS.Value + " AS (", p);
                 return std::make_pair(next + ")", u);
             }
         }

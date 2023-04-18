@@ -25,9 +25,9 @@ namespace backend::db {
             ));
 
             template <std::size_t PARAMETER>
-            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-                auto [next, u] = COMPONENT::render_to_v2(prev, p);
-                return bound_parameter_type::render_to_v2(next + TOKEN.Value, u);
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                auto [next, u] = COMPONENT::render_to(prev, p);
+                return bound_parameter_type::render_to(next + TOKEN.Value, u);
             }
         };
 
@@ -39,8 +39,8 @@ namespace backend::db {
             using parameter_types = typename CRITERIA::parameter_types;
 
             template <std::size_t PARAMETER>
-            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-                auto [next, u] = CRITERIA::render_to_v2(prev + BEGIN.Value, p);
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                auto [next, u] = CRITERIA::render_to(prev + BEGIN.Value, p);
                 return std::make_pair(next + END.Value, u);
             }
         };

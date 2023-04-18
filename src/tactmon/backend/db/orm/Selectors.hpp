@@ -30,8 +30,8 @@ namespace backend::db {
         using value_type = TYPE;
 
         template <std::size_t I>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
-            auto [next, u] = detail::VariadicRenderable<", ", COMPONENTS...>::render_to_v2(prev + NAME.Value + '(', p);
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, I> p) {
+            auto [next, u] = detail::VariadicRenderable<", ", COMPONENTS...>::render_to(prev + NAME.Value + '(', p);
             return std::make_pair(next + ')', u);
         }
     };
@@ -51,8 +51,8 @@ namespace backend::db {
         using value_type = typename COMPONENT::value_type;
 
         template <std::size_t I>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
-            return COMPONENT::render_to_v2(prev + TOKEN.Value + ' ', p);
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, I> p) {
+            return COMPONENT::render_to(prev + TOKEN.Value + ' ', p);
         }
     };
 
@@ -69,9 +69,9 @@ namespace backend::db {
             using value_type = typename COMPONENT::value_type;
 
             template <std::size_t I>
-            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
-                auto [next, u] = CRITERIA::render_to_v2(prev + "DISTINCT ON (", p);
-                return COMPONENT::render_to_v2(next + ") ", u);
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, I> p) {
+                auto [next, u] = CRITERIA::render_to(prev + "DISTINCT ON (", p);
+                return COMPONENT::render_to(next + ") ", u);
             }
         };
     };
@@ -88,8 +88,8 @@ namespace backend::db {
         using value_type = typename COMPONENT::value_type;
 
         template <std::size_t I>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
-            auto [next, u] = COMPONENT::render_to_v2(prev, p);
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, I> p) {
+            auto [next, u] = COMPONENT::render_to(prev, p);
             return std::make_pair(next + " AS " + TOKEN.Value, u);
         }
 
@@ -100,7 +100,7 @@ namespace backend::db {
             using parameter_types = utility::tuple<>;
 
             template <std::size_t I>
-            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, I> p) {
                 return std::make_pair(prev + TOKEN.Value, p);
             }
         };
@@ -110,7 +110,7 @@ namespace backend::db {
         template <utility::Literal KEYWORD>
         struct RawLiteral {
             template <std::size_t I>
-            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, I> p) {
                 return std::make_pair(prev + KEYWORD.Value, p);
             }
         };
@@ -118,7 +118,7 @@ namespace backend::db {
         template <auto V>
         struct Raw {
             template <std::size_t I>
-            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, I> p) {
                 return std::make_pair(prev + detail2::Explode<V>::Value, p);
             }
         };
@@ -140,9 +140,9 @@ namespace backend::db {
         ));
 
         template <std::size_t I>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
-            auto [next, u] = COMPONENT::render_to_v2(prev, p);
-            auto [next2, u2] = PARTITION::render_to_v2(next + " OVER (", u);
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, I> p) {
+            auto [next, u] = COMPONENT::render_to(prev, p);
+            auto [next2, u2] = PARTITION::render_to(next + " OVER (", u);
             return std::make_pair(next2 + ')', u2);
         }
     };
@@ -152,8 +152,8 @@ namespace backend::db {
         using parameter_types = typename COMPONENT::parameter_types;
 
         template <std::size_t I>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
-            return COMPONENT::render_to_v2(prev + "PARTITION BY ", p);
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, I> p) {
+            return COMPONENT::render_to(prev + "PARTITION BY ", p);
         }
     };
 }

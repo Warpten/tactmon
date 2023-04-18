@@ -18,9 +18,9 @@ namespace backend::db::update {
         template <typename ENTITY, concepts::IsSet SET>
         struct QueryImpl {
             template <std::size_t I>
-            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
-                auto [next, u] = ENTITY::render_to_v2(prev + "UPDATE ", p);
-                return SET::render_to_v2(next + ' ', u);
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, I> p) {
+                auto [next, u] = ENTITY::render_to(prev + "UPDATE ", p);
+                return SET::render_to(next + ' ', u);
             }
 
             using parameter_types = decltype(utility::tuple_cat(
@@ -35,9 +35,9 @@ namespace backend::db::update {
         template <typename QUERYBASE, typename CRITERIA>
         struct WhereImpl final {
             template <std::size_t I>
-            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, I> p) {
-                auto [next, u] = QUERYBASE::render_to_v2(prev, p);
-                return CRITERIA::render_to_v2(next + " WHERE ", u);
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, I> p) {
+                auto [next, u] = QUERYBASE::render_to(prev, p);
+                return CRITERIA::render_to(next + " WHERE ", u);
             }
 
         public:

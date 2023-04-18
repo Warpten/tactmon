@@ -65,14 +65,9 @@ namespace backend::db {
         Projection() : _columns() { }
         explicit Projection(pqxx::row const& row) : _columns(std::make_index_sequence<sizeof...(COLUMNS)> { }, row) { }
 
-        template <std::size_t P>
-        static auto render_to(std::ostream& ss, std::integral_constant<std::size_t, P> p) {
-            return detail::VariadicRenderable<", ", COLUMNS...>::render_to(ss, p);
-        }
-
         template <std::size_t PARAMETER>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-            return detail::VariadicRenderable<", ", COLUMNS...>::render_to_v2(prev, p);
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return detail::VariadicRenderable<", ", COLUMNS...>::render_to(prev, p);
         }
 
     public: // Element accessors.

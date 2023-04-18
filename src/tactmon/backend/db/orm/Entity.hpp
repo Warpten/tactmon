@@ -40,7 +40,7 @@ namespace backend::db {
         Entity(projection_type const& proj) : _proj(proj) { }
 
         template <std::size_t PARAMETER>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
             return std::make_pair(prev + SCHEMA.Value + '.' + NAME.Value, p);
         }
 

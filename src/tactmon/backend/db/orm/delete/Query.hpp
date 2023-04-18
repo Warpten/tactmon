@@ -18,9 +18,9 @@ namespace backend::db::del {
             using result_type = void;
 
             template <std::size_t PARAMETER>
-            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-                auto [next, u] = ENTITY::render_to_v2(prev + "DELETE FROM", p);
-                return CRITERIA::render_to_v2(next + ' ', u);
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                auto [next, u] = ENTITY::render_to(prev + "DELETE FROM", p);
+                return CRITERIA::render_to(next + ' ', u);
             }
         };
     }

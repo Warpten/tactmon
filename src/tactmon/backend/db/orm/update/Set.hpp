@@ -19,8 +19,8 @@ namespace backend::db::update {
         ));
 
         template <std::size_t PARAMETER>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-            return detail::VariadicRenderable<", ", ASSIGNMENTS...>::render_to_v2(prev + " SET ", p);
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return detail::VariadicRenderable<", ", ASSIGNMENTS...>::render_to(prev + " SET ", p);
         }
     };
 }

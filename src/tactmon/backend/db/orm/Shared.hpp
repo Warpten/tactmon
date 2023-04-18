@@ -30,8 +30,8 @@ namespace backend::db {
         using parameter_types = typename COMPONENT::parameter_types;
 
         template <std::size_t PARAMETER>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-            return COMPONENT::render_to_v2(prev + "WHERE ", p);
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return COMPONENT::render_to(prev + "WHERE ", p);
         }
     };
 
@@ -47,8 +47,8 @@ namespace backend::db {
         ));
 
         template <std::size_t PARAMETER>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-            auto [next, u] = detail::VariadicRenderable<" AND ", COMPONENTS...>::render_to_v2(prev + '(', p);
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            auto [next, u] = detail::VariadicRenderable<" AND ", COMPONENTS...>::render_to(prev + '(', p);
             return std::make_pair(next + ')', u);
         }
     };
@@ -65,8 +65,8 @@ namespace backend::db {
         ));
 
         template <std::size_t PARAMETER>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-            auto [next, u] = detail::VariadicRenderable<" OR ", COMPONENTS...>::render_to_v2(prev + '(', p);
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            auto [next, u] = detail::VariadicRenderable<" OR ", COMPONENTS...>::render_to(prev + '(', p);
             return std::make_pair(next + ')', u);
         }
     };
@@ -83,7 +83,7 @@ namespace backend::db {
             using parameter_types = utility::tuple<typename COMPONENT::value_type>;
 
             template <std::size_t PARAMETER>
-                constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+                constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
                 return std::make_pair(prev + "$" + detail::Explode<PARAMETER>::Value, std::integral_constant<std::size_t, PARAMETER + 1> { });
             }
         };
@@ -101,7 +101,7 @@ namespace backend::db {
             using parameter_types = utility::tuple<>;
 
             template <std::size_t PARAMETER>
-            constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
                 static_assert(I < PARAMETER, "Unable to bind to a position parameter prior to its first use.");
 
                 return std::make_pair(prev + '$' + detail::Explode<I>::Value, p);
@@ -120,7 +120,7 @@ namespace backend::db {
         using parameter_types = utility::tuple<>;
 
         template <std::size_t PARAMETER>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
             return std::make_pair(prev + detail::Explode<V>::Value, p);
         }
     };
@@ -133,8 +133,8 @@ namespace backend::db {
         using parameter_types = typename COMPONENT::parameter_types;
 
         template <std::size_t PARAMETER>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-            return COMPONENT::render_to_v2(prev + "OFFSET ", p);
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return COMPONENT::render_to(prev + "OFFSET ", p);
         }
     };
 
@@ -146,8 +146,8 @@ namespace backend::db {
         using parameter_types = typename COMPONENT::parameter_types;
 
         template <std::size_t PARAMETER>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-            return COMPONENT::render_to_v2(prev + "LIMIT ", p);
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return COMPONENT::render_to(prev + "LIMIT ", p);
         }
     };
 
@@ -159,8 +159,8 @@ namespace backend::db {
         using parameter_types = typename COMPONENT::parameter_types;
 
         template <std::size_t PARAMETER>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-            auto [next, u] = COMPONENT::render_to_v2(prev, p);
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            auto [next, u] = COMPONENT::render_to(prev, p);
             return std::make_pair(ASCENDING ? next + " ASC" : next + " DESC", u);
         }
     };
@@ -183,8 +183,8 @@ namespace backend::db {
         using parameter_types = decltype(utility::tuple_cat(std::declval<typename COMPONENTS::parameter_types>()...));
 
         template <std::size_t PARAMETER>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-            return detail::VariadicRenderable<", ", COMPONENTS...>::render_to_v2(prev + "ORDER BY ", p);
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return detail::VariadicRenderable<", ", COMPONENTS...>::render_to(prev + "ORDER BY ", p);
         }
     };
 
@@ -198,8 +198,8 @@ namespace backend::db {
         using parameter_types = decltype(utility::tuple_cat(std::declval<typename COMPONENTS::parameter_types>()...));
 
         template <std::size_t PARAMETER>
-        constexpr static auto render_to_v2(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
-            return detail::VariadicRenderable<", ", COMPONENTS...>::render_to_v2(prev + "GROUP BY ", p);
+        constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            return detail::VariadicRenderable<", ", COMPONENTS...>::render_to(prev + "GROUP BY ", p);
         }
     };
 }
