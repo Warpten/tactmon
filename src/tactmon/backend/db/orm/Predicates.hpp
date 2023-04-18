@@ -24,8 +24,8 @@ namespace backend::db {
                 std::declval<typename bound_parameter_type::parameter_types>()
             ));
 
-            template <std::size_t PARAMETER>
-            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, PARAMETER> p) {
+            template <std::size_t I>
+            constexpr static auto render_to(std::string prev, std::integral_constant<std::size_t, I> p) {
                 auto [next, u] = COMPONENT::render_to(prev, p);
                 return bound_parameter_type::render_to(next + TOKEN.Value, u);
             }
