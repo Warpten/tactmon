@@ -22,84 +22,84 @@ namespace libtactmon::tact::config {
         { "root",
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 2)
-                    return false;
+                    return Error::BuildConfig_InvalidRoot;
 
                 if (!CKey::TryParse(tokens[1], cfg.Root))
-                    return false;
+                    return Error::BuildConfig_InvalidRoot;
 
-                return true;
+                return Error::OK;
             }
         }, { "install",
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 3 && tokens.size() != 2)
-                    return false;
+                    return Error::BuildConfig_InvalidInstall;
 
                 if (!CKey::TryParse(tokens[1], cfg.Install.Key.ContentKey))
-                    return false;
+                    return Error::BuildConfig_InvalidInstall;
 
                 if (!EKey::TryParse(tokens[2], cfg.Install.Key.EncodingKey))
-                    return false;
+                    return Error::BuildConfig_InvalidInstall;
 
-                return true;
+                return Error::OK;
             }
         }, { "install-size",
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 3 && tokens.size() != 2)
-                    return false;
+                    return Error::BuildConfig_InvalidInstallSize;
 
                 {
                     auto [ptr, ec] = std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), cfg.Install.Size[0]);
                     if (ec != std::errc{ })
-                        return false;
+                        return Error::BuildConfig_InvalidInstallSize;
                 }
 
                 if (tokens.size() == 3) {
                     auto [ptr, ec] = std::from_chars(tokens[2].data(), tokens[2].data() + tokens[2].size(), cfg.Install.Size[1]);
                     if (ec != std::errc{ })
-                        return false;
+                        return Error::BuildConfig_InvalidInstallSize;
                 }
 
-                return true;
+                return Error::OK;
             }
         }, { "encoding", 
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 3 && tokens.size() != 2)
-                    return false;
+                    return Error::BuildConfig_InvalidEncoding;
 
                 if (!CKey::TryParse(tokens[1], cfg.Encoding.Key.ContentKey))
-                    return false;
+                    return Error::BuildConfig_InvalidEncoding;
 
                 if (!EKey::TryParse(tokens[2], cfg.Encoding.Key.EncodingKey))
-                    return false;
+                    return Error::BuildConfig_InvalidEncoding;
 
-                return true;
+                return Error::OK;
             }
         }, { "encoding-size",
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 3 && tokens.size() != 2)
-                    return false;
+                    return Error::BuildConfig_InvalidEncodingSize;
 
                 {
                     auto [ptr, ec] = std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), cfg.Encoding.Size[0]);
                     if (ec != std::errc{ })
-                        return false;
+                        return Error::BuildConfig_InvalidEncodingSize;
                 }
 
                 if (tokens.size() == 3) {
                     auto [ptr, ec] = std::from_chars(tokens[2].data(), tokens[2].data() + tokens[2].size(), cfg.Encoding.Size[1]);
                     if (ec != std::errc{ })
-                        return false;
+                        return Error::BuildConfig_InvalidEncodingSize;
                 }
 
-                return true;
+                return Error::OK;
             }
         }, { "build-name",
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 2)
-                    return false;
+                    return Error::BuildConfig_InvalidBuildName;
 
                 cfg.BuildName = tokens[1];
-                return true;
+                return Error::OK;
             }
         }
     };
@@ -125,8 +125,9 @@ namespace libtactmon::tact::config {
                 if (tokens[0] != handler.Token)
                     continue;
 
-                if (!handler.Handler(config, std::move(tokens)))
-                    return Result<BuildConfig> { Error::MalformedBuildConfiguration };
+                Error error = handler.Handler(config, std::move(tokens));
+                if (error != Error::OK)
+                    return Result<BuildConfig> { error };
                 break;
             }
         }

@@ -27,7 +27,14 @@ namespace libtactmon {
         MalformedFile,
         EncodingKeyMismatch,
         CompressionFailure,
-        UnknownCompressionMode
+        UnknownCompressionMode,
+
+        BuildConfig_InvalidRoot,
+        BuildConfig_InvalidInstall,
+        BuildConfig_InvalidInstallSize,
+        BuildConfig_InvalidEncoding,
+        BuildConfig_InvalidEncodingSize,
+        BuildConfig_InvalidBuildName
     };
 
     std::error_code make_error_code(Error err);
