@@ -39,6 +39,7 @@
 #include <libtactmon/ribbit/Commands.hpp>
 #include <libtactmon/ribbit/types/Versions.hpp>
 #include <libtactmon/tact/data/product/wow/Product.hpp>
+#include <libtactmon/Result.hpp>
 
 void Execute(boost::program_options::variables_map vm);
 
@@ -179,10 +180,9 @@ void Execute(boost::program_options::variables_map vm) {
         for (ribbit::types::versions::Record const& version : versions->Records) {
             tact::data::product::ResourceResolver resolver(threadPool.executor(), localCache);
 
-            std::optional<tact::config::BuildConfig> buildConfig = resolver.ResolveConfiguration(*cdns, version.BuildConfig,
-                [&](libtactmon::io::FileStream& fstream) {
-                    return tact::config::BuildConfig::Parse(fstream);
-                });
+            libtactmon::Result<tact::config::BuildConfig> buildConfig = resolver.ResolveConfiguration(*cdns, version.BuildConfig).transform([&](libtactmon::io::FileStream fstream) {
+                return tact::config::BuildConfig::Parse(fstream);
+            });
 
             if (!buildConfig.has_value())
                 continue;
