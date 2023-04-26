@@ -56,7 +56,7 @@ namespace libtactmon::tact::data::product {
                     });
 
             if (encoding)
-                return encoding.ToOptional();
+                return std::move(encoding).ToOptional();
 
             if (_logger != nullptr)
                 _logger->error("({}) An error occured while loading the encoding manifest: {}.", _buildConfig->BuildName, encoding.code());
@@ -76,7 +76,7 @@ namespace libtactmon::tact::data::product {
                 });
 
             if (install)
-                return install.ToOptional();
+                return std::move(install).ToOptional();
 
             if (_logger != nullptr)
                 _logger->error("({}) An error occured while parsing install manifest: {}.", _buildConfig->BuildName, install.code());

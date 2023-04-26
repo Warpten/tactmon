@@ -40,7 +40,7 @@ namespace libtactmon::tact::data::product::wow {
             return false;
         }
 
-        _root = root.ToOptional();
+        _root = std::move(root).ToOptional();
 
         if (_logger != nullptr)
             _logger->info("({}) Root manifest loaded in {:.3} seconds ({} entries).", _buildConfig->BuildName, sw, _root->size());
