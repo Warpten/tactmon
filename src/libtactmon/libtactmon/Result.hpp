@@ -21,7 +21,7 @@ namespace libtactmon {
      * @tparam[in] R The type of the value possibly stored in this result.
      * @tparam[in] E The type of the error value possibly stored in this result.
      */
-    template <typename R, typename E>
+    template <typename R, typename E = boost::system::error_code>
     struct Result final {
         static_assert(!std::is_void_v<R>, "R must not be void");
         static_assert(!std::is_void_v<E>, "E must not be void");
@@ -177,7 +177,7 @@ namespace libtactmon {
          */
         template <typename F, typename = std::enable_if_t<std::is_same_v<std::invoke_result_t<F>, R>>>
         auto unwrap_or_else(F f) && -> R&& {
-            return !has_value() ? f() : unwrap();
+            return !has_value() ? f() : unwrap_locally();
         }
 
         /**
@@ -187,18 +187,18 @@ namespace libtactmon {
          */
         template <typename U = R, typename = std::enable_if_t<std::is_default_constructible_v<R>>>
         auto unwrap_or_default() && -> R&& {
-            return !has_value() ? R{ } : unwrap();
+            return !has_value() ? R{ } : unwrap_locally();
         }
 
         E const& code() const& { return std::get<1>(_result); }
-        E&& code()&& { return std::get<1>(std::move(_result)); }
+        E&& code() && { return std::get<1>(std::move(_result)); }
 
         /**
          * Transfers this @p Result into an optional.
          *
          * This is a terminal operation; the current object is considered moved-from after this call.
          */
-        std::optional<R> ToOptional()&& {
+        std::optional<R> ToOptional() && {
             return std::optional<R> { std::get<0>(std::move(_result)) };
         }
 
