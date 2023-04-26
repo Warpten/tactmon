@@ -6,14 +6,6 @@ namespace libtactmon::tact {
             std::filesystem::create_directories(root);
     }
 
-    io::FileStream Cache::OpenWrite(std::string_view relativePath) const {
-        std::filesystem::path absolutePath = GetAbsolutePath(relativePath);
-        if (!std::filesystem::is_directory(absolutePath.parent_path()))
-            std::filesystem::create_directories(absolutePath.parent_path());
-
-        return io::FileStream { absolutePath };
-    }
-
     std::filesystem::path Cache::GetAbsolutePath(std::string_view relativePath) const { 
         std::filesystem::path fullResourcePath = _root;
 
@@ -23,6 +15,14 @@ namespace libtactmon::tact {
             return fullResourcePath / relativePath.substr(1);
 
         return _root / relativePath;
+    }
+
+    Result<io::FileStream> Cache::OpenWrite(std::string_view relativePath) const {
+        std::filesystem::path absolutePath = GetAbsolutePath(relativePath);
+        if (!std::filesystem::is_directory(absolutePath.parent_path()))
+            std::filesystem::create_directories(absolutePath.parent_path());
+
+        return Result<io::FileStream> { absolutePath };
     }
 
     void Cache::Delete(std::string_view relativePath) const {

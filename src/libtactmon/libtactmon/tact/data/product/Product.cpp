@@ -1,10 +1,10 @@
 #include "libtactmon/io/MemoryStream.hpp"
-#include "libtactmon/net/DownloadTask.hpp"
-#include "libtactmon/net/MemoryDownloadTask.hpp"
 #include "libtactmon/ribbit/Commands.hpp"
 #include "libtactmon/tact/data/Encoding.hpp"
 #include "libtactmon/tact/data/product/Product.hpp"
 #include "libtactmon/tact/EKey.hpp"
+#include "libtactmon/utility/Formatting.hpp"
+#include "libtactmon/Errors.hpp"
 
 #include <filesystem>
 #include <future>
@@ -29,15 +29,15 @@ namespace libtactmon::tact::data::product {
             return false;
 
         // Load build config and cdn config; abort if invalid or not found.
-        _buildConfig = ResolveCachedConfig(buildConfig, [](io::FileStream& fstream) {
+        _buildConfig = ResolveCachedConfig(buildConfig).transform([](io::FileStream fstream) {
             return tact::config::BuildConfig::Parse(fstream);
-        });
+        }).ToOptional();
         if (!_buildConfig.has_value())
             return false;
 
-        _cdnConfig = ResolveCachedConfig(cdnConfig, [](io::FileStream& fstream) {
+        _cdnConfig = ResolveCachedConfig(cdnConfig).transform([](io::FileStream fstream) {
             return tact::config::CDNConfig::Parse(fstream);
-        });
+        }).ToOptional();
         if (!_cdnConfig.has_value())
             return false;
         
@@ -49,45 +49,42 @@ namespace libtactmon::tact::data::product {
             _logger->info("({}) Detected root manifest: {}.", _buildConfig->BuildName, _buildConfig->Root.ToString());
         }
 
-        _encoding = ResolveCachedData(_buildConfig->Encoding.Key.EncodingKey.ToString(),
-            [&key = _buildConfig->Encoding.Key](io::FileStream& fstream) -> std::optional<tact::data::Encoding>
-            {
-                if (!fstream)
-                    return std::nullopt;
+        _encoding = [&]() -> std::optional<tact::data::Encoding> {
+            Result<tact::data::Encoding> encoding = ResolveCachedBLTE(_buildConfig->Encoding.Key.EncodingKey, _buildConfig->Encoding.Key.ContentKey)
+                .and_then([](tact::BLTE decompressedStream) {
+                return tact::data::Encoding{ decompressedStream.GetStream() };
+                    });
 
-                std::optional<tact::BLTE> compressedArchive = tact::BLTE::Parse(fstream, key.EncodingKey, key.ContentKey);
-                if (!compressedArchive.has_value())
-                    return std::nullopt;
+            if (encoding)
+                return encoding.ToOptional();
 
-                return tact::data::Encoding { compressedArchive->GetStream() };
-            });
-
-        if (!_encoding.has_value()) {
             if (_logger != nullptr)
-                _logger->error("({}) An error occured while parsing encoding manifest.", _buildConfig->BuildName);
+                _logger->error("({}) An error occured while loading the encoding manifest: {}.", _buildConfig->BuildName, encoding.code());
+
+            return std::nullopt;
+        }();
+        if (!_encoding.has_value())
             return false;
-        }
 
         if (_logger != nullptr)
             _logger->info("({}) {} entries found in encoding manifest.", _buildConfig->BuildName, _encoding->count());
 
-        _install = ResolveCachedData(_buildConfig->Install.Key.EncodingKey.ToString(),
-            [&key = _buildConfig->Install.Key](io::FileStream& fstream) -> std::optional<tact::data::Install> {
-                if (!fstream)
-                    return std::nullopt;
+        _install = [&]() -> std::optional<tact::data::Install> {
+            Result<tact::data::Install> install = ResolveCachedBLTE(_buildConfig->Install.Key.EncodingKey, _buildConfig->Install.Key.ContentKey)
+                .transform([](tact::BLTE decompressedStream) {
+                    return tact::data::Install::Parse(decompressedStream.GetStream());
+                });
 
-                std::optional<tact::BLTE> compressedArchive = tact::BLTE::Parse(fstream, key.EncodingKey, key.ContentKey);
-                if (!compressedArchive.has_value())
-                    return std::nullopt;
+            if (install)
+                return install.ToOptional();
 
-                return tact::data::Install::Parse(compressedArchive->GetStream());
-            });
-
-        if (!_install.has_value()) {
             if (_logger != nullptr)
-                _logger->error("({}) An error occured while parsing install manifest.", _buildConfig->BuildName);
+                _logger->error("({}) An error occured while parsing install manifest: {}.", _buildConfig->BuildName, install.code());
+
+            return std::nullopt;
+        }();
+        if (!_install.has_value())
             return false;
-        }
 
         if (_logger != nullptr)
             _logger->info("({}) {} entries found in install manifest.", _buildConfig->BuildName, _install->size());
@@ -98,13 +95,10 @@ namespace libtactmon::tact::data::product {
         for (config::CDNConfig::Archive const& archive : _cdnConfig->archives) {
             std::shared_ptr<index_parse_task> task = std::make_shared<index_parse_task>(
                 [archiveName = archive.Name, archiveSize = archive.Size, buildName = _buildConfig->BuildName, logger = _logger, this]() {
-                    return ResolveCachedData(fmt::format("{}.index", archiveName),
-                        [&](io::FileStream& fstream) -> std::optional<tact::data::Index> {
-                            if (!fstream /* || fstream.GetLength() != archiveSize */ )
-                                return std::nullopt;
-
-                            return tact::data::Index { archiveName, fstream };
-                        });
+                    return ResolveCachedData(fmt::format("{}.index", archiveName))
+                        .transform([&](io::FileStream fstream) {
+                            return tact::data::Index::TryParse(archiveName, fstream);
+                        }).ToOptional();
                 }
             );
 
@@ -117,13 +111,13 @@ namespace libtactmon::tact::data::product {
             if (_logger != nullptr)
                 _logger->info("({}) Loading file index '{}'.", _buildConfig->BuildName, _cdnConfig->fileIndex->Name);
 
-            _fileIndex = ResolveCachedData(fmt::format("{}.index", _cdnConfig->fileIndex->Name),
-                [name = _cdnConfig->fileIndex->Name](io::FileStream& fstream) -> std::optional<tact::data::Index> {
+            _fileIndex = ResolveCachedData(fmt::format("{}.index", _cdnConfig->fileIndex->Name)).transform(
+                [name = _cdnConfig->fileIndex->Name](io::FileStream fstream) {
                     if (!fstream)
-                        return std::nullopt;
+                        return Result<tact::data::Index> { Error::IndexNotFound };
 
-                    return tact::data::Index{ name, fstream };
-                });
+                    return tact::data::Index::TryParse(name, fstream);
+                }).ToOptional();
         }
 
         for (boost::future<std::optional<tact::data::Index>>& future : boost::when_all(archiveFutures.begin(), archiveFutures.end()).get()) {

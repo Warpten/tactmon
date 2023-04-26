@@ -3,6 +3,7 @@
 #include "libtactmon/io/FileStream.hpp"
 #include "libtactmon/io/MemoryStream.hpp"
 #include "libtactmon/tact/Cache.hpp"
+#include "libtactmon/Result.hpp"
 
 #include <cstdint>
 #include <filesystem>
@@ -58,7 +59,7 @@ namespace libtactmon::net {
         }
 
         // virtual boost::system::error_code Initialize(ValueType& body) = 0;
-        // virtual std::optional<R> TransformMessage(MessageType& body) = 0;
+        // virtual Result<R> TransformMessage(MessageType& body) = 0;
 
         /**
          * Executes this task.
@@ -69,7 +70,7 @@ namespace libtactmon::net {
          *
          * @returns An optional containing the parsed response or an empty optional if an error occured.
          */
-        std::optional<R> Run(boost::asio::any_io_executor const& executor,
+        Result<R> Run(boost::asio::any_io_executor const& executor,
             std::string_view host,
             spdlog::logger* logger = nullptr)
         {
@@ -82,19 +83,12 @@ namespace libtactmon::net {
 
             beast::error_code ec;
 
-            if (logger != nullptr)
-                logger->trace("Downloading '{}' from {}.", _resourcePath, host);
-
             beast::tcp_stream stream { executor };
             tcp::resolver r { executor };
 
             stream.connect(r.resolve(host, "80"), ec);
-            if (ec.failed()) {
-                if (logger != nullptr)
-                    logger->error("An error occured while downloading {} from {}: {}.", _resourcePath, host, ec.message());
-
-                return std::nullopt;
-            }
+            if (ec.failed())
+                return Result<R> { ec };
 
             http::request<http::string_body> req { http::verb::get, _resourcePath, 11 };
             req.set(http::field::host, host);
@@ -102,35 +96,27 @@ namespace libtactmon::net {
                 req.set(http::field::range, fmt::format("{}-{}", _offset, _offset + _size - 1));
 
             http::write(stream, req, ec);
-            if (ec.failed()) {
-                if (logger != nullptr)
-                    logger->error("An error occured while downloading {} from {}: {}.", _resourcePath, host, ec.message());
-
-                return std::nullopt;
-            }
+            if (ec.failed())
+                return Result<R> { ec };
 
             http::response_parser<Body> res;
             res.body_limit({ });
 
             ec = static_cast<T*>(this)->Initialize(res.get().body());
-            if (ec.failed()) {
-                if (logger != nullptr)
-                    logger->error("An error occured while downloading {} from {}: {}.", _resourcePath, host, ec.message());
-
-                return std::nullopt;
-            }
+            if (ec.failed())
+                return Result<R> { ec };
 
             beast::flat_buffer buffer;
-            http::read(stream, buffer, res, ec);
-            if (ec.failed() || res.get().result() != http::status::ok) {
-                if (logger != nullptr)
-                    logger->error("An error occured while downloading {} from {}: {}.", _resourcePath, host, ec.message());
-            }
+            http::read_header(stream, buffer, res, ec);
+            if (ec.failed())
+                return Result<R> { ec };
 
-            if (res.get().result() == http::status::ok) {
-                if (logger != nullptr)
-                    logger->trace("Downloaded '{}' from {} ({} bytes)", host, _resourcePath, res.get()[http::field::content_length]);
-            }
+            if (res.get().result() != http::status::ok)
+                return Result<R> { boost::beast::http::error::bad_status };
+
+            http::read(stream, buffer, res, ec);
+            if (ec.failed())
+                return Result<R> { ec };
 
             stream.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             return static_cast<T*>(this)->TransformMessage(res.get());

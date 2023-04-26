@@ -1,6 +1,7 @@
 #include "libtactmon/detail/Tokenizer.hpp"
 #include "libtactmon/tact/config/CDNConfig.hpp"
 #include "libtactmon/io/IReadableStream.hpp"
+#include "libtactmon/Errors.hpp"
 
 #include <charconv>
 #include <functional>
@@ -10,14 +11,14 @@
 using namespace std::string_view_literals;
 
 namespace libtactmon::tact::config {
-    std::optional<CDNConfig> CDNConfig::Parse(io::IReadableStream& stream) {
+    Result<CDNConfig> CDNConfig::Parse(io::IReadableStream& stream) {
         stream.SeekRead(0);
 
         std::string_view contents { stream.Data<char>().data(), stream.GetLength() };
         std::vector<std::string_view> lines = detail::Tokenize(contents, '\n', true);
 
         if (lines.empty())
-            return std::nullopt;
+            return Result<CDNConfig> { Error::MalformedCDNConfiguration };
 
         CDNConfig config;
         for (std::string_view line : lines) {
@@ -36,12 +37,12 @@ namespace libtactmon::tact::config {
                 for (std::size_t i = 1; i < tokens.size(); ++i) {
                     auto [ptr, ec] = std::from_chars(tokens[i].data(), tokens[i].data() + tokens[i].size(), config.archives[i - 1].Size);
                     if (ec != std::errc{ })
-                        return std::nullopt;
+                        return Result<CDNConfig> { Error::MalformedCDNConfiguration };
                 }
             }
             else if (tokens[0] == "file-index") {
                 if (tokens.size() == 1)
-                    return std::nullopt;
+                    return Result<CDNConfig> { Error::MalformedCDNConfiguration };
 
                 if (!config.fileIndex.has_value())
                     config.fileIndex.emplace();
@@ -50,17 +51,17 @@ namespace libtactmon::tact::config {
             }
             else if (tokens[0] == "file-index-size") {
                 if (tokens.size() == 1)
-                    return std::nullopt;
+                    return Result<CDNConfig> { Error::MalformedCDNConfiguration };
 
                 if (!config.fileIndex.has_value())
                     config.fileIndex.emplace();
 
                 auto [ptr, ec] = std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), config.fileIndex->Size);
                 if (ec != std::errc{ })
-                    return std::nullopt;
+                    return Result<CDNConfig> { Error::MalformedCDNConfiguration };
             }
         }
 
-        return config;
+        return Result<CDNConfig> { std::move(config) };
     }
 }

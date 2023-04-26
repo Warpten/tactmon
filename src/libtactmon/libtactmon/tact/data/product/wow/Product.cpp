@@ -1,5 +1,6 @@
 #include "libtactmon/tact/BLTE.hpp"
 #include "libtactmon/tact/data/product/wow/Product.hpp"
+#include "libtactmon/utility/Formatting.hpp"
 
 #include <fstream>
 
@@ -18,33 +19,31 @@ namespace libtactmon::tact::data::product::wow {
 
         spdlog::stopwatch sw;
 
-        _root = [&]() -> std::optional<tact::data::product::wow::Root> {
+        Result<tact::data::product::wow::Root> root = [&]() {
             for (std::size_t i = 0; i < rootLocation->keyCount(); ++i) {
                 tact::EKey key = (*rootLocation)[i];
 
-                auto root = Base::ResolveCachedData(key.ToString(), [&encoding = _encoding](io::IReadableStream& fstream)
-                    -> std::optional<tact::data::product::wow::Root>
-                {
-                    std::optional<tact::BLTE> blte = tact::BLTE::Parse(fstream);
-                    if (blte.has_value())
-                        return tact::data::product::wow::Root::Parse(blte->GetStream(), encoding->GetContentKeySize());
-
-                    return std::nullopt;
+                auto root = Base::ResolveCachedBLTE(key).transform([&encoding = _encoding](tact::BLTE decompressedStream) {
+                    return tact::data::product::wow::Root::Parse(decompressedStream.GetStream(), encoding->GetContentKeySize());
                 });
                 if (root.has_value())
                     return root;
             }
 
-            return std::nullopt;
+            return Result<tact::data::product::wow::Root> { Error::RootManifestNotFound };
         }();
 
-        if (!_root.has_value())
+        if (!root.has_value()) {
+            if (_logger != nullptr)
+                _logger->error("({}) An error occured while loading the root manifest: {}.", _buildConfig->BuildName, root.code());
+
             return false;
+        }
+
+        _root = root.ToOptional();
 
         if (_logger != nullptr)
-            _logger->info("({}) Root manifest loaded in {:.3} seconds ({} entries).", _buildConfig->BuildName,
-                sw,
-                _root->size());
+            _logger->info("({}) Root manifest loaded in {:.3} seconds ({} entries).", _buildConfig->BuildName, sw, _root->size());
         return true;
     }
 

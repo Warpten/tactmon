@@ -2,6 +2,7 @@
 
 #include "libtactmon/detail/Export.hpp"
 #include "libtactmon/tact/CKey.hpp"
+#include "libtactmon/Result.hpp"
 
 #include <cstdint>
 #include <list>
@@ -18,7 +19,7 @@ namespace libtactmon::io {
 
 namespace libtactmon::tact::data {
     struct LIBTACTMON_API Install final {
-        static std::optional<Install> Parse(io::IReadableStream& stream);
+        static Result<Install> Parse(io::IReadableStream& stream);
 
         struct LIBTACTMON_API Tag final {
             friend struct Install;

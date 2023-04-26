@@ -1,6 +1,7 @@
 #include "libtactmon/crypto/Jenkins.hpp"
 #include "libtactmon/tact/data/product/wow/Root.hpp"
 #include "libtactmon/utility/Endian.hpp"
+#include "libtactmon/Errors.hpp"
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/thread_pool.hpp>
@@ -65,9 +66,9 @@ namespace libtactmon::tact::data::product::wow {
         return block;
     }
 
-    /* static */ std::optional<Root> Root::Parse(io::IReadableStream& stream, std::size_t contentKeySize) {
+    /* static */ Result<Root> Root::Parse(io::IReadableStream& stream, std::size_t contentKeySize) {
         if (!stream.CanRead(sizeof(uint32_t)))
-            return std::nullopt;
+            return Result<Root> { Error::CorruptedRootManifest };
 
         uint32_t magic = stream.Read<uint32_t>(std::endian::little);
 
@@ -76,7 +77,7 @@ namespace libtactmon::tact::data::product::wow {
 
         if (magic == 0x4D465354) {
             if (!stream.CanRead(sizeof(uint32_t) * 2))
-                return std::nullopt;
+                return Result<Root> { Error::CorruptedRootManifest };
 
             uint32_t totalFileCount = stream.Read<uint32_t>(std::endian::little);
             uint32_t namedFileCount = stream.Read<uint32_t>(std::endian::little);
@@ -92,7 +93,7 @@ namespace libtactmon::tact::data::product::wow {
 
         while (stream.GetReadCursor() < stream.GetLength()) {
             if (!stream.CanRead(12))
-                return std::nullopt;
+                return Result<Root> { Error::CorruptedRootManifest };
 
             PageInfo page;
             page.numRecords = stream.Read<uint32_t>(std::endian::little);
@@ -112,7 +113,7 @@ namespace libtactmon::tact::data::product::wow {
             }
 
             if (!stream.CanRead(length))
-                return std::nullopt;
+                return Result<Root> { Error::CorruptedRootManifest };
 
             page.data.emplace(stream.Data().subspan(0, length));
             stream.SkipRead(length);
@@ -133,14 +134,14 @@ namespace libtactmon::tact::data::product::wow {
         for (auto&& future : boost::when_all(futures.begin(), futures.end()).get()) {
             std::optional<Block> value = future.get();
             if (!value.has_value())
-                return std::nullopt;
+                return Result<Root> { Error::CorruptedRootManifest };
 
             instance._blocks.emplace_back(std::move(*value));
         }
 
         pool.join();
 
-        return instance;
+        return Result<Root> { std::move(instance) };
     }
 
     Root::Root(Root&& other) noexcept : _blocks(std::move(other._blocks)) {

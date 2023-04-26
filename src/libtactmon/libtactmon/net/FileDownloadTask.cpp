@@ -13,14 +13,15 @@ namespace libtactmon::net {
         return ec;
     }
 
-    std::optional<io::FileStream> FileDownloadTask::TransformMessage(MessageType& message) {
+    Result<io::FileStream> FileDownloadTask::TransformMessage(MessageType& message) {
         message.body().close();
 
         if (message.result() != boost::beast::http::status::ok) {
             // Ideally we would prevent beast from writing to disk if http response is not 200 OK or some
             // other 2xx code.
             _localCache.Delete(_resourcePath);
-            return std::nullopt;
+
+            return Result<io::FileStream> { boost::beast::http::error::bad_status };
         }
 
         return _localCache.OpenWrite(_resourcePath);

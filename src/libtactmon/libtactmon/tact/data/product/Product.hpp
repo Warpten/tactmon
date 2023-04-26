@@ -2,8 +2,6 @@
 
 #include "libtactmon/detail/Export.hpp"
 #include "libtactmon/io/FileStream.hpp"
-#include "libtactmon/net/DownloadTask.hpp"
-#include "libtactmon/net/FileDownloadTask.hpp"
 #include "libtactmon/ribbit/types/CDNs.hpp"
 #include "libtactmon/ribbit/types/Versions.hpp"
 #include "libtactmon/tact/BLTE.hpp"
@@ -16,6 +14,7 @@
 #include "libtactmon/tact/data/Index.hpp"
 #include "libtactmon/tact/data/Install.hpp"
 #include "libtactmon/tact/data/product/Utility.hpp"
+#include "libtactmon/Result.hpp"
 
 #include <cstdint>
 #include <filesystem>
@@ -62,8 +61,12 @@ namespace libtactmon::tact::data::product {
          * @returns The parsed configuration object, or an empty optional if an error occured.
          */
         template <typename Handler>
-        [[nodiscard]] auto ResolveCachedConfig(std::string_view key, Handler parser) const -> std::invoke_result_t<Handler, io::FileStream&> {
-            return ResourceResolver::ResolveConfiguration(*_cdns, key, parser, _logger.get());
+        [[nodiscard]] auto ResolveCachedConfig(std::string_view key, Handler parser) const {
+            return ResourceResolver::ResolveConfiguration(*_cdns, key, parser);
+        }
+
+        [[nodiscard]] auto ResolveCachedConfig(std::string_view key) const {
+            return ResourceResolver::ResolveConfiguration(*_cdns, key);
         }
 
         /**
@@ -75,8 +78,36 @@ namespace libtactmon::tact::data::product {
          * @returns An optional encapsulating the deserialized resource.
          */
         template <typename Handler>
-        [[nodiscard]] auto ResolveCachedData(std::string_view key, Handler resultSupplier) const -> std::invoke_result_t<Handler, io::FileStream&> {
-            return ResourceResolver::ResolveData(*_cdns, key, resultSupplier, _logger.get());
+        [[nodiscard]] auto ResolveCachedData(std::string_view key, Handler resultSupplier) const {
+            return ResourceResolver::ResolveData(*_cdns, key, resultSupplier);
+        }
+
+        /**
+         * Resolves a cached data file.
+         *
+         * @param[in] key A key identifying the resource.
+         */
+        [[nodiscard]] Result<io::FileStream> ResolveCachedData(std::string_view key) const {
+            return ResourceResolver::ResolveData(*_cdns, key);
+        }
+
+        /**
+         * Resolves a cached compressed BLTE archive.
+         *
+         * @param[in] encodingKey The encoding key of the BLTE archive to search for.
+         * @param[in] contentKey  The content key of the BLTE archive to search for.
+         */
+        [[nodiscard]] Result<tact::BLTE> ResolveCachedBLTE(tact::EKey const& encodingKey, tact::CKey const& contentKey) const {
+            return ResourceResolver::ResolveBLTE(*_cdns, encodingKey, contentKey);
+        }
+
+        /**
+         * Resolves a cached compressed BLTE archive.
+         *
+         * @param[in] encodingKey The encoding key of the BLTE archive to search for.
+         */
+        [[nodiscard]] Result<tact::BLTE> ResolveCachedBLTE(tact::EKey const& encodingKey) const {
+            return ResourceResolver::ResolveBLTE(*_cdns, encodingKey);
         }
 
     public: // Front-facing API

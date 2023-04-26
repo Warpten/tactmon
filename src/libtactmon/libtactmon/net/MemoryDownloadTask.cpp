@@ -5,10 +5,10 @@ namespace libtactmon::net {
         return { };
     }
 
-    std::optional<io::GrowableMemoryStream> MemoryDownloadTask::TransformMessage(MessageType& message) {
+    Result<io::GrowableMemoryStream> MemoryDownloadTask::TransformMessage(MessageType& message) {
         if (message.result() != boost::beast::http::status::ok)
-            return std::nullopt;
+            return Result<io::GrowableMemoryStream> { boost::beast::http::error::bad_status };
 
-        return io::GrowableMemoryStream { message.body().data() };
+        return Result<io::GrowableMemoryStream> { message.body().data() };
     }
 }

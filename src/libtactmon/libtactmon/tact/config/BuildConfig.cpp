@@ -1,6 +1,7 @@
 #include "libtactmon/detail/Tokenizer.hpp"
 #include "libtactmon/tact/config/BuildConfig.hpp"
 #include "libtactmon/io/IReadableStream.hpp"
+#include "libtactmon/Errors.hpp"
 
 #include <charconv>
 #include <string_view>
@@ -103,13 +104,13 @@ namespace libtactmon::tact::config {
         }
     };
     
-    /* static */ std::optional<BuildConfig> BuildConfig::Parse(io::IReadableStream& stream) {
+    /* static */ Result<BuildConfig> BuildConfig::Parse(io::IReadableStream& stream) {
         stream.SeekRead(0);
         
         std::string_view contents { stream.Data<char>().data(), stream.GetLength() };
         std::vector<std::string_view> lines = libtactmon::detail::Tokenize(contents, '\n', false);
         if (lines.empty())
-            return std::nullopt;
+            return Result<BuildConfig> { Error::MalformedBuildConfiguration };
 
         BuildConfig config { };
 
@@ -125,11 +126,26 @@ namespace libtactmon::tact::config {
                     continue;
 
                 if (!handler.Handler(config, std::move(tokens)))
-                    return std::nullopt;
+                    return Result<BuildConfig> { Error::MalformedBuildConfiguration };
                 break;
             }
         }
 
-        return config;
+        return Result<BuildConfig> { std::move(config) };
+    }
+
+    BuildConfig::BuildConfig(BuildConfig&& other) noexcept
+        : Root(std::move(other.Root)), Install(std::move(other.Install)), Encoding(std::move(other.Encoding)), BuildName(std::move(other.BuildName))
+    {
+
+    }
+
+    BuildConfig& BuildConfig::operator = (BuildConfig&& other) noexcept {
+        Root = std::move(other.Root);
+        Install = std::move(other.Install);
+        Encoding = std::move(other.Encoding);
+        BuildName = std::move(other.BuildName);
+
+        return *this;
     }
 }

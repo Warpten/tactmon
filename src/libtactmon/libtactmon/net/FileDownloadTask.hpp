@@ -28,7 +28,7 @@ namespace libtactmon::net {
         { }
 
         boost::system::error_code Initialize(ValueType& body);
-        std::optional<io::FileStream> TransformMessage(MessageType& body);
+        Result<io::FileStream> TransformMessage(MessageType& body);
 
     private:
         tact::Cache& _localCache;

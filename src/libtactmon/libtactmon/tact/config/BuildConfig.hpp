@@ -3,6 +3,7 @@
 #include "libtactmon/detail/Export.hpp"
 #include "libtactmon/tact/CKey.hpp"
 #include "libtactmon/tact/EKey.hpp"
+#include "libtactmon/Result.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -19,10 +20,17 @@ namespace libtactmon::tact::config {
      * Does **not** model all properties **yet**.
      */
     struct LIBTACTMON_API BuildConfig final {
-        static std::optional<BuildConfig> Parse(io::IReadableStream& stream);
+        static Result<BuildConfig> Parse(io::IReadableStream& stream);
 
     private:
         BuildConfig() = default;
+
+    public:
+        BuildConfig(BuildConfig&&) noexcept;
+        BuildConfig(BuildConfig const&) = default;
+
+        BuildConfig& operator = (BuildConfig&&) noexcept;
+        BuildConfig& operator = (BuildConfig const&) = default;
 
     public:
         struct Key {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "libtactmon/detail/Export.hpp"
+#include "libtactmon/Result.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -27,7 +28,7 @@ namespace libtactmon::tact::config {
             std::size_t Size = 0;
         };
 
-        static std::optional<CDNConfig> Parse(io::IReadableStream& stream);
+        static Result<CDNConfig> Parse(io::IReadableStream& stream);
 
     private:
         CDNConfig() = default;

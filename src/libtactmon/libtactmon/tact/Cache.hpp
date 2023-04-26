@@ -2,6 +2,7 @@
 
 #include "libtactmon/detail/Export.hpp"
 #include "libtactmon/io/FileStream.hpp"
+#include "libtactmon/Result.hpp"
 
 #include <filesystem>
 #include <functional>
@@ -46,6 +47,21 @@ namespace libtactmon::tact {
             }
         }
 
+        std::optional<io::FileStream> Resolve(std::string_view resourcePath) {
+            std::filesystem::path fullResourcePath = GetAbsolutePath(resourcePath);
+
+            if (!std::filesystem::is_regular_file(fullResourcePath))
+                return std::nullopt;
+
+            try {
+                return io::FileStream { fullResourcePath };
+            } catch (std::exception const& ex) {
+                Delete(resourcePath);
+
+                return std::nullopt;
+            }
+        }
+
         /**
          * Resolves the absolute path to the specific resource. Does not check for the resource's existence!
          *
@@ -61,7 +77,7 @@ namespace libtactmon::tact {
          * @param[in] relativePath Relative path to the file.
          * @returns A writable stream.
          */
-        [[nodiscard]] io::FileStream OpenWrite(std::string_view relativePath) const;
+        [[nodiscard]] Result<io::FileStream> OpenWrite(std::string_view relativePath) const;
 
         /**
          * Deletes a file from the cache.

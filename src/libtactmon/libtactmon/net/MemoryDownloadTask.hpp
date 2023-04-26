@@ -16,6 +16,6 @@ namespace libtactmon::net {
         using DownloadTask::DownloadTask;
 
         boost::system::error_code Initialize(ValueType& body);
-        std::optional<io::GrowableMemoryStream> TransformMessage(MessageType& body);
+        Result<io::GrowableMemoryStream> TransformMessage(MessageType& body);
     };
 }

@@ -2,6 +2,7 @@
 
 #include "libtactmon/detail/Export.hpp"
 #include "libtactmon/tact/EKey.hpp"
+#include "libtactmon/Result.hpp"
 
 #include <cstdint>
 #include <string_view>
@@ -14,8 +15,12 @@ namespace libtactmon::io {
 
 namespace libtactmon::tact::data {
     struct LIBTACTMON_API Index final {
-        explicit Index(std::string_view hash, io::IReadableStream& stream);
+        static Result<Index> TryParse(std::string_view hash, io::IReadableStream& stream);
+        
+    private:
+        Index();
 
+    public:
         [[nodiscard]] std::string_view name() const { return _archiveName; }
 
         struct Entry {
