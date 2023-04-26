@@ -12,7 +12,6 @@ namespace libtactmon::io {
 
     public: // IStream
         [[nodiscard]] std::size_t GetLength() const override;
-        explicit operator bool() const override { return _stream.is_open(); }
 
     public: // IReadableStream
         std::size_t SeekRead(std::size_t offset) override;

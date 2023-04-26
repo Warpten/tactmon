@@ -1,4 +1,3 @@
-#include "libtactmon/tact/BLTE.hpp"
 #include "libtactmon/tact/data/product/wow/Product.hpp"
 #include "libtactmon/utility/Formatting.hpp"
 
@@ -23,8 +22,8 @@ namespace libtactmon::tact::data::product::wow {
             for (std::size_t i = 0; i < rootLocation->keyCount(); ++i) {
                 tact::EKey key = (*rootLocation)[i];
 
-                auto root = Base::ResolveCachedBLTE(key).transform([&encoding = _encoding](tact::BLTE decompressedStream) {
-                    return tact::data::product::wow::Root::Parse(decompressedStream.GetStream(), encoding->GetContentKeySize());
+                auto root = Base::ResolveCachedBLTE(key).transform([&encoding = _encoding](io::GrowableMemoryStream decompressedStream) {
+                    return tact::data::product::wow::Root::Parse(decompressedStream, encoding->GetContentKeySize());
                 });
                 if (root.has_value())
                     return root;

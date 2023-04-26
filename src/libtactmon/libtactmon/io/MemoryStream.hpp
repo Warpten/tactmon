@@ -26,8 +26,6 @@ namespace libtactmon::io {
         [[nodiscard]] bool CanRead(std::size_t amount) const override { return _cursor + amount <= _data.size(); }
         [[nodiscard]] std::size_t GetLength() const override { return _data.size(); }
 
-        explicit operator bool() const override { return true; }
-
         using IReadableStream::Data;
         [[nodiscard]] std::span<std::byte const> Data() const override { return _data.subspan(_cursor); }
 
@@ -50,8 +48,6 @@ namespace libtactmon::io {
         void SkipRead(std::size_t offset) override { _cursor += offset; }
         [[nodiscard]] bool CanRead(std::size_t amount) const override { return _cursor + amount <= _data.size(); }
         [[nodiscard]] std::size_t GetLength() const override { return _data.size(); }
-
-        explicit operator bool() const override { return true; }
 
         [[nodiscard]] std::span<std::byte const> Data() const override { return std::span { _data }.subspan(_cursor); }
 
@@ -76,7 +72,6 @@ namespace libtactmon::io {
         }
 
         [[nodiscard]] std::size_t GetLength() const override { return _data.size(); }
-        explicit operator bool() const override { return true; }
 
     public:
         [[nodiscard]] std::size_t GetReadCursor() const override { return _readCursor; }

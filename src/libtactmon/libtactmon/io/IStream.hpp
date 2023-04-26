@@ -29,11 +29,6 @@ namespace libtactmon::io {
          * Returns the length of this stream.
          */
         virtual std::size_t GetLength() const = 0;
-
-        /**
-         * Determines if this stream was successfully opened.
-         */
-        virtual operator bool() const = 0;
     };
 
 }

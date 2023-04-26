@@ -1,9 +1,11 @@
 #pragma once
 
 #include "libtactmon/io/FileStream.hpp"
-#include "libtactmon/net/FileDownloadTask.hpp"
+#include "libtactmon/io/MemoryStream.hpp"
 #include "libtactmon/ribbit/types/CDNs.hpp"
 #include "libtactmon/tact/Cache.hpp"
+#include "libtactmon/tact/CKey.hpp"
+#include "libtactmon/tact/EKey.hpp"
 #include "libtactmon/Errors.hpp"
 #include "libtactmon/Result.hpp"
 
@@ -36,9 +38,7 @@ namespace libtactmon::tact::data::product {
          * 
          * @returns A @ref Result holding a stream to the resource on disk, or an error value.
          */
-        Result<io::FileStream> ResolveConfiguration(ribbit::types::CDNs const& cdns, std::string_view key) const {
-            return Resolve(cdns, key, "/{}/config/{}/{}/{}");
-        }
+        Result<io::FileStream> ResolveConfiguration(ribbit::types::CDNs const& cdns, std::string_view key) const;
 
         /**
          * Resolves a data file.
@@ -48,9 +48,7 @@ namespace libtactmon::tact::data::product {
          * 
          * @returns A @ref Result holding a stream to the resource on disk, or an error value.
          */
-        Result<io::FileStream> ResolveData(ribbit::types::CDNs const& cdns, std::string_view key) const {
-            return Resolve(cdns, key, "/{}/data/{}/{}/{}");
-        }
+        Result<io::FileStream> ResolveData(ribbit::types::CDNs const& cdns, std::string_view key) const;
 
         /**
          * Resolves a block table-encoded data file.
@@ -61,15 +59,7 @@ namespace libtactmon::tact::data::product {
          *
          * @returns A @ref Result holding a stream to the resource on disk, or an error value.
          */
-        Result<tact::BLTE> ResolveBLTE(ribbit::types::CDNs const& cdns, tact::EKey const& encodingKey, tact::CKey const& contentKey) const {
-            return ResolveData(cdns, encodingKey.ToString()).transform([&](io::FileStream compressedStream) {
-                std::optional<tact::BLTE> decompressedStream = tact::BLTE::Parse(compressedStream, encodingKey, contentKey);
-                if (decompressedStream.has_value())
-                    return Result<tact::BLTE> { decompressedStream.value() };
-
-                return Result<tact::BLTE> { Error::MalformedArchive };
-            });
-        }
+        Result<io::GrowableMemoryStream> ResolveBLTE(ribbit::types::CDNs const& cdns, tact::EKey const& encodingKey, tact::CKey const& contentKey) const;
 
         /**
          * Resolves a block table-encoded data file.
@@ -79,35 +69,7 @@ namespace libtactmon::tact::data::product {
          *
          * @returns A @ref Result holding a stream to the resource on disk, or an error value.
          */
-        Result<tact::BLTE> ResolveBLTE(ribbit::types::CDNs const& cdns, tact::EKey const& encodingKey) const {
-            return ResolveData(cdns, encodingKey.ToString()).transform([&](io::FileStream compressedStream) {
-                std::optional<tact::BLTE> decompressedStream = tact::BLTE::Parse(compressedStream);
-                if (decompressedStream.has_value())
-                    return Result<tact::BLTE> { decompressedStream.value() };
-
-                return Result<tact::BLTE> { Error::MalformedArchive };
-            });
-        }
-
-    private:
-        Result<io::FileStream> Resolve(ribbit::types::CDNs const& cdns, std::string_view key, std::string_view formatString) const {
-            for (ribbit::types::cdns::Record const& cdn : cdns) {
-                std::string relativePath { fmt::format(fmt::runtime(formatString), cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
-
-                auto cachedValue = _localCache.Resolve(relativePath);
-                if (cachedValue.has_value())
-                    return Result<io::FileStream> { std::move(cachedValue.value()) };
-
-                for (std::string_view host : cdn.Hosts) {
-                    net::FileDownloadTask downloadTask{ relativePath, _localCache };
-                    auto taskResult = downloadTask.Run(_executor, host);
-                    if (taskResult.has_value())
-                        return taskResult;
-                }
-            }
-
-            return Result<io::FileStream> { Error::ResourceResolutionFailed };
-        }
+        Result<io::GrowableMemoryStream> ResolveBLTE(ribbit::types::CDNs const& cdns, tact::EKey const& encodingKey) const;
 
     protected:
         boost::asio::any_io_executor _executor;

@@ -4,6 +4,7 @@
 #include "libtactmon/Errors.hpp"
 
 #include <boost/asio/io_context.hpp>
+#include <boost/asio/post.hpp>
 #include <boost/asio/thread_pool.hpp>
 #include <boost/thread/future.hpp>
 

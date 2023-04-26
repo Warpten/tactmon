@@ -4,7 +4,6 @@
 #include "libtactmon/io/FileStream.hpp"
 #include "libtactmon/ribbit/types/CDNs.hpp"
 #include "libtactmon/ribbit/types/Versions.hpp"
-#include "libtactmon/tact/BLTE.hpp"
 #include "libtactmon/tact/Cache.hpp"
 #include "libtactmon/tact/CKey.hpp"
 #include "libtactmon/tact/config/BuildConfig.hpp"
@@ -97,7 +96,7 @@ namespace libtactmon::tact::data::product {
          * @param[in] encodingKey The encoding key of the BLTE archive to search for.
          * @param[in] contentKey  The content key of the BLTE archive to search for.
          */
-        [[nodiscard]] Result<tact::BLTE> ResolveCachedBLTE(tact::EKey const& encodingKey, tact::CKey const& contentKey) const {
+        [[nodiscard]] Result<io::GrowableMemoryStream> ResolveCachedBLTE(tact::EKey const& encodingKey, tact::CKey const& contentKey) const {
             return ResourceResolver::ResolveBLTE(*_cdns, encodingKey, contentKey);
         }
 
@@ -106,7 +105,7 @@ namespace libtactmon::tact::data::product {
          *
          * @param[in] encodingKey The encoding key of the BLTE archive to search for.
          */
-        [[nodiscard]] Result<tact::BLTE> ResolveCachedBLTE(tact::EKey const& encodingKey) const {
+        [[nodiscard]] Result<io::GrowableMemoryStream> ResolveCachedBLTE(tact::EKey const& encodingKey) const {
             return ResourceResolver::ResolveBLTE(*_cdns, encodingKey);
         }
 

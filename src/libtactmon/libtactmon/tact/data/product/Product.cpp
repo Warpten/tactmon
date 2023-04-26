@@ -51,9 +51,9 @@ namespace libtactmon::tact::data::product {
 
         _encoding = [&]() -> std::optional<tact::data::Encoding> {
             Result<tact::data::Encoding> encoding = ResolveCachedBLTE(_buildConfig->Encoding.Key.EncodingKey, _buildConfig->Encoding.Key.ContentKey)
-                .and_then([](tact::BLTE decompressedStream) {
-                return tact::data::Encoding{ decompressedStream.GetStream() };
-                    });
+                .and_then([](io::GrowableMemoryStream decompressedStream) {
+                    return tact::data::Encoding{ decompressedStream };
+                });
 
             if (encoding)
                 return std::move(encoding).ToOptional();
@@ -71,8 +71,8 @@ namespace libtactmon::tact::data::product {
 
         _install = [&]() -> std::optional<tact::data::Install> {
             Result<tact::data::Install> install = ResolveCachedBLTE(_buildConfig->Install.Key.EncodingKey, _buildConfig->Install.Key.ContentKey)
-                .transform([](tact::BLTE decompressedStream) {
-                    return tact::data::Install::Parse(decompressedStream.GetStream());
+                .transform([](io::GrowableMemoryStream decompressedStream) {
+                    return tact::data::Install::Parse(decompressedStream);
                 });
 
             if (install)
@@ -113,9 +113,6 @@ namespace libtactmon::tact::data::product {
 
             _fileIndex = ResolveCachedData(fmt::format("{}.index", _cdnConfig->fileIndex->Name)).transform(
                 [name = _cdnConfig->fileIndex->Name](io::FileStream fstream) {
-                    if (!fstream)
-                        return Result<tact::data::Index> { Error::IndexNotFound };
-
                     return tact::data::Index::TryParse(name, fstream);
                 }).ToOptional();
         }
