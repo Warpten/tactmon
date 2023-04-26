@@ -24,6 +24,15 @@ namespace libtactmon {
             >
         > explicit Result(Ts... args) : _result(std::in_place_index<0>, R { std::forward<Ts>(args)... }) { }
 
+        struct Success { }; // Tag
+        struct Failure { }; // Tag
+
+        template <typename... Ts, typename = std::enable_if_t<std::is_constructible_v<R, Ts...> && std::is_constructible_v<E, Ts...>>>
+        explicit Result(Success, Ts... args) : _result(std::in_place_index<0>, R { std::forward<Ts>(args)... }) { }
+
+        template <typename... Ts, typename = std::enable_if_t<std::is_constructible_v<R, Ts...> && std::is_constructible_v<E, Ts...>>>
+        explicit Result(Failure, Ts... args) : _result(std::in_place_index<1>, E { std::forward<Ts>(args)... }) { }
+
         Result(Result&& other) noexcept : _result(std::move(other._result)) { }
         Result(Result const& other) = delete;
 
