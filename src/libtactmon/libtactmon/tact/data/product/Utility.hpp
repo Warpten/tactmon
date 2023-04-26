@@ -23,11 +23,7 @@ namespace libtactmon::tact::data::product {
     /**
      * Exposes utility methods to resolve files from Blizzard CDNs.
      */
-    class ResourceResolver {
-        template <typename F>
-        using ResultType = Result<std::invoke_result_t<F, io::FileStream&>>;
-
-    public:
+    struct ResourceResolver {
         ResourceResolver(boost::asio::any_io_executor executor, tact::Cache& localCache)
             : _executor(std::move(executor)), _localCache(localCache)
         { }
@@ -37,16 +33,9 @@ namespace libtactmon::tact::data::product {
          * 
          * @param[in] cdns   A list of available CDNs, as provided by Ribbit.
          * @param[in] key    The configuration file's key.
-         * @param[in] parser A callable in charge of parsing the file.
          * 
-         * @returns The parsed file or an empty optional if unable to.
+         * @returns A @ref Result holding a stream to the resource on disk, or an error value.
          */
-        template <typename Handler>
-        auto ResolveConfiguration(ribbit::types::CDNs const& cdns, std::string_view key, Handler parser) const -> ResultType<Handler>
-        {
-            return Resolve(cdns, key, "/{}/config/{}/{}/{}", parser);
-        }
-
         Result<io::FileStream> ResolveConfiguration(ribbit::types::CDNs const& cdns, std::string_view key) const {
             return Resolve(cdns, key, "/{}/config/{}/{}/{}");
         }
@@ -55,21 +44,23 @@ namespace libtactmon::tact::data::product {
          * Resolves a data file.
          * 
          * @param[in] cdns   A list of available CDNs, as provided by Ribbit.
-         * @param[in] key    The configuration file's key.
-         * @param[in] parser A callable in charge of parsing the file.
+         * @param[in] key    The data file's key.
          * 
-         * @returns The parsed file or an empty optional if unable to.
+         * @returns A @ref Result holding a stream to the resource on disk, or an error value.
          */
-        template <typename Handler>
-        auto ResolveData(ribbit::types::CDNs const& cdns, std::string_view key, Handler parser) const -> ResultType<Handler>
-        {
-            return Resolve(cdns, key, "/{}/data/{}/{}/{}", parser);
-        }
-
         Result<io::FileStream> ResolveData(ribbit::types::CDNs const& cdns, std::string_view key) const {
             return Resolve(cdns, key, "/{}/data/{}/{}/{}");
         }
 
+        /**
+         * Resolves a block table-encoded data file.
+         *
+         * @param[in] cdns        A list of available CDNs, as provided by Ribbit.
+         * @param[in] encodingKey The data file's encoding key.
+         * @param[in] contentKey  The data file's content key.
+         *
+         * @returns A @ref Result holding a stream to the resource on disk, or an error value.
+         */
         Result<tact::BLTE> ResolveBLTE(ribbit::types::CDNs const& cdns, tact::EKey const& encodingKey, tact::CKey const& contentKey) const {
             return ResolveData(cdns, encodingKey.ToString()).transform([&](io::FileStream compressedStream) {
                 std::optional<tact::BLTE> decompressedStream = tact::BLTE::Parse(compressedStream, encodingKey, contentKey);
@@ -80,6 +71,14 @@ namespace libtactmon::tact::data::product {
             });
         }
 
+        /**
+         * Resolves a block table-encoded data file.
+         *
+         * @param[in] cdns        A list of available CDNs, as provided by Ribbit.
+         * @param[in] encodingKey The data file's encoding key.
+         *
+         * @returns A @ref Result holding a stream to the resource on disk, or an error value.
+         */
         Result<tact::BLTE> ResolveBLTE(ribbit::types::CDNs const& cdns, tact::EKey const& encodingKey) const {
             return ResolveData(cdns, encodingKey.ToString()).transform([&](io::FileStream compressedStream) {
                 std::optional<tact::BLTE> decompressedStream = tact::BLTE::Parse(compressedStream);
@@ -108,28 +107,6 @@ namespace libtactmon::tact::data::product {
             }
 
             return Result<io::FileStream> { Error::ResourceResolutionFailed };
-        }
-
-        template <typename Handler>
-        auto Resolve(ribbit::types::CDNs const& cdns, std::string_view key, std::string_view formatString, Handler parser) const
-            -> ResultType<Handler>
-        {
-            for (ribbit::types::cdns::Record const& cdn : cdns) {
-                std::string relativePath { fmt::format(fmt::runtime(formatString), cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
-
-                auto cachedValue = _localCache.Resolve(relativePath, parser);
-                if (cachedValue.has_value())
-                    return cachedValue;
-
-                for (std::string_view host : cdn.Hosts) {
-                    net::FileDownloadTask downloadTask { relativePath, _localCache };
-                    auto taskResult = downloadTask.Run(_executor, host).and_then(parser);
-                    if (taskResult.has_value())
-                        return taskResult;
-                }
-            }
-
-            return ResultType<Handler> { Error::ResourceResolutionFailed };
         }
 
     protected:
