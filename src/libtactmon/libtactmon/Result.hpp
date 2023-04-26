@@ -43,8 +43,8 @@ namespace libtactmon {
         // Construct from value
         // - Enabled if R != E
         template <typename X, typename = std::enable_if_t<
-            std::is_samev_<X, R> && !std::is_same_v<R, E>
-        >> explicit Result(R value) : _result(std::in_place_index<0>, R { std::forward<X>(value) })
+            std::is_same_v<X, R> && !std::is_same_v<R, E>
+        >> explicit Result(X&& value) : _result(std::in_place_index<0>, R { std::forward<X>(value) })
         { }
 
         // Construct from error
