@@ -16,7 +16,6 @@ namespace libtactmon {
     template <typename R, typename E = boost::system::error_code>
     struct Result final {
         explicit Result(E e) : _result(std::in_place_index<1>, e) { }
-        explicit Result(R&& r) : _result(std::in_place_index<0>, std::move(r)) { }
 
         template <
             typename... Ts,
@@ -39,9 +38,14 @@ namespace libtactmon {
         explicit operator bool() const { return has_value(); }
 
         /**
-         * Tests wether this @p Result holds an ok value or an error value.
+         * Tests wether this @p Result holds an ok value.
          */
         bool has_value() const { return _result.index() == 0; }
+
+        /**
+         * Tests wether this @p Result holds an error value.
+         */
+        bool has_error() const { return _result.index() == 1; }
 
         /**
          * Returns a new @p Result where the result type is the outcome of applying a function to the stored result of the current @p Result.
@@ -140,6 +144,11 @@ namespace libtactmon {
             return std::optional<R> { std::get<0>(std::move(_result)) };
         }
 
+        /**
+         * Provides read-only access to the value stored in this @p Result.
+         *
+         * This is not a terminal operation. Use with caution.
+         */
         R const* operator -> () const { return std::addressof(std::get<0>(_result)); }
 
     private:
