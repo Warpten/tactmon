@@ -43,26 +43,30 @@ namespace libtactmon {
         // Construct from value
         // - Enabled if R != E
         template <typename X>
-        explicit Result(X&& value, std::enable_if_t<std::is_same_v<X, R> && !std::is_same_v<R, E>, float> = 0.0f) : _result(std::in_place_index<0>, std::forward<X>(value))
+        explicit Result(X&& value, std::enable_if_t<std::is_same_v<X, R> && !std::is_same_v<R, E>, float> = 0.0f)
+            : _result(std::in_place_index<0>, std::forward<X>(value))
         { }
 
         // Construct from error
         // - Enabled if R != E
         template <typename X>
-        explicit Result(X&& e, std::enable_if_t<std::is_same_v<X, E> && !std::is_same_v<R, E>, int> = 0) : _result(std::in_place_index<1>, std::forward<X>(e))
+        explicit Result(X&& e, std::enable_if_t<std::is_same_v<X, E> && !std::is_same_v<R, E>, int> = 0)
+            : _result(std::in_place_index<1>, std::forward<X>(e))
         { }
 
         // Construct R from Ts...
         // - Enabled if R is constructible from Ts...
         // - Enabled if E is constructible from Ts...
         template <typename... Ts, typename = std::enable_if_t<std::is_constructible_v<R, Ts...> && std::is_constructible_v<E, Ts...>>>
-        explicit Result(Success, Ts&&... args) : _result(std::in_place_index<0>, R{ std::forward<Ts>(args)... }) { }
+        explicit Result(Success, Ts&&... args)
+            : _result(std::in_place_index<0>, R{ std::forward<Ts>(args)... }) { }
 
         // Construct E from Ts...
         // - Enabled if R is constructible from Ts...
         // - Enabled if E is constructible from Ts...
         template <typename... Ts, typename = std::enable_if_t<std::is_constructible_v<R, Ts...> && std::is_constructible_v<E, Ts...>>>
-        explicit Result(Failure, Ts&&... args) : _result(std::in_place_index<1>, E{ std::forward<Ts>(args)... }) { }
+        explicit Result(Failure, Ts&&... args)
+            : _result(std::in_place_index<1>, E{ std::forward<Ts>(args)... }) { }
 
         ~Result() = default;
 
@@ -181,7 +185,7 @@ namespace libtactmon {
          */
         template <typename U = R, typename = std::enable_if_t<std::is_default_constructible_v<R>>>
         auto unwrap_or_default() && -> R {
-            return !has_value() ? R{ } : std::move(*this).locally();
+            return !has_value() ? R{ } : std::move(*this).unwrap();
         }
 
         E const& code() const& { return std::get<1>(_result); }
@@ -197,7 +201,8 @@ namespace libtactmon {
         }
 
         /**
-         * Provides read-only access to the value stored in this @p Result.
+         * Provides read-only access to the value stored in this @p Result. This function assumes that this @p Result
+         * is not currently holding an error value.
          *
          * This is not a terminal operation. Use with caution.
          */
