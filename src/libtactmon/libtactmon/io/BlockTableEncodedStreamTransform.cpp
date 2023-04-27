@@ -8,18 +8,20 @@
 #include <zlib.h>
 
 namespace libtactmon::io {
+    using namespace libtactmon::errors;
+
     // TODO: validate content using the content key as well
-    Error BlockTableEncodedStreamTransform::operator () (IReadableStream& sourceStream, IWritableStream& targetStream, tact::EKey const* encodingKey, tact::CKey const* contentKey) const noexcept {
+    Error BlockTableEncodedStreamTransform::operator () (IReadableStream& sourceStream, IWritableStream& targetStream, libtactmon::tact::EKey const* encodingKey, libtactmon::tact::CKey const* contentKey, bool validateKeys) const noexcept {
         if (!sourceStream.CanRead(4 + 4))
-            return Error::MalformedArchive;
+            return blte::MalformedArchive(encodingKey);
 
         uint32_t magic = sourceStream.Read<uint32_t>(std::endian::big);
         if (magic != 'BLTE')
-            return Error::MalformedArchive;
+            return blte::MalformedArchive(encodingKey);
 
         uint32_t headerSize = sourceStream.Read<uint32_t>(std::endian::big);
         if (!sourceStream.CanRead(headerSize))
-            return Error::MalformedArchive;
+            return blte::MalformedArchive(encodingKey);
 
         uint32_t flagsChunkCount = sourceStream.Read<uint32_t>(std::endian::big);
 
@@ -32,7 +34,7 @@ namespace libtactmon::io {
         uint8_t flags = (flagsChunkCount & 0xFF000000) >> 24;
         uint32_t chunkCount = flagsChunkCount & 0x00FFFFFF;
 
-        std::vector<std::function<Error(IReadableStream&, IWritableStream&)>> chunkHandlers;
+        std::vector<std::function<errors::Error(IReadableStream&, IWritableStream&)>> chunkHandlers;
         for (std::size_t i = 0; i < chunkCount; ++i) {
             uint32_t compressedSize = sourceStream.Read<uint32_t>(std::endian::big);
             uint32_t decompressedSize = sourceStream.Read<uint32_t>(std::endian::big);
@@ -44,14 +46,17 @@ namespace libtactmon::io {
             engine.UpdateData(checksum);
 
             chunkHandlers.emplace_back([&](IReadableStream& source, IWritableStream& target) {
-                io::SpanStream chunkStream{ source.Data().subspan(0, compressedSize) };
+                io::SpanStream chunkStream { source.Data().subspan(0, compressedSize) };
                 source.SkipRead(compressedSize);
 
-                switch (chunkStream.Read<uint8_t>()) {
+                uint8_t compressionMode = chunkStream.Read<uint8_t>();
+                switch (compressionMode) {
                     case 'N':
                     {
                         std::size_t writtenBytes = target.Write(chunkStream.Data(), std::endian::little);
-                        return writtenBytes == decompressedSize ? Error::OK : Error::CompressionFailure;
+                        return writtenBytes == decompressedSize
+                            ? errors::Success
+                            : blte::ChunkDecompressionFailure(encodingKey, i, sourceStream.GetReadCursor());
                     }
                     case 'Z':
                     {
@@ -68,7 +73,7 @@ namespace libtactmon::io {
                         };
                         int ret = inflateInit(&strm);
                         if (ret != Z_OK)
-                            return Error::CompressionFailure;
+                            return blte::ChunkDecompressionFailure(encodingKey, i, sourceStream.GetReadCursor());
 
                         std::unique_ptr<z_stream, decltype(&inflateEnd)> raii(std::addressof(strm), &inflateEnd);
 
@@ -82,19 +87,21 @@ namespace libtactmon::io {
 
                             ret = inflate(&strm, Z_NO_FLUSH);
                             if (ret < 0)
-                                return Error::CompressionFailure;
+                                return blte::ChunkDecompressionFailure(encodingKey, i, sourceStream.GetReadCursor());
 
                             std::size_t writeCount = target.Write(std::span{ decompressedBuffer.data(), decompressedBuffer.size() - strm.avail_out }, std::endian::little);
+
+                            // Should this error be more specific?
                             if (writeCount != decompressedBuffer.size() - strm.avail_out)
-                                return Error::CompressionFailure;
+                                return blte::ChunkDecompressionFailure(encodingKey, i, sourceStream.GetReadCursor());
                         }
 
-                        return Error::OK;
+                        return errors::Success;
                     }
                     case 'F':
-                        return operator() (source, target);
+                        return operator() (source, target, encodingKey, contentKey, false);
                     default:
-                        return Error::UnknownCompressionMode;
+                        return blte::UnsupportedCompressionMode(encodingKey, i, compressionMode, sourceStream.GetReadCursor());
                 }
             });
         }
@@ -102,23 +109,25 @@ namespace libtactmon::io {
         engine.Finalize();
         crypto::MD5::Digest encodingDigest = engine.GetDigest();
 
-        if (encodingKey != nullptr && *encodingKey != encodingDigest)
-            return Error::EncodingKeyMismatch;
+        if (validateKeys && encodingKey != nullptr && *encodingKey != encodingDigest)
+            return blte::InvalidSignature(encodingKey);
 
         for (auto&& handler : chunkHandlers) {
             Error error = handler(sourceStream, targetStream);
-            if (error != Error::OK)
+            if (error != errors::Success)
                 return error;
         }
 
-        return Error::OK;
+        return errors::Success;
     }
 
-    Result<io::GrowableMemoryStream> BlockTableEncodedStreamTransform::operator () (IReadableStream& sourceStream, tact::EKey const* encodingKey, tact::CKey const* contentKey) const noexcept {
+    Result<io::GrowableMemoryStream> BlockTableEncodedStreamTransform::operator () (IReadableStream& sourceStream, libtactmon::tact::EKey const* encodingKey, libtactmon::tact::CKey const* contentKey) const noexcept {
         io::GrowableMemoryStream target;
-        Error error = operator () (sourceStream, target, encodingKey, contentKey);
-        return error == Error::OK
+
+        Error error = operator () (sourceStream, target, encodingKey, contentKey, encodingKey != nullptr && contentKey != nullptr);
+
+        return error == errors::Success
             ? Result<io::GrowableMemoryStream> { std::move(target) }
-            : Result<io::GrowableMemoryStream> { error };
+            : Result<io::GrowableMemoryStream> { std::move(error) };
     }
 }

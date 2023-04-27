@@ -5,7 +5,7 @@
 namespace libtactmon::tact::data {
     /* static */ Result<Install> Install::Parse(io::IReadableStream& stream) {
         if (!stream.CanRead(2 + 1 + 1 + 2 + 4))
-            return Result<Install> { Error::CorruptedInstallManifest };
+            return Result<Install> { errors::tact::InvalidInstallFile("", "too small") };
 
         uint16_t signature = stream.Read<uint16_t>(std::endian::big);
         uint8_t version = stream.Read<uint8_t>();

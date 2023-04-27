@@ -1,10 +1,10 @@
 #pragma once
 
+#include "libtactmon/Errors.hpp"
+
 #include <optional>
 #include <type_traits>
 #include <variant>
-
-#include <boost/system/error_code.hpp>
 
 namespace libtactmon {
     struct Success { }; // Tag
@@ -21,7 +21,7 @@ namespace libtactmon {
      * @tparam[in] R The type of the value possibly stored in this result.
      * @tparam[in] E The type of the error value possibly stored in this result.
      */
-    template <typename R, typename E = boost::system::error_code>
+    template <typename R, typename E = errors::Error>
     struct Result final {
         static_assert(!std::is_void_v<R>, "R must not be void");
         static_assert(!std::is_void_v<E>, "E must not be void");
@@ -38,21 +38,19 @@ namespace libtactmon {
                 && !dtl::convertible<R, Ts...>::value // Special handling to avoid compiler errors due to sizeof...(Ts) > 1 for SFINAE
                 && !dtl::convertible<E, Ts...>::value
             >
-        > explicit Result(Ts&&... args) : _result(std::in_place_index<0>, R { std::forward<Ts>(args)... }) { }
+        > explicit Result(Ts&&... args) : _result(std::in_place_index<0>, std::forward<Ts>(args)...) { }
 
         // Construct from value
         // - Enabled if R != E
-        template <typename X, typename = std::enable_if_t<
-            std::is_same_v<X, R> && !std::is_same_v<R, E>
-        >> explicit Result(X&& value) : _result(std::in_place_index<0>, R { std::forward<X>(value) })
+        template <typename X>
+        explicit Result(X&& value, std::enable_if_t<std::is_same_v<X, R> && !std::is_same_v<R, E>, float> = 0.0f) : _result(std::in_place_index<0>, std::forward<X>(value))
         { }
 
         // Construct from error
         // - Enabled if R != E
-        template <typename X, typename = std::enable_if_t<
-            std::is_same_v<X, E> && !std::is_same_v<R, E>
-        >> explicit Result(X&& e) : _result(std::in_place_index<1>, std::forward<X>(e))
-        {  }
+        template <typename X>
+        explicit Result(X&& e, std::enable_if_t<std::is_same_v<X, E> && !std::is_same_v<R, E>, int> = 0) : _result(std::in_place_index<1>, std::forward<X>(e))
+        { }
 
         // Construct R from Ts...
         // - Enabled if R is constructible from Ts...
@@ -105,22 +103,18 @@ namespace libtactmon {
             using value_type = std::invoke_result_t<Transform, R&&>;
             using result_type = Result<value_type, E>;
 
-            std::cout << _result.index() << std::endl;
-
             if (!has_value()) {
                 if constexpr (std::is_same_v<value_type, E>) {
-                    return result_type{ Failure { }, code() };
-                }
-                else {
-                    return result_type{ code() };
+                    return result_type{ Failure { }, std::move(*this).code() };
+                } else {
+                    return result_type{ std::move(*this).code() };
                 }
             }
 
             if constexpr (std::is_same_v<value_type, R>) {
-                return result_type{ Success { }, handler(unwrap_locally()) };
-            }
-            else {
-                return result_type{ handler(unwrap_locally()) };
+                return result_type{ Success { }, handler(std::move(*this).unwrap()) };
+            } else {
+                return result_type{ handler(std::move(*this).unwrap()) };
             }
         }
 
@@ -138,9 +132,9 @@ namespace libtactmon {
             using result_type = std::invoke_result_t<Transform, R&&>;
 
             if (!has_value())
-                return result_type{ code() };
+                return result_type{ std::move(*this).code() };
 
-            return result_type{ handler(unwrap_locally()) };
+            return result_type{ handler(std::move(*this).unwrap()) };
         }
 
         /**
@@ -154,9 +148,9 @@ namespace libtactmon {
         template <typename MapSuccess, typename MapFailure>
         auto then(MapSuccess successHandler, MapFailure failureHandler) && -> void {
             if (!has_value())
-                failureHandler(code());
+                failureHandler(std::move(*this).code());
             else
-                successHandler(unwrap_locally());
+                successHandler(std::move(*this).unwrap());
         }
 
         /**
@@ -166,7 +160,7 @@ namespace libtactmon {
          *
          * Because this function may panic, its use is generally discouraged. Prefer @ref unwrap_or_else or @ref unwrap_or_default.
          */
-        auto unwrap() && -> R&& { return std::get<0>(std::move(_result)); }
+        auto unwrap() && -> R { return std::get<0>(std::move(_result)); }
 
         /**
          * Returns the contained ok value, or computes it from the provided close.
@@ -176,8 +170,8 @@ namespace libtactmon {
          * @param[in] f A closure returning an instance of an ok value.
          */
         template <typename F, typename = std::enable_if_t<std::is_same_v<std::invoke_result_t<F>, R>>>
-        auto unwrap_or_else(F f) && -> R&& {
-            return !has_value() ? f() : unwrap_locally();
+        auto unwrap_or_else(F f) && -> R {
+            return !has_value() ? f() : std::move(*this).unwrap();
         }
 
         /**
@@ -186,8 +180,8 @@ namespace libtactmon {
          * This is a terminal operation; the current object is considered moved-from after this call.
          */
         template <typename U = R, typename = std::enable_if_t<std::is_default_constructible_v<R>>>
-        auto unwrap_or_default() && -> R&& {
-            return !has_value() ? R{ } : unwrap_locally();
+        auto unwrap_or_default() && -> R {
+            return !has_value() ? R{ } : std::move(*this).locally();
         }
 
         E const& code() const& { return std::get<1>(_result); }
@@ -210,8 +204,6 @@ namespace libtactmon {
         R const* operator -> () const { return std::addressof(std::get<0>(_result)); }
 
     private:
-        auto unwrap_locally() const& -> const R& { return std::get<0>(std::move(_result)); }
-
         std::variant<R, E> _result;
     };
 }

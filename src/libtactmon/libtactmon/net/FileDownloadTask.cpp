@@ -1,5 +1,6 @@
 #include "libtactmon/net/FileDownloadTask.hpp"
 #include "libtactmon/tact/Cache.hpp"
+#include "libtactmon/Errors.hpp"
 
 #include <filesystem>
 
@@ -13,17 +14,14 @@ namespace libtactmon::net {
         return ec;
     }
 
+    Result<io::FileStream> FileDownloadTask::HandleFailure(boost::beast::http::status statusCode) {
+        _localCache.Delete(_resourcePath);
+
+        return Result<io::FileStream> { errors::network::BadStatusCode(_resourcePath, "", statusCode) };
+    }
+
     Result<io::FileStream> FileDownloadTask::TransformMessage(MessageType& message) {
         message.body().close();
-
-        if (message.result() != boost::beast::http::status::ok) {
-            // Ideally we would prevent beast from writing to disk if http response is not 200 OK or some
-            // other 2xx code.
-            _localCache.Delete(_resourcePath);
-
-            return Result<io::FileStream> { boost::beast::http::error::bad_status };
-        }
-
         return _localCache.OpenWrite(_resourcePath);
     }
 }

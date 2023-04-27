@@ -69,7 +69,7 @@ namespace libtactmon::tact::data::product::wow {
 
     /* static */ Result<Root> Root::Parse(io::IReadableStream& stream, std::size_t contentKeySize) {
         if (!stream.CanRead(sizeof(uint32_t)))
-            return Result<Root> { Error::CorruptedRootManifest };
+            return Result<Root> { errors::tact::InvalidRootFile("", "too small") };
 
         uint32_t magic = stream.Read<uint32_t>(std::endian::little);
 
@@ -78,7 +78,7 @@ namespace libtactmon::tact::data::product::wow {
 
         if (magic == 0x4D465354) {
             if (!stream.CanRead(sizeof(uint32_t) * 2))
-                return Result<Root> { Error::CorruptedRootManifest };
+                return Result<Root> { errors::tact::InvalidRootFile("", "too small") };
 
             uint32_t totalFileCount = stream.Read<uint32_t>(std::endian::little);
             uint32_t namedFileCount = stream.Read<uint32_t>(std::endian::little);
@@ -94,7 +94,7 @@ namespace libtactmon::tact::data::product::wow {
 
         while (stream.GetReadCursor() < stream.GetLength()) {
             if (!stream.CanRead(12))
-                return Result<Root> { Error::CorruptedRootManifest };
+                return Result<Root> { errors::tact::InvalidRootFile("", "too small") };
 
             PageInfo page;
             page.numRecords = stream.Read<uint32_t>(std::endian::little);
@@ -114,7 +114,7 @@ namespace libtactmon::tact::data::product::wow {
             }
 
             if (!stream.CanRead(length))
-                return Result<Root> { Error::CorruptedRootManifest };
+                return Result<Root> { errors::tact::InvalidRootFile("", "too small") };
 
             page.data.emplace(stream.Data().subspan(0, length));
             stream.SkipRead(length);
@@ -135,7 +135,7 @@ namespace libtactmon::tact::data::product::wow {
         for (auto&& future : boost::when_all(futures.begin(), futures.end()).get()) {
             std::optional<Block> value = future.get();
             if (!value.has_value())
-                return Result<Root> { Error::CorruptedRootManifest };
+                return Result<Root> { errors::tact::InvalidRootFile("", "too small") };
 
             instance._blocks.emplace_back(std::move(*value));
         }

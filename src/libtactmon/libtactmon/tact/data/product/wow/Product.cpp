@@ -1,5 +1,6 @@
 #include "libtactmon/tact/data/product/wow/Product.hpp"
 #include "libtactmon/utility/Formatting.hpp"
+#include "libtactmon/Errors.hpp"
 
 #include <fstream>
 
@@ -29,7 +30,7 @@ namespace libtactmon::tact::data::product::wow {
                     return root;
             }
 
-            return Result<tact::data::product::wow::Root> { Error::RootManifestNotFound };
+            return Result<tact::data::product::wow::Root> { errors::tact::RootNotFound() };
         }();
 
         if (!root.has_value()) {

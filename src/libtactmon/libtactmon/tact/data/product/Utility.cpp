@@ -1,6 +1,7 @@
 #include "libtactmon/io/BlockTableEncodedStreamTransform.hpp"
 #include "libtactmon/net/FileDownloadTask.hpp"
 #include "libtactmon/tact/data/product/Utility.hpp"
+#include "libtactmon/Errors.hpp"
 
 namespace libtactmon::tact::data::product {
     static io::BlockTableEncodedStreamTransform transform;
@@ -29,7 +30,7 @@ namespace libtactmon::tact::data::product {
             }
         }
 
-        return Result<R> { Error::ResourceResolutionFailed };
+        return Result<R> { errors::ResourceResolutionFailed(key, "no CDN able to serve resource") };
     }
 
     Result<io::FileStream> ResourceResolver::ResolveConfiguration(ribbit::types::CDNs const& cdns, std::string_view key) const {

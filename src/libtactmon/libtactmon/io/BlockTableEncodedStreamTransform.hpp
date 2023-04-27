@@ -13,8 +13,11 @@
 
 namespace libtactmon::io {
     struct BlockTableEncodedStreamTransform final {
-        Error operator () (IReadableStream& sourceStream, IWritableStream& targetStream, tact::EKey const* encodingKey = nullptr, tact::CKey const* contentKey = nullptr) const noexcept;
+        Result<io::GrowableMemoryStream> operator () (IReadableStream& sourceStream,
+            libtactmon::tact::EKey const* encodingKey = nullptr, libtactmon::tact::CKey const* contentKey = nullptr) const noexcept;
 
-        Result<io::GrowableMemoryStream> operator () (IReadableStream& sourceStream, tact::EKey const* encodingKey = nullptr, tact::CKey const* contentKey = nullptr) const noexcept;
+        errors::Error operator () (IReadableStream& sourceStream, IWritableStream& targetStream,
+            libtactmon::tact::EKey const* encodingKey = nullptr, libtactmon::tact::CKey const* contentKey = nullptr,
+            bool validateKeys = false) const noexcept;
     };
 }

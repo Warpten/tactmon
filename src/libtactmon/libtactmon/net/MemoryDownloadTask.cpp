@@ -6,9 +6,10 @@ namespace libtactmon::net {
     }
 
     Result<io::GrowableMemoryStream> MemoryDownloadTask::TransformMessage(MessageType& message) {
-        if (message.result() != boost::beast::http::status::ok)
-            return Result<io::GrowableMemoryStream> { boost::beast::http::error::bad_status };
-
         return Result<io::GrowableMemoryStream> { message.body().data() };
+    }
+
+    Result<io::GrowableMemoryStream> MemoryDownloadTask::HandleFailure(boost::beast::http::status statusCode) {
+        return Result<io::GrowableMemoryStream> { errors::network::BadStatusCode(_resourcePath, "", statusCode) };
     }
 }

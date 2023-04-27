@@ -11,6 +11,8 @@
 using namespace std::string_view_literals;
 
 namespace libtactmon::tact::config {
+    using namespace errors;
+
     Result<CDNConfig> CDNConfig::Parse(io::IReadableStream& stream) {
         stream.SeekRead(0);
 
@@ -18,7 +20,7 @@ namespace libtactmon::tact::config {
         std::vector<std::string_view> lines = detail::Tokenize(contents, '\n', true);
 
         if (lines.empty())
-            return Result<CDNConfig> { Error::MalformedCDNConfiguration };
+            return Result<CDNConfig> { cfg::MalformedFile("") };
 
         CDNConfig config;
         for (std::string_view line : lines) {
@@ -37,12 +39,12 @@ namespace libtactmon::tact::config {
                 for (std::size_t i = 1; i < tokens.size(); ++i) {
                     auto [ptr, ec] = std::from_chars(tokens[i].data(), tokens[i].data() + tokens[i].size(), config.archives[i - 1].Size);
                     if (ec != std::errc{ })
-                        return Result<CDNConfig> { Error::MalformedCDNConfiguration };
+                        return Result<CDNConfig> { cfg::InvalidPropertySpecification("archives-index-size", tokens) };
                 }
             }
             else if (tokens[0] == "file-index") {
                 if (tokens.size() == 1)
-                    return Result<CDNConfig> { Error::MalformedCDNConfiguration };
+                    return Result<CDNConfig> { cfg::InvalidPropertySpecification("file-index", tokens) };
 
                 if (!config.fileIndex.has_value())
                     config.fileIndex.emplace();
@@ -51,14 +53,14 @@ namespace libtactmon::tact::config {
             }
             else if (tokens[0] == "file-index-size") {
                 if (tokens.size() == 1)
-                    return Result<CDNConfig> { Error::MalformedCDNConfiguration };
+                    return Result<CDNConfig> { cfg::InvalidPropertySpecification("file-index-size", tokens) };
 
                 if (!config.fileIndex.has_value())
                     config.fileIndex.emplace();
 
                 auto [ptr, ec] = std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), config.fileIndex->Size);
                 if (ec != std::errc{ })
-                    return Result<CDNConfig> { Error::MalformedCDNConfiguration };
+                    return Result<CDNConfig> { cfg::InvalidPropertySpecification("file-index-size", tokens) };
             }
         }
 

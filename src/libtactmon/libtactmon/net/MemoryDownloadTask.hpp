@@ -6,6 +6,7 @@
 #include <optional>
 
 #include <boost/beast/http/dynamic_body.hpp>
+#include <boost/beast/http/status.hpp>
 #include <boost/system/error_code.hpp>
 
 namespace libtactmon::net {
@@ -17,5 +18,6 @@ namespace libtactmon::net {
 
         boost::system::error_code Initialize(ValueType& body);
         Result<io::GrowableMemoryStream> TransformMessage(MessageType& body);
+        Result<io::GrowableMemoryStream> HandleFailure(boost::beast::http::status statusCode);
     };
 }

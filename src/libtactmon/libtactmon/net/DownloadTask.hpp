@@ -3,6 +3,7 @@
 #include "libtactmon/io/FileStream.hpp"
 #include "libtactmon/io/MemoryStream.hpp"
 #include "libtactmon/tact/Cache.hpp"
+#include "libtactmon/Errors.hpp"
 #include "libtactmon/Result.hpp"
 
 #include <cstdint>
@@ -74,6 +75,8 @@ namespace libtactmon::net {
             std::string_view host,
             spdlog::logger* logger = nullptr)
         {
+            using namespace errors;
+
             namespace asio = boost::asio;
             namespace ip = asio::ip;
             using tcp = ip::tcp;
@@ -88,7 +91,7 @@ namespace libtactmon::net {
 
             stream.connect(r.resolve(host, "80"), ec);
             if (ec.failed())
-                return Result<R> { ec };
+                return Result<R> { network::NetworkError(_resourcePath, host, ec) };
 
             http::request<http::string_body> req { http::verb::get, _resourcePath, 11 };
             req.set(http::field::host, host);
@@ -97,26 +100,27 @@ namespace libtactmon::net {
 
             http::write(stream, req, ec);
             if (ec.failed())
-                return Result<R> { ec };
+                return Result<R> { network::NetworkError(_resourcePath, host, ec) };
 
             http::response_parser<Body> res;
             res.body_limit({ });
 
             ec = static_cast<T*>(this)->Initialize(res.get().body());
             if (ec.failed())
-                return Result<R> { ec };
+                return Result<R> { network::LocalInitializationFailed(_resourcePath, host, ec) };
 
+            // Read headers first - treat bad status codes properly
             beast::flat_buffer buffer;
             http::read_header(stream, buffer, res, ec);
             if (ec.failed())
-                return Result<R> { ec };
+                return Result<R> { network::ReadError(_resourcePath, host, ec) };
 
             if (res.get().result() != http::status::ok)
-                return Result<R> { boost::beast::http::error::bad_status };
+                return static_cast<T*>(this)->HandleFailure(res.get().result());
 
             http::read(stream, buffer, res, ec);
             if (ec.failed())
-                return Result<R> { ec };
+                return Result<R> { network::ReadError(_resourcePath, host, ec) };
 
             stream.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             return static_cast<T*>(this)->TransformMessage(res.get());

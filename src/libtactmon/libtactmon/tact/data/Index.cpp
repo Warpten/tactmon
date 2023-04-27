@@ -28,7 +28,7 @@ namespace libtactmon::tact::data {
 
         // Unable to validate the file, exit out
         if (checksumSize == 0)
-            return Result<Index> { Error::MalformedIndexFile };
+            return Result<Index> { errors::tact::InvalidIndexFile(hash, "unable to deduce checksum size") };
 
         Index instance;
 

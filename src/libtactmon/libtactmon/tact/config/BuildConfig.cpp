@@ -10,10 +10,12 @@
 using namespace std::string_view_literals;
 
 namespace libtactmon::tact::config {
+    using namespace errors;
+
     struct ConfigHandler {
         std::string_view Token;
 
-        using HandlerType = bool(*)(BuildConfig&, std::vector<std::string_view>);
+        using HandlerType = Error(*)(BuildConfig&, std::vector<std::string_view>);
         HandlerType Handler;
     };
 
@@ -22,84 +24,84 @@ namespace libtactmon::tact::config {
         { "root",
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 2)
-                    return Error::BuildConfig_InvalidRoot;
+                    return errors::cfg::InvalidPropertySpecification("root", tokens);
 
                 if (!CKey::TryParse(tokens[1], cfg.Root))
-                    return Error::BuildConfig_InvalidRoot;
+                    return errors::cfg::InvalidContentKey(tokens[1]);
 
-                return Error::OK;
+                return errors::Success;
             }
         }, { "install",
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 3 && tokens.size() != 2)
-                    return Error::BuildConfig_InvalidInstall;
+                    return errors::cfg::InvalidPropertySpecification("install", tokens);
 
                 if (!CKey::TryParse(tokens[1], cfg.Install.Key.ContentKey))
-                    return Error::BuildConfig_InvalidInstall;
+                    return errors::cfg::InvalidContentKey(tokens[1]);
 
                 if (!EKey::TryParse(tokens[2], cfg.Install.Key.EncodingKey))
-                    return Error::BuildConfig_InvalidInstall;
+                    return errors::cfg::InvalidEncodingKey(tokens[2]);
 
-                return Error::OK;
+                return errors::Success;
             }
         }, { "install-size",
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 3 && tokens.size() != 2)
-                    return Error::BuildConfig_InvalidInstallSize;
+                    return errors::cfg::InvalidPropertySpecification("install-size", tokens);
 
                 {
                     auto [ptr, ec] = std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), cfg.Install.Size[0]);
                     if (ec != std::errc{ })
-                        return Error::BuildConfig_InvalidInstallSize;
+                        return errors::cfg::InvalidPropertySpecification("install-size", tokens);
                 }
 
                 if (tokens.size() == 3) {
                     auto [ptr, ec] = std::from_chars(tokens[2].data(), tokens[2].data() + tokens[2].size(), cfg.Install.Size[1]);
                     if (ec != std::errc{ })
-                        return Error::BuildConfig_InvalidInstallSize;
+                        return errors::cfg::InvalidPropertySpecification("install-size", tokens);
                 }
 
-                return Error::OK;
+                return errors::Success;
             }
         }, { "encoding", 
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 3 && tokens.size() != 2)
-                    return Error::BuildConfig_InvalidEncoding;
+                    return errors::cfg::InvalidPropertySpecification("encoding", tokens);
 
                 if (!CKey::TryParse(tokens[1], cfg.Encoding.Key.ContentKey))
-                    return Error::BuildConfig_InvalidEncoding;
+                    return errors::cfg::InvalidContentKey(tokens[1]);
 
                 if (!EKey::TryParse(tokens[2], cfg.Encoding.Key.EncodingKey))
-                    return Error::BuildConfig_InvalidEncoding;
+                    return errors::cfg::InvalidEncodingKey(tokens[2]);
 
-                return Error::OK;
+                return errors::Success;
             }
         }, { "encoding-size",
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 3 && tokens.size() != 2)
-                    return Error::BuildConfig_InvalidEncodingSize;
+                    return errors::cfg::InvalidPropertySpecification("encoding-size", tokens);
 
                 {
                     auto [ptr, ec] = std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), cfg.Encoding.Size[0]);
                     if (ec != std::errc{ })
-                        return Error::BuildConfig_InvalidEncodingSize;
+                        return errors::cfg::InvalidPropertySpecification("encoding-size", tokens);
                 }
 
                 if (tokens.size() == 3) {
                     auto [ptr, ec] = std::from_chars(tokens[2].data(), tokens[2].data() + tokens[2].size(), cfg.Encoding.Size[1]);
                     if (ec != std::errc{ })
-                        return Error::BuildConfig_InvalidEncodingSize;
+                        return errors::cfg::InvalidPropertySpecification("encoding-size", tokens);
                 }
 
-                return Error::OK;
+                return errors::Success;
             }
         }, { "build-name",
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 2)
-                    return Error::BuildConfig_InvalidBuildName;
+                    return errors::cfg::InvalidPropertySpecification("build-name", tokens);
 
                 cfg.BuildName = tokens[1];
-                return Error::OK;
+                return errors::Success;
             }
         }
     };
@@ -110,7 +112,7 @@ namespace libtactmon::tact::config {
         std::string_view contents { stream.Data<char>().data(), stream.GetLength() };
         std::vector<std::string_view> lines = libtactmon::detail::Tokenize(contents, '\n', false);
         if (lines.empty())
-            return Result<BuildConfig> { Error::MalformedBuildConfiguration };
+            return Result<BuildConfig> { errors::cfg::MalformedFile("") };
 
         BuildConfig config { };
 
@@ -126,8 +128,8 @@ namespace libtactmon::tact::config {
                     continue;
 
                 Error error = handler.Handler(config, std::move(tokens));
-                if (error != Error::OK)
-                    return Result<BuildConfig> { error };
+                if (error != errors::Success)
+                    return Result<BuildConfig> { std::move(error) };
                 break;
             }
         }
