@@ -78,10 +78,10 @@ namespace libtactmon {
             Code _code;
         };
 
-        bool operator == (Error const& left, Error const& right) {
+        inline bool operator == (Error const& left, Error const& right) {
             return left.code() == right.code();
         }
-        bool operator != (Error const& left, Error const& right) {
+        inline bool operator != (Error const& left, Error const& right) {
             return !(left == right);
         }
 
