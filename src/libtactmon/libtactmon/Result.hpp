@@ -7,6 +7,9 @@
 #include <variant>
 
 namespace libtactmon {
+    struct Success { };
+    struct Failure { };
+
     namespace dtl {
         template <typename T, typename...> struct convertible : std::false_type { };
         template <typename T, typename U> struct convertible<T, U> : std::is_convertible<T, U> { };
@@ -55,14 +58,14 @@ namespace libtactmon {
         // - Enabled if R is constructible from Ts...
         // - Enabled if E is constructible from Ts...
         template <typename... Ts, typename = std::enable_if_t<std::is_constructible_v<R, Ts...> && std::is_constructible_v<E, Ts...>>>
-        explicit Result(struct Success, Ts&&... args)
+        explicit Result(Success, Ts&&... args)
             : _result(std::in_place_index<0>, R{ std::forward<Ts>(args)... }) { }
 
         // Construct E from Ts...
         // - Enabled if R is constructible from Ts...
         // - Enabled if E is constructible from Ts...
         template <typename... Ts, typename = std::enable_if_t<std::is_constructible_v<R, Ts...> && std::is_constructible_v<E, Ts...>>>
-        explicit Result(struct Failure, Ts&&... args)
+        explicit Result(Failure, Ts&&... args)
             : _result(std::in_place_index<1>, E{ std::forward<Ts>(args)... }) { }
 
         ~Result() = default;
