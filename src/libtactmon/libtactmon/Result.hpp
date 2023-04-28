@@ -183,7 +183,7 @@ namespace libtactmon {
          *
          * This is a terminal operation; the current object is considered moved-from after this call.
          */
-        template <typename U = R, typename = std::enable_if_t<std::is_default_constructible_v<R>>>
+        template <typename U = R, typename = std::enable_if_t<std::is_default_constructible_v<U>>>
         auto unwrap_or_default() && -> R {
             return !has_value() ? R{ } : std::move(*this).unwrap();
         }
