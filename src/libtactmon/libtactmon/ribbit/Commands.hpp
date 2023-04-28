@@ -39,7 +39,7 @@ namespace libtactmon::ribbit {
             using Args = std::tuple<>;
             using ValueType = types::Summary;
 
-            static Result<types::Summary> Parse(std::string_view input);
+            static Result<types::Summary> Parse(std::string_view command, std::string_view input);
         };
 
         template <> struct CommandTraits<Command::ProductVersions> {
@@ -48,7 +48,7 @@ namespace libtactmon::ribbit {
             using Args = std::tuple<std::string_view>;
             using ValueType = types::Versions;
 
-            static Result<types::Versions> Parse(std::string_view input);
+            static Result<types::Versions> Parse(std::string_view command, std::string_view input);
         };
 
         template <> struct CommandTraits<Command::ProductCDNs> {
@@ -57,7 +57,7 @@ namespace libtactmon::ribbit {
             using Args = std::tuple<std::string_view>;
             using ValueType = types::CDNs;
 
-            static Result<types::CDNs> Parse(std::string_view input);
+            static Result<types::CDNs> Parse(std::string_view command, std::string_view input);
         };
 
         template <> struct CommandTraits<Command::ProductBGDL> {
@@ -66,7 +66,7 @@ namespace libtactmon::ribbit {
             using ValueType = types::BGDL;
             using Args = std::tuple<std::string_view>;
 
-            static Result<types::BGDL> Parse(std::string_view input);
+            static Result<types::BGDL> Parse(std::string_view command, std::string_view input);
         };
 
         template <Version> struct VersionTraits;
@@ -75,43 +75,43 @@ namespace libtactmon::ribbit {
             constexpr static const std::string_view Value = "v1";
 
             template <typename C>
-            static auto Parse(std::string_view payload)
+            static auto Parse(std::string_view command, std::string_view payload)
                 -> Result<typename C::ValueType>
             {
-                return ParseCore(payload).transform([](std::vector<std::string_view> tokens) {
+                return ParseCore(command, payload).transform([&](std::vector<std::string_view> tokens) {
                     for (std::string_view token : tokens) {
-                        auto elemParse = C::Parse(token);
+                        auto elemParse = C::Parse(command, token);
                         if (elemParse.has_value())
                             return elemParse;
                     }
 
-                    return Result<typename C::ValueType> { errors::ribbit::Unparsable() };
+                    return Result<typename C::ValueType> { errors::ribbit::Unparsable(command) };
                 });
             }
 
         private:
-            static Result<std::vector<std::string_view>> ParseCore(std::string_view input);
+            static Result<std::vector<std::string_view>> ParseCore(std::string_view command, std::string_view input);
         };
 
         template <> struct VersionTraits<Version::V2> {
             constexpr static const std::string_view Value = "v2";
 
             template <typename C>
-            static auto Parse(std::string_view payload, spdlog::logger* logger)
+            static auto Parse(std::string_view command, std::string_view payload)
                 -> Result<typename C::ValueType>
             {
-                std::vector<std::string_view> messageParts = ParseCore(payload, logger);
+                std::vector<std::string_view> messageParts = ParseCore(payload);
                 for (std::string_view elem : messageParts) {
-                    auto elemParse = C::Parse(elem);
+                    auto elemParse = C::Parse(command, elem);
                     if (elemParse.has_value())
                         return elemParse;
                 }
 
-                return Result<typename C::ValueType> { errors::ribbit::Unparsable() };
+                return Result<typename C::ValueType> { errors::ribbit::Unparsable(command) };
             }
 
         private:
-            static std::vector<std::string_view> ParseCore(std::string_view input, spdlog::logger* logger);
+            static std::vector<std::string_view> ParseCore(std::string_view input);
         };
 
         template <Command C, Version V, typename Args> class command_executor_impl;
@@ -158,7 +158,7 @@ namespace libtactmon::ribbit {
                     auto bufs = buf.data();
                     std::string response { asio::buffers_begin(bufs), asio::buffers_begin(bufs) + buf.size() };
 
-                    return VersionTraits::template Parse<CommandTraits>(response);
+                    return VersionTraits::template Parse<CommandTraits>(command, response);
                 }
             }
         };

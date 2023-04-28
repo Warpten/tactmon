@@ -91,14 +91,14 @@ namespace libtactmon::errors {
     }
 
     namespace ribbit {
-        Error MalformedFile(std::string_view name) {
-            return Error { Category::Ribbit, Code::MalformedFile, "Malformed response for {}", name };
+        Error MalformedFile(std::string_view command) {
+            return Error { Category::Ribbit, Code::MalformedFile, "Malformed response for {}", command };
         }
-        Error MalformedMultipartMessage() {
-            return Error { Category::Ribbit, Code::MalformedMultipartMessage, "Malformed multipart response"};
+        Error MalformedMultipartMessage(std::string_view command) {
+            return Error { Category::Ribbit, Code::MalformedMultipartMessage, "Malformed multipart response for {}", command };
         }
-        Error Unparsable() {
-            return Error { Category::Ribbit, Code::Unparsable, "Response cannot be oarsed" };
+        Error Unparsable(std::string_view command) {
+            return Error { Category::Ribbit, Code::Unparsable, "Response cannot be parsed for {}", command };
         }
     }
 

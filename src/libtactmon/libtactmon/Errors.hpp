@@ -127,9 +127,9 @@ namespace libtactmon {
         }
 
         namespace ribbit {
-            extern Error MalformedFile(std::string_view name);
-            extern Error MalformedMultipartMessage();
-            extern Error Unparsable();
+            extern Error MalformedFile(std::string_view command);
+            extern Error MalformedMultipartMessage(std::string_view command);
+            extern Error Unparsable(std::string_view command);
         }
 
         namespace tact {

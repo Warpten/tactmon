@@ -11,7 +11,7 @@ namespace libtactmon::ribbit::detail {
     using char_sep = boost::char_separator<char>;
     using tokenizer = boost::tokenizer<char_sep>;
 
-    /* static */ Result<std::vector<std::string_view>> VersionTraits<Version::V1>::ParseCore(std::string_view input) {
+    /* static */ Result<std::vector<std::string_view>> VersionTraits<Version::V1>::ParseCore(std::string_view command, std::string_view input) {
         // We pretend this is an HTTP response by shoving a "HTTP/1.1 200 OK\r\n" at the front of the response
         std::string httpResponse = "HTTP/1.1 200 OK\r\n";
         httpResponse += input;
@@ -22,7 +22,7 @@ namespace libtactmon::ribbit::detail {
         boost::beast::error_code ec;
         parser.put(boost::asio::buffer(httpResponse), ec);
         if (ec.failed())
-            return Result<std::vector<std::string_view>> { errors::ribbit::MalformedMultipartMessage() };
+            return Result<std::vector<std::string_view>> { errors::ribbit::MalformedMultipartMessage(command) };
 
         auto mimeBoundary = [&]() -> std::optional<std::string_view> {
             auto contentType = parser.get()[boost::beast::http::field::content_type];
@@ -33,7 +33,7 @@ namespace libtactmon::ribbit::detail {
         }();
 
         if (mimeBoundary == std::nullopt)
-            return Result<std::vector<std::string_view>> { errors::ribbit::MalformedMultipartMessage() };
+            return Result<std::vector<std::string_view>> { errors::ribbit::MalformedMultipartMessage(command) };
 
         // Found a MIME boundary, split the body
         std::string boundaryDelimiter = fmt::format("--{}\r\n", *mimeBoundary);
@@ -41,14 +41,14 @@ namespace libtactmon::ribbit::detail {
         return Result<std::vector<std::string_view>> { libtactmon::detail::Tokenize(input, std::string_view { boundaryDelimiter }, true) };
     }
 
-    /* static */ std::vector<std::string_view> VersionTraits<Version::V2>::ParseCore(std::string_view input, spdlog::logger* logger) {
+    /* static */ std::vector<std::string_view> VersionTraits<Version::V2>::ParseCore(std::string_view input) {
         using namespace std::string_view_literals;
 
         // Split on the header delimiter.
         return libtactmon::detail::Tokenize(input, "\r\n\r\n"sv, false);
     }
 
-    /* static */ Result<types::BGDL> CommandTraits<Command::ProductBGDL>::Parse(std::string_view input) {
+    /* static */ Result<types::BGDL> CommandTraits<Command::ProductBGDL>::Parse(std::string_view command, std::string_view input) {
         using namespace std::string_view_literals;
 
         types::BGDL bgdl;
@@ -61,7 +61,7 @@ namespace libtactmon::ribbit::detail {
         }
 
         if (bgdl.empty())
-            return Result<types::BGDL> { errors::ribbit::MalformedFile("bgdl") };
+            return Result<types::BGDL> { errors::ribbit::MalformedFile(command) };
 
         // Remove the first row - needed because there's nothing stopping it from parsing as a record
         bgdl.erase(bgdl.begin());
@@ -69,7 +69,7 @@ namespace libtactmon::ribbit::detail {
         return Result<types::BGDL> { std::move(bgdl) };
     }
 
-    /* static */ Result<types::CDNs> CommandTraits<Command::ProductCDNs>::Parse(std::string_view input) {
+    /* static */ Result<types::CDNs> CommandTraits<Command::ProductCDNs>::Parse(std::string_view command, std::string_view input) {
         using namespace std::string_view_literals;
 
         types::CDNs cdns;
@@ -82,7 +82,7 @@ namespace libtactmon::ribbit::detail {
         }
 
         if (cdns.empty())
-            return Result<types::CDNs> { errors::ribbit::MalformedFile("cdns") };
+            return Result<types::CDNs> { errors::ribbit::MalformedFile(command) };
 
         // Remove the first row - needed because there's nothing stopping it from parsing as a record
         cdns.erase(cdns.begin());
@@ -90,7 +90,7 @@ namespace libtactmon::ribbit::detail {
         return Result<types::CDNs> { std::move(cdns) };
     }
 
-    /* static */ Result<types::Summary> CommandTraits<Command::Summary>::Parse(std::string_view input) {
+    /* static */ Result<types::Summary> CommandTraits<Command::Summary>::Parse(std::string_view command, std::string_view input) {
         using namespace std::string_view_literals;
 
         types::Summary summary;
@@ -104,12 +104,12 @@ namespace libtactmon::ribbit::detail {
 
         // Do not remove the first row - it gets skipped because we expect a sequence number in one column and treat it as an integer
         if (summary.empty())
-            return Result<types::Summary> { errors::ribbit::MalformedFile("summary") };
+            return Result<types::Summary> { errors::ribbit::MalformedFile(command) };
 
         return Result<types::Summary> { std::move(summary) };
     }
 
-    /* static */ Result<types::Versions> CommandTraits<Command::ProductVersions>::Parse(std::string_view input) {
+    /* static */ Result<types::Versions> CommandTraits<Command::ProductVersions>::Parse(std::string_view command, std::string_view input) {
         using namespace std::string_view_literals;
 
         types::Versions versions;
@@ -128,7 +128,7 @@ namespace libtactmon::ribbit::detail {
         }
 
         if (versions.Records.empty() || versions.SequenceID == 0)
-            return Result<types::Versions> { errors::ribbit::MalformedFile("versions") };
+            return Result<types::Versions> { errors::ribbit::MalformedFile(command) };
 
         // Do not remove the first row - it gets skipped because we expect a build number in one column and treat it as an integer
         return Result<types::Versions> { std::move(versions) };
