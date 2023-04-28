@@ -1,5 +1,6 @@
 #pragma once
 
+#include "libtactmon/detail/Export.hpp"
 #include "libtactmon/Errors.hpp"
 
 #include <optional>
@@ -22,7 +23,7 @@ namespace libtactmon {
      * @tparam[in] E The type of the error value possibly stored in this result.
      */
     template <typename R, typename E = errors::Error>
-    struct Result final {
+    struct LIBTACTMON_API Result final {
         static_assert(!std::is_void_v<R>, "R must not be void");
         static_assert(!std::is_void_v<E>, "E must not be void");
 

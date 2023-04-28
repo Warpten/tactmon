@@ -7,6 +7,8 @@
 #include "libtactmon/ribbit/types/CDNs.hpp"
 #include "libtactmon/ribbit/types/Summary.hpp"
 #include "libtactmon/ribbit/types/Versions.hpp"
+#include "libtactmon/Errors.hpp"
+#include "libtactmon/Result.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -37,7 +39,7 @@ namespace libtactmon::ribbit {
             using Args = std::tuple<>;
             using ValueType = types::Summary;
 
-            static std::optional<types::Summary> Parse(std::string_view input);
+            static Result<types::Summary> Parse(std::string_view input);
         };
 
         template <> struct CommandTraits<Command::ProductVersions> {
@@ -46,7 +48,7 @@ namespace libtactmon::ribbit {
             using Args = std::tuple<std::string_view>;
             using ValueType = types::Versions;
 
-            static std::optional<types::Versions> Parse(std::string_view input);
+            static Result<types::Versions> Parse(std::string_view input);
         };
 
         template <> struct CommandTraits<Command::ProductCDNs> {
@@ -55,7 +57,7 @@ namespace libtactmon::ribbit {
             using Args = std::tuple<std::string_view>;
             using ValueType = types::CDNs;
 
-            static std::optional<types::CDNs> Parse(std::string_view input);
+            static Result<types::CDNs> Parse(std::string_view input);
         };
 
         template <> struct CommandTraits<Command::ProductBGDL> {
@@ -64,7 +66,7 @@ namespace libtactmon::ribbit {
             using ValueType = types::BGDL;
             using Args = std::tuple<std::string_view>;
 
-            static std::optional<types::BGDL> Parse(std::string_view input);
+            static Result<types::BGDL> Parse(std::string_view input);
         };
 
         template <Version> struct VersionTraits;
@@ -73,21 +75,22 @@ namespace libtactmon::ribbit {
             constexpr static const std::string_view Value = "v1";
 
             template <typename C>
-            static auto Parse(std::string_view payload, spdlog::logger* logger)
-                -> std::optional<typename C::ValueType>
+            static auto Parse(std::string_view payload)
+                -> Result<typename C::ValueType>
             {
-                std::vector<std::string_view> messageParts = ParseCore(payload, logger);
-                for (std::string_view elem : messageParts) {
-                    auto elemParse = C::Parse(elem);
-                    if (elemParse.has_value())
-                        return elemParse;
-                }
+                return ParseCore(payload).transform([](std::vector<std::string_view> tokens) {
+                    for (std::string_view token : tokens) {
+                        auto elemParse = C::Parse(token);
+                        if (elemParse.has_value())
+                            return elemParse;
+                    }
 
-                return std::nullopt;
+                    return Result<typename C::ValueType> { errors::ribbit::Unparsable() };
+                });
             }
 
         private:
-            static std::vector<std::string_view> ParseCore(std::string_view input, spdlog::logger* logger);
+            static Result<std::vector<std::string_view>> ParseCore(std::string_view input);
         };
 
         template <> struct VersionTraits<Version::V2> {
@@ -95,7 +98,7 @@ namespace libtactmon::ribbit {
 
             template <typename C>
             static auto Parse(std::string_view payload, spdlog::logger* logger)
-                -> std::optional<typename C::ValueType>
+                -> Result<typename C::ValueType>
             {
                 std::vector<std::string_view> messageParts = ParseCore(payload, logger);
                 for (std::string_view elem : messageParts) {
@@ -104,7 +107,7 @@ namespace libtactmon::ribbit {
                         return elemParse;
                 }
 
-                return std::nullopt;
+                return Result<typename C::ValueType> { errors::ribbit::Unparsable() };
             }
 
         private:
@@ -118,13 +121,13 @@ namespace libtactmon::ribbit {
             using VersionTraits = detail::VersionTraits<V>;
 
         public:
-            static auto Execute(boost::asio::any_io_executor const& executor, Region region, Args... args) {
-                return Execute(executor, nullptr, region, std::forward<Args>(args)...);
-            }
-
-            static auto Execute(boost::asio::any_io_executor const& executor, spdlog::logger* logger, Region region, Args... args)
-                -> std::optional<typename CommandTraits::ValueType>
+            static auto Execute(boost::asio::any_io_executor const& executor, Region region, Args... args)
+                -> Result<typename CommandTraits::ValueType>
             {
+                using result_type = Result<typename CommandTraits::ValueType>;
+
+                namespace error = libtactmon::errors;
+
                 namespace asio = boost::asio;
                 namespace ip = asio::ip;
                 using tcp = ip::tcp;
@@ -137,42 +140,25 @@ namespace libtactmon::ribbit {
 
                 std::string host = fmt::format("{}.version.battle.net", region);
 
-                if (logger != nullptr)
-                    logger->info("Loading {}:{}/{}.", host, 1119, command);
-
                 tcp::resolver r { executor };
                 asio::connect(socket, r.resolve(host, "1119"), ec);
 
-                if (ec) {
-                    if (logger != nullptr)
-                        logger->error("An error occured: {}.", ec.message());
-
-                    return std::nullopt;
-                }
+                if (ec.failed()) return result_type { error::network::ConnectError(ec, host) };
 
                 asio::write(socket, asio::buffer(command), ec);
-                if (ec) {
-                    if (logger != nullptr)
-                        logger->error("An error occured: {}.", ec.message());
-
-                    return std::nullopt;
-                }
+                if (ec.failed()) return result_type { error::network::WriteError(ec, host) };
 
                 { // Read Ribbit response
                     boost::asio::streambuf buf;
                     std::size_t bytesTransferred = asio::read(socket, buf, ec);
                     boost::ignore_unused(bytesTransferred);
-                    if (ec && ec != boost::asio::error::eof) {
-                        if (logger != nullptr)
-                            logger->error("An error occured: {}.", ec.message());
-
-                        return std::nullopt;
-                    }
+                    if (ec && ec != boost::asio::error::eof)
+                        return result_type{ error::network::ReadError(ec, host) };
 
                     auto bufs = buf.data();
                     std::string response { asio::buffers_begin(bufs), asio::buffers_begin(bufs) + buf.size() };
 
-                    return VersionTraits::template Parse<CommandTraits>(response, logger);
+                    return VersionTraits::template Parse<CommandTraits>(response);
                 }
             }
         };

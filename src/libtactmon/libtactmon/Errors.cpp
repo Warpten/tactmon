@@ -41,6 +41,16 @@ namespace libtactmon::errors {
     }
 
     namespace network {
+        Error ConnectError(boost::system::error_code const& ec, std::string_view host) {
+            return Error { Category::Network, Code::ConnectError, "An error occured while connecting to {}: {}", host, ec.message() };
+        }
+        Error ReadError(boost::system::error_code const& ec, std::string_view host) {
+            return Error { Category::Network, Code::ReadError, "An error occured while reading from {}: {}", host, ec.message() };
+        }
+        extern Error WriteError(boost::system::error_code const& ec, std::string_view host) {
+            return Error { Category::Network, Code::WriteError, "An error occured while writing to {}: {}", host, ec.message() };
+        }
+
         Error NetworkError(std::string_view resourcePath, std::string_view resourceHost, boost::system::error_code const& ec) {
             return Error { Category::Network, Code::NetworkError, "An error occured while downloading {} from {}: {}", resourcePath, resourceHost, ec.message() };
         }

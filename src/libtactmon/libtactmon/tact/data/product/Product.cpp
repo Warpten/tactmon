@@ -24,7 +24,7 @@ namespace libtactmon::tact::data::product {
 
     bool Product::Load(std::string_view buildConfig, std::string_view cdnConfig) noexcept {
         // **Always** refresh CDN
-        _cdns = ribbit::CDNs<>::Execute(_executor, nullptr, ribbit::Region::US, _productName);
+        _cdns = ribbit::CDNs<>::Execute(_executor, ribbit::Region::US, _productName).ToOptional();
         if (!_cdns.has_value())
             return false;
 
@@ -52,7 +52,7 @@ namespace libtactmon::tact::data::product {
         _encoding = [&]() -> std::optional<tact::data::Encoding> {
             Result<tact::data::Encoding> encoding = ResolveCachedBLTE(_buildConfig->Encoding.Key.EncodingKey, _buildConfig->Encoding.Key.ContentKey)
                 .and_then([](io::GrowableMemoryStream decompressedStream) {
-                    return tact::data::Encoding{ decompressedStream };
+                    return tact::data::Encoding { decompressedStream };
                 });
 
             if (encoding)
@@ -117,6 +117,7 @@ namespace libtactmon::tact::data::product {
                 }).ToOptional();
         }
 
+        _indices.reserve(archiveFutures.size());
         for (boost::future<std::optional<tact::data::Index>>& future : boost::when_all(archiveFutures.begin(), archiveFutures.end()).get()) {
             std::optional<tact::data::Index> futureOutcome = future.get();
             if (futureOutcome.has_value())
@@ -127,7 +128,7 @@ namespace libtactmon::tact::data::product {
     }
 
     std::optional<ribbit::types::Versions> Product::Refresh() noexcept {
-        auto summary = ribbit::Summary<>::Execute(_executor, _logger.get(), ribbit::Region::US);
+        auto summary = ribbit::Summary<>::Execute(_executor, ribbit::Region::US);
         if (!summary.has_value())
             return std::nullopt;
 
@@ -137,7 +138,7 @@ namespace libtactmon::tact::data::product {
         if (summaryItr == summary->end())
             return std::nullopt;
 
-        auto versions = ribbit::Versions<>::Execute(_executor, _logger.get(), ribbit::Region::US, _productName);
+        auto versions = ribbit::Versions<>::Execute(_executor, ribbit::Region::US, _productName);
         if (!versions.has_value())
             return std::nullopt;
 
@@ -151,7 +152,7 @@ namespace libtactmon::tact::data::product {
         }
 #endif
 
-        return versions;
+        return std::move(versions).ToOptional();
     }
 
     std::optional<tact::data::FileLocation> Product::FindFile(std::string_view fileName) const {

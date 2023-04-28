@@ -24,6 +24,7 @@ namespace libtactmon {
             BLTE,
             FileSystem,
             Config,
+            Ribbit,
             Product
         };
 
@@ -42,7 +43,9 @@ namespace libtactmon {
             NetworkError,
             LocalInitializationFailed,
             BadStatusCode,
+            ConnectError,
             ReadError,
+            WriteError,
 
             // Filesystem
             FileNotFound,
@@ -52,6 +55,10 @@ namespace libtactmon {
             InvalidPropertySpecification,
             InvalidContentKey,
             InvalidEncodingKey,
+
+            // Ribbit,
+            MalformedMultipartMessage,
+            Unparsable,
 
             // Product
             InvalidIndexFile,
@@ -97,6 +104,10 @@ namespace libtactmon {
         }
 
         namespace network {
+            extern Error ConnectError(boost::system::error_code const& ec, std::string_view host);
+            extern Error ReadError(boost::system::error_code const& ec, std::string_view host);
+            extern Error WriteError(boost::system::error_code const& ec, std::string_view host);
+
             extern Error NetworkError(std::string_view resourcePath, std::string_view resourceHost, boost::system::error_code const& ec);
             extern Error LocalInitializationFailed(std::string_view resourcePath, std::string_view resourceHost, boost::system::error_code const& ec);
             extern Error BadStatusCode(std::string_view resourcePath, std::string_view resourceHost, boost::beast::http::status statusCode);
@@ -113,6 +124,12 @@ namespace libtactmon {
             extern Error InvalidPropertySpecification(std::string_view propertyName, std::vector<std::string_view> tokens);
             extern Error InvalidContentKey(std::string_view token);
             extern Error InvalidEncodingKey(std::string_view token);
+        }
+
+        namespace ribbit {
+            extern Error MalformedFile(std::string_view name);
+            extern Error MalformedMultipartMessage();
+            extern Error Unparsable();
         }
 
         namespace tact {
