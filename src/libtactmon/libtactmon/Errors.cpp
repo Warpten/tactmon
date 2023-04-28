@@ -90,6 +90,18 @@ namespace libtactmon::errors {
         }
     }
 
+    namespace ribbit {
+        Error MalformedFile(std::string_view name) {
+            return Error { Category::Ribbit, Code::MalformedFile, "Malformed response for {}", name };
+        }
+        Error MalformedMultipartMessage() {
+            return Error { Category::Ribbit, Code::MalformedMultipartMessage, "Malformed multipart response"};
+        }
+        Error Unparsable() {
+            return Error { Category::Ribbit, Code::Unparsable, "Response cannot be oarsed" };
+        }
+    }
+
     namespace tact {
         Error InvalidIndexFile(std::string_view hash, std::string_view reason) {
             return Error { Category::Product, Code::InvalidIndexFile, "An error occured while parsing index file {}.index: {}", hash, reason };
