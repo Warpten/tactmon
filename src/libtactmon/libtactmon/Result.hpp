@@ -168,6 +168,11 @@ namespace libtactmon {
         auto unwrap() && -> R { return std::get<0>(std::move(_result)); }
 
         /**
+         * 
+         */
+        R const& value() const& { return std::get<0>(_result); }
+
+        /**
          * Returns the contained ok value, or computes it from the provided close.
          *
          * This is a terminal operation; the current object is considered moved-from after this call.
@@ -208,6 +213,9 @@ namespace libtactmon {
          * This is not a terminal operation. Use with caution.
          */
         R const* operator -> () const { return std::addressof(std::get<0>(_result)); }
+
+        R const& operator * () const& { return std::get<0>(_result); }
+        R& operator * () & { return std::get<0>(_result); }
 
     private:
         std::variant<R, E> _result;

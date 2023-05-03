@@ -110,7 +110,7 @@ namespace libtactmon::tact::config {
         stream.SeekRead(0);
         
         std::string_view contents { stream.Data<char>().data(), stream.GetLength() };
-        std::vector<std::string_view> lines = libtactmon::detail::Tokenize(contents, '\n', false);
+        std::vector<std::string_view> lines = libtactmon::detail::CharacterTokenizer<'\n'> { contents, false }.Accumulate();
         if (lines.empty())
             return Result<BuildConfig> { errors::cfg::MalformedFile("") };
 
@@ -120,9 +120,7 @@ namespace libtactmon::tact::config {
             if (line[0] == '#')
                 continue;
 
-            static const char Separators[] = { ' ', '=' };
-            std::vector<std::string_view> tokens = libtactmon::detail::Tokenize(line, std::span { Separators }, true);
-
+            std::vector<std::string_view> tokens = libtactmon::detail::ConfigurationTokenizer { line, true }.Accumulate();
             for (auto&& handler : Handlers) {
                 if (tokens[0] != handler.Token)
                     continue;

@@ -32,7 +32,7 @@ namespace backend {
         if (ec == boost::asio::error::operation_aborted)
             return;
 
-        auto summary = ribbit::Summary<>::Execute(_executor, nullptr, ribbit::Region::US);
+        auto summary = ribbit::Summary<>::Execute(_executor, ribbit::Region::US);
         if (!summary.has_value())
             return;
 

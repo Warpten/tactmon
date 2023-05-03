@@ -8,9 +8,6 @@
 #include <boost/beast/http.hpp>
 
 namespace libtactmon::ribbit::detail {
-    using char_sep = boost::char_separator<char>;
-    using tokenizer = boost::tokenizer<char_sep>;
-
     /* static */ Result<std::vector<std::string_view>> VersionTraits<Version::V1>::ParseCore(std::string_view command, std::string_view input) {
         // We pretend this is an HTTP response by shoving a "HTTP/1.1 200 OK\r\n" at the front of the response
         std::string httpResponse = "HTTP/1.1 200 OK\r\n";
@@ -53,7 +50,7 @@ namespace libtactmon::ribbit::detail {
 
         types::BGDL bgdl;
 
-        std::vector<std::string_view> lines = libtactmon::detail::Tokenize(input, "\r\n"sv, true);
+        libtactmon::detail::NewlineTokenizer lines { input, true };
         for (std::string_view line : lines) {
             auto value = types::bgdl::Record::Parse(line);
             if (value.has_value())
@@ -74,7 +71,7 @@ namespace libtactmon::ribbit::detail {
 
         types::CDNs cdns;
 
-        std::vector<std::string_view> lines = libtactmon::detail::Tokenize(input, "\r\n"sv, true);
+        libtactmon::detail::NewlineTokenizer lines { input, true };
         for (std::string_view line : lines) {
             auto value = types::cdns::Record::Parse(line);
             if (value.has_value())
@@ -95,7 +92,7 @@ namespace libtactmon::ribbit::detail {
 
         types::Summary summary;
 
-        std::vector<std::string_view> lines = libtactmon::detail::Tokenize(input, "\r\n"sv, true);
+        libtactmon::detail::NewlineTokenizer lines { input, true };
         for (std::string_view line : lines) {
             auto item = types::summary::Record::Parse(line);
             if (item.has_value())
@@ -114,7 +111,7 @@ namespace libtactmon::ribbit::detail {
 
         types::Versions versions;
 
-        std::vector<std::string_view> lines = libtactmon::detail::Tokenize(input, "\r\n"sv, true);
+        libtactmon::detail::NewlineTokenizer lines { input, true };
         for (std::string_view line : lines) {
             auto value = types::versions::Record::Parse(line);
             if (value.has_value())

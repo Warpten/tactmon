@@ -88,7 +88,7 @@ namespace net {
         if (request.get().target().find('\\') != std::string::npos)
             return writeError(http::status::bad_request, "Don't try to exploit me");
 
-        std::vector<std::string_view> tokens = libtactmon::detail::Tokenize(std::string_view { request.get().target() }, '/', false);
+        std::vector<std::string_view> tokens = libtactmon::detail::CharacterTokenizer<'/'> { std::string_view { request.get().target() }, false }.Accumulate();
         if (!tokens.empty())
             tokens.erase(tokens.begin());
 
@@ -115,7 +115,7 @@ namespace net {
 
         params.FileName = tokens[5];
 
-        auto cdns = ribbit::CDNs<>::Execute(_stream.get_executor(), nullptr, ribbit::Region::US, params.Product);
+        auto cdns = ribbit::CDNs<>::Execute(_stream.get_executor(), ribbit::Region::US, params.Product);
         if (!cdns.has_value()) {
             return writeError(http::status::not_found,
                 "Unable to resolve CDN configuration.\r\n"
@@ -137,7 +137,6 @@ namespace net {
         http::write_header(_stream, responseSerializer, ec);
         if (ec.failed())
             return true;
-
 
         // 1. Collect eligible CDNs.
         std::unordered_map<std::string_view, std::string> availableRemoteArchives = CollectAvailableCDNs(*cdns, params.ArchiveName, params.Offset, params.Length);

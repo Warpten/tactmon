@@ -172,8 +172,8 @@ void Execute(boost::program_options::variables_map vm) {
         if (!productCache.IsAwareOf(productName))
             return;
 
-        auto versions = ribbit::Versions<>::Execute(threadPool.executor(), nullptr, ribbit::Region::US, productName);
-        auto cdns = ribbit::CDNs<>::Execute(threadPool.executor(), nullptr, ribbit::Region::US, productName);
+        auto versions = ribbit::Versions<>::Execute(threadPool.executor(), ribbit::Region::US, productName);
+        auto cdns = ribbit::CDNs<>::Execute(threadPool.executor(), ribbit::Region::US, productName);
         if (!versions.has_value() || !cdns.has_value())
             return;
 

@@ -16,8 +16,8 @@ namespace libtactmon::tact::config {
     Result<CDNConfig> CDNConfig::Parse(io::IReadableStream& stream) {
         stream.SeekRead(0);
 
-        std::string_view contents { stream.Data<char>().data(), stream.GetLength() };
-        std::vector<std::string_view> lines = detail::Tokenize(contents, '\n', true);
+        std::string_view contents{ stream.Data<char>().data(), stream.GetLength() };
+        std::vector<std::string_view> lines = detail::NewlineTokenizer<"\n"> { contents, true }.Accumulate();
 
         if (lines.empty())
             return Result<CDNConfig> { cfg::MalformedFile("") };
@@ -27,8 +27,7 @@ namespace libtactmon::tact::config {
             if (line[0] == '#')
                 continue;
 
-            static const char Separators[] = { ' ', '=' };
-            std::vector<std::string_view> tokens = detail::Tokenize(line, std::span { Separators }, true);
+            std::vector<std::string_view> tokens = detail::ConfigurationTokenizer { line, true }.Accumulate();
 
             if (tokens[0] == "archives") {
                 config.archives.resize(tokens.size() - 1);

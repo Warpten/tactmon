@@ -94,7 +94,7 @@ namespace libtactmon::tact::data::product {
 
         for (config::CDNConfig::Archive const& archive : _cdnConfig->archives) {
             std::shared_ptr<index_parse_task> task = std::make_shared<index_parse_task>(
-                [archiveName = archive.Name, archiveSize = archive.Size, buildName = _buildConfig->BuildName, logger = _logger, this]() {
+                [archiveName = archive.Name, archiveSize = archive.Size, buildName = _buildConfig->BuildName, this]() {
                     return ResolveCachedData(fmt::format("{}.index", archiveName))
                         .transform([&](io::FileStream fstream) {
                             return tact::data::Index::TryParse(archiveName, fstream);

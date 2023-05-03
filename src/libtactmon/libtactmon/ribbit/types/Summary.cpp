@@ -8,7 +8,7 @@
 
 namespace libtactmon::ribbit::types::summary {
     std::optional<Record> Record::Parse(std::string_view input) {
-        std::vector<std::string_view> tokens = libtactmon::detail::Tokenize(input, '|', false);
+        std::vector<std::string_view> tokens = libtactmon::detail::RibbitTokenizer { input, false }.Accumulate();
         if (tokens.size() != 3 && tokens.size() != 2)
             return std::nullopt;
 
