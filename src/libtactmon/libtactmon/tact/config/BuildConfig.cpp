@@ -13,15 +13,19 @@ namespace libtactmon::tact::config {
     using namespace errors;
 
     struct ConfigHandler {
-        std::string_view Token;
+        using MatcherType = bool(*)(std::vector<std::string_view>);
+        MatcherType Matcher;
 
         using HandlerType = Error(*)(BuildConfig&, std::vector<std::string_view>);
         HandlerType Handler;
     };
 
+#define MAKE_MATCHER(TOKEN) [](std::vector<std::string_view> tokens) { return !tokens.empty() && tokens[0] == TOKEN; }
+
     // Not all properties are modeled here.
     static const ConfigHandler Handlers[] = {
-        { "root",
+        {
+            MAKE_MATCHER("root"),
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 2)
                     return errors::cfg::InvalidPropertySpecification("root", tokens);
@@ -31,7 +35,8 @@ namespace libtactmon::tact::config {
 
                 return errors::Success;
             }
-        }, { "install",
+        }, {
+            MAKE_MATCHER("install"),
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 3 && tokens.size() != 2)
                     return errors::cfg::InvalidPropertySpecification("install", tokens);
@@ -44,7 +49,8 @@ namespace libtactmon::tact::config {
 
                 return errors::Success;
             }
-        }, { "install-size",
+        }, {
+            MAKE_MATCHER("install-size"),
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 3 && tokens.size() != 2)
                     return errors::cfg::InvalidPropertySpecification("install-size", tokens);
@@ -63,7 +69,8 @@ namespace libtactmon::tact::config {
 
                 return errors::Success;
             }
-        }, { "encoding", 
+        }, {
+            MAKE_MATCHER("encoding"), 
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 3 && tokens.size() != 2)
                     return errors::cfg::InvalidPropertySpecification("encoding", tokens);
@@ -76,7 +83,8 @@ namespace libtactmon::tact::config {
 
                 return errors::Success;
             }
-        }, { "encoding-size",
+        }, {
+            MAKE_MATCHER("encoding-size"),
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 3 && tokens.size() != 2)
                     return errors::cfg::InvalidPropertySpecification("encoding-size", tokens);
@@ -95,12 +103,94 @@ namespace libtactmon::tact::config {
 
                 return errors::Success;
             }
-        }, { "build-name",
+        }, {
+            MAKE_MATCHER("build-name"),
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 2)
                     return errors::cfg::InvalidPropertySpecification("build-name", tokens);
 
                 cfg.BuildName = tokens[1];
+                return errors::Success;
+            }
+        }, {
+            MAKE_MATCHER("build-uid"),
+            [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
+                if (tokens.size() != 2)
+                    return errors::cfg::InvalidPropertySpecification("build-uid", tokens);
+
+                cfg.BuildUID = tokens[1];
+                return errors::Success;
+            }
+        }, {
+            MAKE_MATCHER("build-product"),
+            [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
+                if (tokens.size() != 2)
+                    return errors::cfg::InvalidPropertySpecification("build-product", tokens);
+
+                cfg.BuildProduct = tokens[1];
+                return errors::Success;
+            }
+        }, {
+            MAKE_MATCHER("build-playbuild-installer"),
+            [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
+                if (tokens.size() != 2)
+                    return errors::cfg::InvalidPropertySpecification("build-playbuild-installer", tokens);
+
+                cfg.BuildPlaybuildInstaller = tokens[1];
+                return errors::Success;
+            }
+        }, {
+            [](std::vector<std::string_view> tokens) {
+                return tokens[0].starts_with("vfs-");
+            },
+            [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
+                std::string_view propertySpecifier = tokens[0].substr(4); // vfs-
+                if (propertySpecifier == "root") {
+                    if (tokens.size() != 2)
+                        return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
+
+                    cfg.VFS.Root.Name = propertySpecifier;
+                    return errors::Success;
+                }
+
+                if (propertySpecifier == "root-size") {
+                    if (tokens.size() != 3)
+                        return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
+
+                    for (std::size_t i = 0; i < 2; ++i) {
+                        auto [ptr, ec] = std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), cfg.VFS.Root.Size[i]);
+                        if (ec != std::errc{ })
+                            return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
+                    }
+
+                    return errors::Success;
+                }
+
+                std::size_t index = 0;
+                auto [ptr, ec] = std::from_chars(propertySpecifier.data(), propertySpecifier.data() + propertySpecifier.size(), index);
+                if (ec != std::errc{ })
+                    return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
+
+                if (cfg.VFS.Entries.size() < index)
+                    cfg.VFS.Entries.resize(index);
+
+                if (ptr != propertySpecifier.data() + propertySpecifier.size()) {
+                    if (tokens.size() != 3)
+                        return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
+
+                    for (std::size_t i = 0; i < 2; ++i) {
+                        auto [ptr, ec] = std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), cfg.VFS.Entries[index].Size[i]);
+                        if (ec != std::errc{ })
+                            return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
+                    }
+
+                    return errors::Success;
+                }
+
+                if (tokens.size() != 2)
+                    return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
+
+                cfg.VFS.Entries[index].Name = tokens[1];
                 return errors::Success;
             }
         }
@@ -122,7 +212,7 @@ namespace libtactmon::tact::config {
 
             std::vector<std::string_view> tokens = libtactmon::detail::ConfigurationTokenizer { line, true }.Accumulate();
             for (auto&& handler : Handlers) {
-                if (tokens[0] != handler.Token)
+                if (handler.Matcher(tokens))
                     continue;
 
                 Error error = handler.Handler(config, std::move(tokens));

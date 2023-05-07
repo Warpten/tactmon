@@ -1,6 +1,7 @@
 #include "libtactmon/crypto/Jenkins.hpp"
 #include "libtactmon/crypto/lookup3.hpp"
 
+#include <array>
 #include <string>
 
 namespace libtactmon::crypto {

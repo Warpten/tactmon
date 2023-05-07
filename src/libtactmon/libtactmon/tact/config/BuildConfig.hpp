@@ -50,5 +50,18 @@ namespace libtactmon::tact::config {
         } Encoding;
 
         std::string BuildName;
+        std::string BuildUID;
+        std::string BuildProduct;
+        std::string BuildPlaybuildInstaller;
+
+        struct {
+            struct Entry {
+                std::string Name;
+                std::size_t Size[2] = { 0, 0 };
+            };
+
+            Entry Root;
+            std::vector<Entry> Entries;
+        } VFS;
     };
 }
