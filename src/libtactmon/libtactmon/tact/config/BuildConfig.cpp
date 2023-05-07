@@ -212,7 +212,7 @@ namespace libtactmon::tact::config {
 
             std::vector<std::string_view> tokens = libtactmon::detail::ConfigurationTokenizer { line, true }.Accumulate();
             for (auto&& handler : Handlers) {
-                if (handler.Matcher(tokens))
+                if (!handler.Matcher(tokens))
                     continue;
 
                 Error error = handler.Handler(config, std::move(tokens));
