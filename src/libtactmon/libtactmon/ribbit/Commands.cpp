@@ -33,16 +33,16 @@ namespace libtactmon::ribbit::detail {
             return Result<std::vector<std::string_view>> { errors::ribbit::MalformedMultipartMessage(command) };
 
         // Found a MIME boundary, split the body
-        std::string boundaryDelimiter = fmt::format("--{}\r\n", *mimeBoundary);
+        libtactmon::detail::StringTokenizer<> tokenizer { input, true, fmt::format("--{}\r\n", *mimeBoundary) };
 
-        return Result<std::vector<std::string_view>> { libtactmon::detail::Tokenize(input, std::string_view { boundaryDelimiter }, true) };
+        return Result<std::vector<std::string_view>> { std::move(tokenizer).Accumulate() };
     }
 
     /* static */ std::vector<std::string_view> VersionTraits<Version::V2>::ParseCore(std::string_view input) {
         using namespace std::string_view_literals;
 
         // Split on the header delimiter.
-        return libtactmon::detail::Tokenize(input, "\r\n\r\n"sv, false);
+        return libtactmon::detail::NewlineTokenizer<"\r\n\r\n"> { input, false }.Accumulate();
     }
 
     /* static */ Result<types::BGDL> CommandTraits<Command::ProductBGDL>::Parse(std::string_view command, std::string_view input) {
