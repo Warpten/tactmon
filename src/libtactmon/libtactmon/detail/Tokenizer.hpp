@@ -11,8 +11,10 @@ namespace libtactmon::detail {
     /**
      * An iterable used to lazily tokenize a string.
      */
-    template <typename T, typename CharT = char, typename... Args>
+    template <typename T, typename CharT, typename... Args>
     struct Tokenizer final : T {
+        static_assert(std::is_constructible_v<T, Args...>);
+
         explicit Tokenizer(std::basic_string_view<CharT> input, bool ignoreEmptyEntries, Args&&... args) noexcept
             : T(std::forward<Args>(args)...), _input(input), _ignoreEmptyEntries(ignoreEmptyEntries)
         { }
@@ -38,7 +40,7 @@ namespace libtactmon::detail {
             }
 
             Iterator operator ++ (int) {
-                Iterator copy{ *this };
+                Iterator copy { *this };
                 ++(*this);
                 return copy;
             }
@@ -60,25 +62,25 @@ namespace libtactmon::detail {
             }
 
         private:
-            T _handler;
+            const T _handler;
             std::basic_string_view<CharT> _token;
             std::basic_string_view<CharT> _next;
             bool _ignoreEmptyEntries;
         };
 
-        Iterator begin() {
-            auto [token, next] = static_cast<T*>(this)->Next(_input);
-            return Iterator { token, next, _ignoreEmptyEntries, T { *static_cast<T*>(this) } };
+        Iterator begin() const {
+            auto [token, next] = static_cast<const T*>(this)->Next(_input);
+            return Iterator { token, next, _ignoreEmptyEntries, T { *static_cast<const T*>(this) } };
         }
 
-        Sentinel end() {
+        Sentinel end() const {
             return Sentinel { };
         }
 
         std::vector<std::basic_string_view<CharT>> Accumulate() && {
             std::vector<std::basic_string_view<CharT>> v;
-            for (std::basic_string_view<CharT> token : *this)
-                v.push_back(token);
+            for (auto it = begin(); it != end(); ++it)
+                v.push_back(*it);
             return v;
         }
 
@@ -92,19 +94,19 @@ namespace libtactmon::detail {
 
         template <std::size_t N>
         struct Lit {
-            constexpr Lit(const char(&c)[N]) {
+            constexpr Lit(const char(&c)[N]) noexcept {
                 std::copy_n(c, N, value);
             }
 
-            constexpr std::string_view AsView() const { return value; }
-            constexpr std::size_t Size() const { return N; }
+            constexpr std::string_view AsView() const noexcept { return value; }
+            constexpr std::size_t Size() const noexcept { return N; }
 
             char value[N];
         };
 
         template <Lit Token>
         struct NewlineTokenizer {
-            std::pair<std::string_view, std::string_view> Next(std::string_view input) {
+            std::pair<std::string_view, std::string_view> Next(std::string_view input) const noexcept {
                 std::size_t offset = input.find(Token.AsView());
                 if (offset == std::string_view::npos)
                     return std::pair{ input, input.substr(input.size()) };
@@ -114,7 +116,7 @@ namespace libtactmon::detail {
         };
 
         struct ConfigTokenizer {
-            std::pair<std::string_view, std::string_view> Next(std::string_view input) {
+            std::pair<std::string_view, std::string_view> Next(std::string_view input) const noexcept {
                 std::size_t offset = input.find('|');
                 if (offset != std::string_view::npos)
                     return std::pair{ input.substr(0, offset), input.substr(offset + 1) };
@@ -128,7 +130,7 @@ namespace libtactmon::detail {
         };
 
         struct RibbitTokenizer {
-            std::pair<std::string_view, std::string_view> Next(std::string_view input) {
+            std::pair<std::string_view, std::string_view> Next(std::string_view input) const noexcept {
                 std::size_t offset = input.find('|');
                 if (offset != std::string_view::npos)
                     return std::pair{ input.substr(0, offset), input.substr(offset + 1) };
@@ -139,7 +141,7 @@ namespace libtactmon::detail {
 
         template <auto C>
         struct CharacterTokenizer {
-            std::pair<std::basic_string_view<decltype(C)>, std::basic_string_view<decltype(C)>> Next(std::basic_string_view<decltype(C)> input) {
+            std::pair<std::basic_string_view<decltype(C)>, std::basic_string_view<decltype(C)>> Next(std::basic_string_view<decltype(C)> input) const noexcept {
                 std::size_t offset = input.find(C);
                 if (offset != std::basic_string_view<decltype(C)>::npos)
                     return std::pair { input.substr(0, offset), input.substr(offset + 1) };
@@ -150,15 +152,18 @@ namespace libtactmon::detail {
 
         template <typename CharT>
         struct StringTokenizer {
-            std::string Token;
+            StringTokenizer(std::string token) : Token(std::move(token)) { }
 
-            std::pair<std::basic_string_view<CharT>, std::basic_string_view<CharT>> Next(std::basic_string_view<CharT> input) {
+            std::pair<std::basic_string_view<CharT>, std::basic_string_view<CharT>> Next(std::basic_string_view<CharT> input) const noexcept {
                 std::size_t offset = input.find(Token);
                 if (offset == std::string_view::npos)
                     return std::pair { input, input.substr(input.size()) };
 
                 return std::pair { input.substr(0, offset), input.substr(offset + Token.size()) };
             }
+
+        private:
+            std::string Token;
         };
     }
 
@@ -168,17 +173,17 @@ namespace libtactmon::detail {
      * @tparam[in] Token The newline token to use.
      */
     template <impl::Lit Token = "\r\n">
-    using NewlineTokenizer = Tokenizer<impl::NewlineTokenizer<Token>>;
+    using NewlineTokenizer = Tokenizer<impl::NewlineTokenizer<Token>, char>;
 
     /**
      * Tokenizes an input string view, assuming said view represents a TACT configuration file.
      */
-    using ConfigurationTokenizer = Tokenizer<impl::ConfigTokenizer>;
+    using ConfigurationTokenizer = Tokenizer<impl::ConfigTokenizer, char>;
 
     /**
      * Tokenizes an input string view, assuming said view represents a Ribbit payload.
      */
-    using RibbitTokenizer = Tokenizer<impl::RibbitTokenizer>;
+    using RibbitTokenizer = Tokenizer<impl::RibbitTokenizer, char>;
 
     /**
      * Tokenizes an input string view according to a single specific character.

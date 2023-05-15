@@ -33,19 +33,19 @@ namespace libtactmon::tact::config {
         BuildConfig& operator = (BuildConfig const&) = default;
 
     public:
-        struct Key {
+        struct _Key {
             CKey ContentKey;
             EKey EncodingKey;
         };
 
         CKey Root;
         struct {
-            Key Key;
+            _Key Key;
             std::size_t Size[2] = { 0, 0 };
         } Install;
         // struct { ... } Download;
         struct {
-            Key Key;
+            _Key Key;
             std::size_t Size[2] = { 0, 0 };
         } Encoding;
 
