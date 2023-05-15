@@ -1,8 +1,10 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <limits>
 #include <span>
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include <vector>
