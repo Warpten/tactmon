@@ -21,7 +21,7 @@ namespace backend {
         using namespace std::chrono_literals;
 
         _timer.expires_at(std::chrono::high_resolution_clock::now() + 60s);
-        _timer.async_wait([=](boost::system::error_code ec) {
+        _timer.async_wait([=, this](boost::system::error_code ec) {
             this->OnUpdate(ec);
 
             this->BeginUpdate();
