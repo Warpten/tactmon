@@ -19,9 +19,6 @@ namespace backend::db {
         template <std::size_t... Digits>
         struct Explode<0, Digits...> : ToChars<Digits...> { };
 
-        template <std::size_t... Digits>
-        struct Explode<0, Digits...> : ToChars<Digits...> { };
-
         template <> struct Explode<0> : ToChars<0> { };
         template <> struct Explode<1> : ToChars<1> { };
         template <> struct Explode<2> : ToChars<2> { };
