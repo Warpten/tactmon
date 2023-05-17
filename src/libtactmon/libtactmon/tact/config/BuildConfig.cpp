@@ -167,9 +167,9 @@ namespace libtactmon::tact::config {
                     return errors::Success;
                 }
 
-                std::size_t index = 0;
+                std::size_t index = 0; // 1-based
                 auto [ptr, ec] = std::from_chars(propertySpecifier.data(), propertySpecifier.data() + propertySpecifier.size(), index);
-                if (ec != std::errc{ })
+                if (ec != std::errc{ } || index == 0)
                     return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
 
                 if (cfg.VFS.Entries.size() < index)
@@ -180,7 +180,7 @@ namespace libtactmon::tact::config {
                         return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
 
                     for (std::size_t i = 0; i < 2; ++i) {
-                        auto [ptr, ec] = std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), cfg.VFS.Entries[index].Size[i]);
+                        auto [ptr, ec] = std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), cfg.VFS.Entries[index - 1].Size[i]);
                         if (ec != std::errc{ })
                             return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
                     }
@@ -191,8 +191,8 @@ namespace libtactmon::tact::config {
                 if (tokens.size() != 3)
                     return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
 
-                cfg.VFS.Entries[index].Name[0] = tokens[1];
-                cfg.VFS.Entries[index].Name[1] = tokens[2];
+                cfg.VFS.Entries[index - 1].Name[0] = tokens[1];
+                cfg.VFS.Entries[index - 1].Name[1] = tokens[2];
                 return errors::Success;
             }
         }
