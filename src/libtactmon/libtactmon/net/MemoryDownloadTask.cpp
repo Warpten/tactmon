@@ -5,10 +5,11 @@ namespace libtactmon::net {
         return { };
     }
 
-    std::optional<io::GrowableMemoryStream> MemoryDownloadTask::TransformMessage(MessageType& message) {
-        if (message.result() != boost::beast::http::status::ok)
-            return std::nullopt;
+    Result<io::GrowableMemoryStream> MemoryDownloadTask::TransformMessage(MessageType& message) {
+        return Result<io::GrowableMemoryStream> { message.body().data() };
+    }
 
-        return io::GrowableMemoryStream { message.body().data() };
+    Result<io::GrowableMemoryStream> MemoryDownloadTask::HandleFailure(boost::beast::http::status statusCode) {
+        return Result<io::GrowableMemoryStream> { errors::network::BadStatusCode(_resourcePath, "", statusCode) };
     }
 }

@@ -55,7 +55,7 @@ struct LIBTACTMON_API fmt::formatter<libtactmon::ribbit::Region> {
 };
 
 template <>
-struct fmt::formatter<libtactmon::ribbit::Version> {
+struct LIBTACTMON_API fmt::formatter<libtactmon::ribbit::Version> {
     template <typename ParseContext>
     constexpr auto parse(ParseContext& ctx) {
         return ctx.begin();

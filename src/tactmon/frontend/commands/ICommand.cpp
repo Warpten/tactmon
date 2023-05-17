@@ -73,6 +73,8 @@ namespace frontend::commands {
 
                 drillDown = false;
             }
+            else
+                context.values.emplace(evntOption.name, evntOption.value);
         }
 
         dpp::autocomplete_interaction interaction = evnt.command.get_autocomplete_interaction();

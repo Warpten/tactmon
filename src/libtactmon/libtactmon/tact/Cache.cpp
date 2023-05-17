@@ -1,17 +1,21 @@
 #include "libtactmon/tact/Cache.hpp"
+#include "libtactmon/Errors.hpp"
 
 namespace libtactmon::tact {
+    using namespace errors;
+
     Cache::Cache(const std::filesystem::path& root) : _root(root) {
         if (!std::filesystem::is_directory(root))
             std::filesystem::create_directories(root);
     }
 
-    io::FileStream Cache::OpenWrite(std::string_view relativePath) const {
-        std::filesystem::path absolutePath = GetAbsolutePath(relativePath);
-        if (!std::filesystem::is_directory(absolutePath.parent_path()))
-            std::filesystem::create_directories(absolutePath.parent_path());
+    Result<io::FileStream> Cache::Resolve(std::string_view resourcePath) {
+        std::filesystem::path fullResourcePath = GetAbsolutePath(resourcePath);
 
-        return io::FileStream { absolutePath };
+        if (!std::filesystem::is_regular_file(fullResourcePath))
+            return Result<io::FileStream> { fs::FileNotFound(resourcePath) };
+
+        return Result<io::FileStream> { fullResourcePath };
     }
 
     std::filesystem::path Cache::GetAbsolutePath(std::string_view relativePath) const { 
@@ -23,6 +27,14 @@ namespace libtactmon::tact {
             return fullResourcePath / relativePath.substr(1);
 
         return _root / relativePath;
+    }
+
+    Result<io::FileStream> Cache::OpenWrite(std::string_view relativePath) const {
+        std::filesystem::path absolutePath = GetAbsolutePath(relativePath);
+        if (!std::filesystem::is_directory(absolutePath.parent_path()))
+            std::filesystem::create_directories(absolutePath.parent_path());
+
+        return Result<io::FileStream> { absolutePath };
     }
 
     void Cache::Delete(std::string_view relativePath) const {

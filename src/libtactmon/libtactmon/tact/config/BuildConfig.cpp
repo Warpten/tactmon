@@ -1,6 +1,7 @@
 #include "libtactmon/detail/Tokenizer.hpp"
 #include "libtactmon/tact/config/BuildConfig.hpp"
 #include "libtactmon/io/IReadableStream.hpp"
+#include "libtactmon/Errors.hpp"
 
 #include <charconv>
 #include <string_view>
@@ -9,107 +10,201 @@
 using namespace std::string_view_literals;
 
 namespace libtactmon::tact::config {
-    struct ConfigHandler {
-        std::string_view Token;
+    using namespace errors;
 
-        using HandlerType = bool(*)(BuildConfig&, std::vector<std::string_view>);
+    struct ConfigHandler {
+        using MatcherType = bool(*)(std::vector<std::string_view>);
+        MatcherType Matcher;
+
+        using HandlerType = Error(*)(BuildConfig&, std::vector<std::string_view>);
         HandlerType Handler;
     };
 
+#define MAKE_MATCHER(TOKEN) [](std::vector<std::string_view> tokens) { return !tokens.empty() && tokens[0] == TOKEN; }
+
     // Not all properties are modeled here.
     static const ConfigHandler Handlers[] = {
-        { "root",
+        {
+            MAKE_MATCHER("root"),
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 2)
-                    return false;
+                    return errors::cfg::InvalidPropertySpecification("root", tokens);
 
                 if (!CKey::TryParse(tokens[1], cfg.Root))
-                    return false;
+                    return errors::cfg::InvalidContentKey(tokens[1]);
 
-                return true;
+                return errors::Success;
             }
-        }, { "install",
+        }, {
+            MAKE_MATCHER("install"),
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 3 && tokens.size() != 2)
-                    return false;
+                    return errors::cfg::InvalidPropertySpecification("install", tokens);
 
                 if (!CKey::TryParse(tokens[1], cfg.Install.Key.ContentKey))
-                    return false;
+                    return errors::cfg::InvalidContentKey(tokens[1]);
 
                 if (!EKey::TryParse(tokens[2], cfg.Install.Key.EncodingKey))
-                    return false;
+                    return errors::cfg::InvalidEncodingKey(tokens[2]);
 
-                return true;
+                return errors::Success;
             }
-        }, { "install-size",
+        }, {
+            MAKE_MATCHER("install-size"),
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 3 && tokens.size() != 2)
-                    return false;
+                    return errors::cfg::InvalidPropertySpecification("install-size", tokens);
 
                 {
                     auto [ptr, ec] = std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), cfg.Install.Size[0]);
                     if (ec != std::errc{ })
-                        return false;
+                        return errors::cfg::InvalidPropertySpecification("install-size", tokens);
                 }
 
                 if (tokens.size() == 3) {
                     auto [ptr, ec] = std::from_chars(tokens[2].data(), tokens[2].data() + tokens[2].size(), cfg.Install.Size[1]);
                     if (ec != std::errc{ })
-                        return false;
+                        return errors::cfg::InvalidPropertySpecification("install-size", tokens);
                 }
 
-                return true;
+                return errors::Success;
             }
-        }, { "encoding", 
+        }, {
+            MAKE_MATCHER("encoding"), 
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 3 && tokens.size() != 2)
-                    return false;
+                    return errors::cfg::InvalidPropertySpecification("encoding", tokens);
 
                 if (!CKey::TryParse(tokens[1], cfg.Encoding.Key.ContentKey))
-                    return false;
+                    return errors::cfg::InvalidContentKey(tokens[1]);
 
                 if (!EKey::TryParse(tokens[2], cfg.Encoding.Key.EncodingKey))
-                    return false;
+                    return errors::cfg::InvalidEncodingKey(tokens[2]);
 
-                return true;
+                return errors::Success;
             }
-        }, { "encoding-size",
+        }, {
+            MAKE_MATCHER("encoding-size"),
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 3 && tokens.size() != 2)
-                    return false;
+                    return errors::cfg::InvalidPropertySpecification("encoding-size", tokens);
 
                 {
                     auto [ptr, ec] = std::from_chars(tokens[1].data(), tokens[1].data() + tokens[1].size(), cfg.Encoding.Size[0]);
                     if (ec != std::errc{ })
-                        return false;
+                        return errors::cfg::InvalidPropertySpecification("encoding-size", tokens);
                 }
 
                 if (tokens.size() == 3) {
                     auto [ptr, ec] = std::from_chars(tokens[2].data(), tokens[2].data() + tokens[2].size(), cfg.Encoding.Size[1]);
                     if (ec != std::errc{ })
-                        return false;
+                        return errors::cfg::InvalidPropertySpecification("encoding-size", tokens);
                 }
 
-                return true;
+                return errors::Success;
             }
-        }, { "build-name",
+        }, {
+            MAKE_MATCHER("build-name"),
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 if (tokens.size() != 2)
-                    return false;
+                    return errors::cfg::InvalidPropertySpecification("build-name", tokens);
 
                 cfg.BuildName = tokens[1];
-                return true;
+                return errors::Success;
+            }
+        }, {
+            MAKE_MATCHER("build-uid"),
+            [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
+                if (tokens.size() != 2)
+                    return errors::cfg::InvalidPropertySpecification("build-uid", tokens);
+
+                cfg.BuildUID = tokens[1];
+                return errors::Success;
+            }
+        }, {
+            MAKE_MATCHER("build-product"),
+            [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
+                if (tokens.size() != 2)
+                    return errors::cfg::InvalidPropertySpecification("build-product", tokens);
+
+                cfg.BuildProduct = tokens[1];
+                return errors::Success;
+            }
+        }, {
+            MAKE_MATCHER("build-playbuild-installer"),
+            [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
+                if (tokens.size() != 2)
+                    return errors::cfg::InvalidPropertySpecification("build-playbuild-installer", tokens);
+
+                cfg.BuildPlaybuildInstaller = tokens[1];
+                return errors::Success;
+            }
+        }, {
+            [](std::vector<std::string_view> tokens) {
+                return !tokens.empty() && tokens[0].starts_with("vfs-");
+            },
+            [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
+                std::string_view propertySpecifier = tokens[0].substr(4); // vfs-
+                if (propertySpecifier == "root") {
+                    if (tokens.size() != 3)
+                        return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
+
+                    cfg.VFS.Root.Name[0] = tokens[1];
+                    cfg.VFS.Root.Name[1] = tokens[2];
+                    return errors::Success;
+                }
+
+                if (propertySpecifier == "root-size") {
+                    if (tokens.size() != 3)
+                        return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
+
+                    for (std::size_t i = 0; i < 2; ++i) {
+                        auto [ptr, ec] = std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), cfg.VFS.Root.Size[i]);
+                        if (ec != std::errc{ })
+                            return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
+                    }
+
+                    return errors::Success;
+                }
+
+                std::size_t index = 0; // 1-based
+                auto [ptr, ec] = std::from_chars(propertySpecifier.data(), propertySpecifier.data() + propertySpecifier.size(), index);
+                if (ec != std::errc{ } || index == 0)
+                    return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
+
+                if (cfg.VFS.Entries.size() < index)
+                    cfg.VFS.Entries.resize(index);
+
+                if (ptr != propertySpecifier.data() + propertySpecifier.size()) {
+                    if (tokens.size() != 3)
+                        return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
+
+                    for (std::size_t i = 0; i < 2; ++i) {
+                        auto [ptr, ec] = std::from_chars(tokens[i + 1].data(), tokens[i + 1].data() + tokens[i + 1].size(), cfg.VFS.Entries[index - 1].Size[i]);
+                        if (ec != std::errc{ })
+                            return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
+                    }
+
+                    return errors::Success;
+                }
+
+                if (tokens.size() != 3)
+                    return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
+
+                cfg.VFS.Entries[index - 1].Name[0] = tokens[1];
+                cfg.VFS.Entries[index - 1].Name[1] = tokens[2];
+                return errors::Success;
             }
         }
     };
     
-    /* static */ std::optional<BuildConfig> BuildConfig::Parse(io::IReadableStream& stream) {
+    /* static */ Result<BuildConfig> BuildConfig::Parse(io::IReadableStream& stream) {
         stream.SeekRead(0);
         
         std::string_view contents { stream.Data<char>().data(), stream.GetLength() };
-        std::vector<std::string_view> lines = libtactmon::detail::Tokenize(contents, '\n', false);
+        std::vector<std::string_view> lines = libtactmon::detail::CharacterTokenizer<'\n'> { contents, true }.Accumulate();
         if (lines.empty())
-            return std::nullopt;
+            return Result<BuildConfig> { errors::cfg::MalformedFile("") };
 
         BuildConfig config { };
 
@@ -117,19 +212,33 @@ namespace libtactmon::tact::config {
             if (line[0] == '#')
                 continue;
 
-            static const char Separators[] = { ' ', '=' };
-            std::vector<std::string_view> tokens = libtactmon::detail::Tokenize(line, std::span { Separators }, true);
-
+            std::vector<std::string_view> tokens = libtactmon::detail::ConfigurationTokenizer { line, true }.Accumulate();
             for (auto&& handler : Handlers) {
-                if (tokens[0] != handler.Token)
+                if (!handler.Matcher(tokens))
                     continue;
 
-                if (!handler.Handler(config, std::move(tokens)))
-                    return std::nullopt;
+                Error error = handler.Handler(config, std::move(tokens));
+                if (error != errors::Success)
+                    return Result<BuildConfig> { std::move(error) };
                 break;
             }
         }
 
-        return config;
+        return Result<BuildConfig> { std::move(config) };
+    }
+
+    BuildConfig::BuildConfig(BuildConfig&& other) noexcept
+        : Root(std::move(other.Root)), Install(std::move(other.Install)), Encoding(std::move(other.Encoding)), BuildName(std::move(other.BuildName))
+    {
+
+    }
+
+    BuildConfig& BuildConfig::operator = (BuildConfig&& other) noexcept {
+        Root = std::move(other.Root);
+        Install = std::move(other.Install);
+        Encoding = std::move(other.Encoding);
+        BuildName = std::move(other.BuildName);
+
+        return *this;
     }
 }

@@ -7,7 +7,7 @@
 
 namespace libtactmon::ribbit::types::cdns {
     std::optional<Record> Record::Parse(std::string_view input) {
-        std::vector<std::string_view> tokens = libtactmon::detail::Tokenize(input, '|', false);
+        std::vector<std::string_view> tokens = libtactmon::detail::RibbitTokenizer { input, false }.Accumulate();
         if (tokens.size() != 5)
             return std::nullopt;
 

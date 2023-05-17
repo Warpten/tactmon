@@ -10,7 +10,7 @@
 namespace ribbit = libtactmon::ribbit;
 
 namespace backend {
-    RibbitMonitor::RibbitMonitor(boost::asio::any_io_executor executor, backend::Database& db) : _database(db), _executor(std::move(executor)), _timer(executor)
+    RibbitMonitor::RibbitMonitor(boost::asio::any_io_executor executor, backend::Database& db) : _database(db), _executor(executor), _timer(executor)
     {
     }
 
@@ -21,7 +21,7 @@ namespace backend {
         using namespace std::chrono_literals;
 
         _timer.expires_at(std::chrono::high_resolution_clock::now() + 60s);
-        _timer.async_wait([=](boost::system::error_code ec) {
+        _timer.async_wait([=, this](boost::system::error_code ec) {
             this->OnUpdate(ec);
 
             this->BeginUpdate();
@@ -32,7 +32,7 @@ namespace backend {
         if (ec == boost::asio::error::operation_aborted)
             return;
 
-        auto summary = ribbit::Summary<>::Execute(_executor, nullptr, ribbit::Region::US);
+        auto summary = ribbit::Summary<>::Execute(_executor, ribbit::Region::US);
         if (!summary.has_value())
             return;
 

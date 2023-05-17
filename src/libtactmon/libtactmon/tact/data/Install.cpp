@@ -1,10 +1,11 @@
 #include "libtactmon/tact/data/Install.hpp"
 #include "libtactmon/io/IReadableStream.hpp"
+#include "libtactmon/Errors.hpp"
 
 namespace libtactmon::tact::data {
-    /* static */ std::optional<Install> Install::Parse(io::IReadableStream& stream) {
+    /* static */ Result<Install> Install::Parse(io::IReadableStream& stream) {
         if (!stream.CanRead(2 + 1 + 1 + 2 + 4))
-            return std::nullopt;
+            return Result<Install> { errors::tact::InvalidInstallFile("", "too small") };
 
         uint16_t signature = stream.Read<uint16_t>(std::endian::big);
         uint8_t version = stream.Read<uint8_t>();
@@ -30,16 +31,7 @@ namespace libtactmon::tact::data {
             instance._entries.emplace_back(stream, hashSize, name);
         }
 
-        // Buggy, disabled for now.
-        // for (auto&& [name, tag] : instance._tags) {
-        //     auto itr = instance._entries.begin();
-        //     for (std::size_t i = 0; i < instance._entries.size(); ++i, ++itr) {
-        //         if (tag.Matches(i))
-        //             itr->_tags.push_back(std::addressof(tag));
-        //     }
-        // }
-
-        return instance;
+        return Result<Install> { std::move(instance) };
     }
 
     Install::Install() = default;

@@ -1,9 +1,13 @@
 #pragma once
 
 #include "libtactmon/io/FileStream.hpp"
-#include "libtactmon/net/FileDownloadTask.hpp"
+#include "libtactmon/io/MemoryStream.hpp"
 #include "libtactmon/ribbit/types/CDNs.hpp"
 #include "libtactmon/tact/Cache.hpp"
+#include "libtactmon/tact/CKey.hpp"
+#include "libtactmon/tact/EKey.hpp"
+#include "libtactmon/Errors.hpp"
+#include "libtactmon/Result.hpp"
 
 #include <functional>
 #include <memory>
@@ -23,7 +27,7 @@ namespace libtactmon::tact::data::product {
      */
     struct ResourceResolver {
         ResourceResolver(boost::asio::any_io_executor executor, tact::Cache& localCache)
-            : _executor(std::move(executor)), _localCache(localCache)
+            : _executor(executor), _localCache(localCache)
         { }
 
         /**
@@ -31,66 +35,41 @@ namespace libtactmon::tact::data::product {
          * 
          * @param[in] cdns   A list of available CDNs, as provided by Ribbit.
          * @param[in] key    The configuration file's key.
-         * @param[in] parser A callable in charge of parsing the file.
-         * @param[in] logger A logger for errors that occur during download.
          * 
-         * @returns The parsed file or an empty optional if unable to.
+         * @returns A @ref Result holding a stream to the resource on disk, or an error value.
          */
-        template <typename Handler>
-        auto ResolveConfiguration(ribbit::types::CDNs const& cdns,
-            std::string_view key, Handler parser, spdlog::logger* logger = nullptr) const
-            -> std::invoke_result_t<Handler, io::FileStream&>
-        {
-            return Resolve(cdns, key, "/{}/config/{}/{}/{}", parser, logger);
-        }
+        Result<io::FileStream> ResolveConfiguration(ribbit::types::CDNs const& cdns, std::string_view key) const;
 
         /**
          * Resolves a data file.
          * 
          * @param[in] cdns   A list of available CDNs, as provided by Ribbit.
-         * @param[in] key    The configuration file's key.
-         * @param[in] parser A callable in charge of parsing the file.
-         * @param[in] logger A logger for errors that occur during download.
+         * @param[in] key    The data file's key.
          * 
-         * @returns The parsed file or an empty optional if unable to.
+         * @returns A @ref Result holding a stream to the resource on disk, or an error value.
          */
-        template <typename Handler>
-        auto ResolveData(ribbit::types::CDNs const& cdns,
-            std::string_view key, Handler parser, spdlog::logger* logger = nullptr) const
-            -> std::invoke_result_t<Handler, io::FileStream&>
-        {
-            return Resolve(cdns, key, "/{}/data/{}/{}/{}", parser, logger);
-        }
+        Result<io::FileStream> ResolveData(ribbit::types::CDNs const& cdns, std::string_view key) const;
 
-    private:
-        template <typename Handler>
-        auto Resolve(ribbit::types::CDNs const& cdns,
-            std::string_view key, std::string_view formatString,
-            Handler parser,
-            spdlog::logger* logger = nullptr) const
-            -> std::invoke_result_t<Handler, io::FileStream&>
-        {
-            for (ribbit::types::cdns::Record const& cdn : cdns) {
-                std::string relativePath{ fmt::format(fmt::runtime(formatString), cdn.Path, key.substr(0, 2), key.substr(2, 2), key) };
+        /**
+         * Resolves a block table-encoded data file.
+         *
+         * @param[in] cdns        A list of available CDNs, as provided by Ribbit.
+         * @param[in] encodingKey The data file's encoding key.
+         * @param[in] contentKey  The data file's content key.
+         *
+         * @returns A @ref Result holding a stream to the resource on disk, or an error value.
+         */
+        Result<io::GrowableMemoryStream> ResolveBLTE(ribbit::types::CDNs const& cdns, tact::EKey const& encodingKey, tact::CKey const& contentKey) const;
 
-                auto cachedValue = _localCache.Resolve(relativePath, parser);
-                if (cachedValue.has_value())
-                    return cachedValue;
-
-                for (std::string_view host : cdn.Hosts) {
-                    net::FileDownloadTask downloadTask{ relativePath, _localCache };
-                    auto taskResult = downloadTask.Run(_executor, host, logger);
-                    if (taskResult.has_value()) {
-                        auto parsedValue = parser(*taskResult);
-
-                        if (parsedValue.has_value())
-                            return parsedValue;
-                    }
-                }
-            }
-
-            return std::nullopt;
-        }
+        /**
+         * Resolves a block table-encoded data file.
+         *
+         * @param[in] cdns        A list of available CDNs, as provided by Ribbit.
+         * @param[in] encodingKey The data file's encoding key.
+         *
+         * @returns A @ref Result holding a stream to the resource on disk, or an error value.
+         */
+        Result<io::GrowableMemoryStream> ResolveBLTE(ribbit::types::CDNs const& cdns, tact::EKey const& encodingKey) const;
 
     protected:
         boost::asio::any_io_executor _executor;

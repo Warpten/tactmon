@@ -2,6 +2,7 @@
 
 #include "libtactmon/detail/Export.hpp"
 #include "libtactmon/io/FileStream.hpp"
+#include "libtactmon/Result.hpp"
 
 #include <filesystem>
 #include <functional>
@@ -24,27 +25,9 @@ namespace libtactmon::tact {
          * Resolves a resource on disk.
          *
          * @param[in] resourcePath Relative path to the resource.
-         * @param[in] handler      A @p Callable that will attempt to parse the resource.
-         * @returns The result of the @p Callable.
+         * @returns A @ref Result holding a stream to the resource on disk, or an error value.
          */
-        template <typename Handler>
-        auto Resolve(std::string_view resourcePath, Handler handler)
-            -> std::invoke_result_t<Handler, io::FileStream&>
-        {
-            std::filesystem::path fullResourcePath = GetAbsolutePath(resourcePath);
-
-            if (!std::filesystem::is_regular_file(fullResourcePath))
-                return std::nullopt;
-
-            try {
-                io::FileStream fstream { fullResourcePath };
-                return handler(fstream);
-            } catch (std::exception const& ex) {
-                Delete(resourcePath);
-
-                return std::nullopt;
-            }
-        }
+        Result<io::FileStream> Resolve(std::string_view resourcePath);
 
         /**
          * Resolves the absolute path to the specific resource. Does not check for the resource's existence!
@@ -61,7 +44,7 @@ namespace libtactmon::tact {
          * @param[in] relativePath Relative path to the file.
          * @returns A writable stream.
          */
-        [[nodiscard]] io::FileStream OpenWrite(std::string_view relativePath) const;
+        [[nodiscard]] Result<io::FileStream> OpenWrite(std::string_view relativePath) const;
 
         /**
          * Deletes a file from the cache.

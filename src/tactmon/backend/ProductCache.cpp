@@ -6,7 +6,7 @@
 
 namespace backend {
     ProductCache::ProductCache(boost::asio::any_io_executor executor)
-        : _cacheExpiryTimer(std::move(executor))
+        : _cacheExpiryTimer(executor)
     {
         RemoveExpiredEntries();
     }

@@ -8,6 +8,7 @@
 #include <string_view>
 
 #include <boost/beast/http/file_body.hpp>
+#include <boost/beast/http/status.hpp>
 #include <boost/system/error_code.hpp>
 
 namespace libtactmon::tact {
@@ -28,7 +29,8 @@ namespace libtactmon::net {
         { }
 
         boost::system::error_code Initialize(ValueType& body);
-        std::optional<io::FileStream> TransformMessage(MessageType& body);
+        Result<io::FileStream> TransformMessage(MessageType& body);
+        Result<io::FileStream> HandleFailure(boost::beast::http::status statusCode);
 
     private:
         tact::Cache& _localCache;

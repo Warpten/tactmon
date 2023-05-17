@@ -2,6 +2,7 @@
 
 #include "libtactmon/tact/CKey.hpp"
 #include "libtactmon/tact/data/product/Product.hpp"
+#include "libtactmon/Result.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -50,7 +51,7 @@ namespace libtactmon::tact::data::product::wow {
             ptPT = 0x00010000,
         };
 
-        static std::optional<Root> Parse(io::IReadableStream& stream, std::size_t contentKeySize);
+        static Result<Root> Parse(io::IReadableStream& stream, std::size_t contentKeySize);
 
     private:
         Root() = default;
