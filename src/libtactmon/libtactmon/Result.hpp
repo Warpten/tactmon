@@ -203,6 +203,9 @@ namespace libtactmon {
          * This is a terminal operation; the current object is considered moved-from after this call.
          */
         std::optional<R> ToOptional() && {
+            if (!has_value())
+                return std::nullopt;
+
             return std::optional<R> { std::get<0>(std::move(_result)) };
         }
 
