@@ -146,10 +146,10 @@ namespace libtactmon::tact::config {
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 std::string_view propertySpecifier = tokens[0].substr(4); // vfs-
                 if (propertySpecifier == "root") {
-                    if (tokens.size() != 2)
+                    if (tokens.size() != 3)
                         return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
 
-                    cfg.VFS.Root.Name = propertySpecifier;
+                    cfg.VFS.Root.Name = tokens[1];
                     return errors::Success;
                 }
 
@@ -200,7 +200,7 @@ namespace libtactmon::tact::config {
         stream.SeekRead(0);
         
         std::string_view contents { stream.Data<char>().data(), stream.GetLength() };
-        std::vector<std::string_view> lines = libtactmon::detail::CharacterTokenizer<'\n'> { contents, false }.Accumulate();
+        std::vector<std::string_view> lines = libtactmon::detail::CharacterTokenizer<'\n'> { contents, true }.Accumulate();
         if (lines.empty())
             return Result<BuildConfig> { errors::cfg::MalformedFile("") };
 

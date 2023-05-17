@@ -119,13 +119,9 @@ namespace libtactmon::detail {
 
         struct ConfigTokenizer {
             std::pair<std::string_view, std::string_view> Next(std::string_view input) const noexcept {
-                std::size_t offset = input.find('|');
+                std::size_t offset = std::min(input.find('='), input.find(' '));
                 if (offset != std::string_view::npos)
-                    return std::pair{ input.substr(0, offset), input.substr(offset + 1) };
-
-                offset = input.find(' ');
-                if (offset != std::string_view::npos)
-                    return std::pair{ input.substr(0, offset), input.substr(offset + 1) };
+                    return std::pair { input.substr(0, offset), input.substr(offset + 1) };
 
                 return std::pair{ input, input.substr(input.size()) };
             }
