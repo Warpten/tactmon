@@ -149,7 +149,8 @@ namespace libtactmon::tact::config {
                     if (tokens.size() != 3)
                         return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
 
-                    cfg.VFS.Root.Name = tokens[1];
+                    cfg.VFS.Root.Name[0] = tokens[1];
+                    cfg.VFS.Root.Name[1] = tokens[2];
                     return errors::Success;
                 }
 
@@ -187,10 +188,11 @@ namespace libtactmon::tact::config {
                     return errors::Success;
                 }
 
-                if (tokens.size() != 2)
+                if (tokens.size() != 3)
                     return errors::cfg::InvalidPropertySpecification(tokens[0], tokens);
 
-                cfg.VFS.Entries[index].Name = tokens[1];
+                cfg.VFS.Entries[index].Name[0] = tokens[1];
+                cfg.VFS.Entries[index].Name[1] = tokens[2];
                 return errors::Success;
             }
         }

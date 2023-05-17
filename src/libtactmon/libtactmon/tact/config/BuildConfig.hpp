@@ -56,7 +56,7 @@ namespace libtactmon::tact::config {
 
         struct {
             struct Entry {
-                std::string Name;
+                std::string Name[2];
                 std::size_t Size[2] = { 0, 0 };
             };
 
