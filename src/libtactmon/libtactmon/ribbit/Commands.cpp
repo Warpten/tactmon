@@ -71,7 +71,7 @@ namespace libtactmon::ribbit::detail {
 
         types::CDNs cdns;
 
-        libtactmon::detail::NewlineTokenizer lines { input, true };
+        libtactmon::detail::CharacterTokenizer<'\n'> lines { input, true };
         for (std::string_view line : lines) {
             auto value = types::cdns::Record::Parse(line);
             if (value.has_value())
@@ -92,7 +92,7 @@ namespace libtactmon::ribbit::detail {
 
         types::Summary summary;
 
-        libtactmon::detail::NewlineTokenizer lines { input, true };
+        libtactmon::detail::CharacterTokenizer<'\n'> lines { input, true };
         for (std::string_view line : lines) {
             auto item = types::summary::Record::Parse(line);
             if (item.has_value())
@@ -111,7 +111,7 @@ namespace libtactmon::ribbit::detail {
 
         types::Versions versions;
 
-        libtactmon::detail::NewlineTokenizer lines { input, true };
+        libtactmon::detail::CharacterTokenizer<'\n'> lines { input, true };
         for (std::string_view line : lines) {
             auto value = types::versions::Record::Parse(line);
             if (value.has_value())

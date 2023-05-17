@@ -56,7 +56,7 @@ namespace libtactmon::detail {
             }
 
             friend bool operator == (Iterator const& left, Sentinel const& right) {
-                return left._next.empty();
+                return left._next.empty() && left._token.empty();
             }
 
             friend bool operator != (Iterator const& left, Sentinel const& right) {
