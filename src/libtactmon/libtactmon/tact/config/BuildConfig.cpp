@@ -141,7 +141,7 @@ namespace libtactmon::tact::config {
             }
         }, {
             [](std::vector<std::string_view> tokens) {
-                return tokens[0].starts_with("vfs-");
+                return !tokens.empty() && tokens[0].starts_with("vfs-");
             },
             [](BuildConfig& cfg, std::vector<std::string_view> tokens) {
                 std::string_view propertySpecifier = tokens[0].substr(4); // vfs-
