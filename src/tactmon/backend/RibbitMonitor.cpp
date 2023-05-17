@@ -10,7 +10,7 @@
 namespace ribbit = libtactmon::ribbit;
 
 namespace backend {
-    RibbitMonitor::RibbitMonitor(boost::asio::any_io_executor executor, backend::Database& db) : _database(db), _executor(std::move(executor)), _timer(executor)
+    RibbitMonitor::RibbitMonitor(boost::asio::any_io_executor executor, backend::Database& db) : _database(db), _executor(executor), _timer(executor)
     {
     }
 

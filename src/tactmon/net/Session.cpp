@@ -213,7 +213,7 @@ namespace net {
                 auto validationTask = std::make_shared<boost::packaged_task<std::optional<result_type>>>([&, remotePath, host]() -> std::optional<result_type> {
                     beast::error_code ec;
 
-                    auto strand = boost::asio::make_strand(workers.executor());
+                    auto strand = boost::asio::make_strand(workers.service.get_executor());
 
                     boost::asio::ip::tcp::resolver resolver(strand);
                     beast::tcp_stream remoteStream(strand);

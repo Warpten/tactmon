@@ -11,13 +11,16 @@
 
 namespace utility {
     struct ThreadPool final {
-        explicit ThreadPool(std::size_t threadCount) noexcept : _size(threadCount), _service(threadCount), _pool(threadCount), _guard(boost::asio::make_work_guard(_service)) {
-        }
+        explicit ThreadPool(std::size_t threadCount) noexcept : _size(threadCount),
+            service(threadCount),
+            _pool(threadCount),
+            _guard(boost::asio::make_work_guard(service))
+        { }
 
         void PostWork(std::function<void(boost::asio::io_context&, boost::asio::executor_work_guard<boost::asio::io_context::executor_type> const&)> work) {
             boost::asio::post(_pool, [&, work = std::move(work)]() {
                 try {
-                    work(_service, _guard);
+                    work(service, _guard);
                 } catch (std::exception const& ex) {
                     std::cerr << ex.what() << std::endl;
                 }
@@ -39,9 +42,8 @@ namespace utility {
         void PostWork(std::function<void(boost::asio::io_context&)> work) {
             boost::asio::post(_pool, [&, work = std::move(work)]() {
                 try {
-                    work(_service);
-                }
-                catch (std::exception const& ex) {
+                    work(service);
+                } catch (std::exception const& ex) {
                     std::cerr << ex.what() << std::endl;
                 }
             });
@@ -51,14 +53,13 @@ namespace utility {
             Interrupt();
         }
 
-        boost::asio::io_context& service() { return _service; }
-        boost::asio::any_io_executor executor() { return _service.get_executor(); }
-
         boost::asio::any_io_executor pool_executor() { return _pool.get_executor(); }
 
     private:
         std::size_t _size;
-        boost::asio::io_context _service;
+    public:
+        boost::asio::io_context service;
+    private:
         boost::asio::thread_pool _pool;
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type> _guard;
     };
