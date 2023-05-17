@@ -101,7 +101,7 @@ namespace libtactmon::detail {
             }
 
             constexpr std::string_view AsView() const noexcept { return value; }
-            constexpr std::size_t Size() const noexcept { return N; }
+            constexpr std::size_t Size() const noexcept { return N - 1; }
 
             char value[N];
         };
